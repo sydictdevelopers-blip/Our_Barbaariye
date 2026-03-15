@@ -8,7 +8,9 @@ function generateCrudConfig(schema) {
   const fromRow = (row) => {
     const out = { id: row[idKey] ?? row.id };
     fields.forEach((f) => {
-      const keys = [f.value ?? f.rowKey ?? f.name, f.name];
+      // Try value, rowKey, name so both l_ty_id and l_ty_id_sp (and level_name) work from DB
+      const keyCandidates = [f.value, f.rowKey, f.name].filter(Boolean);
+      const keys = [...new Set([...keyCandidates, f.name])];
       let val = keys.map((k) => row[k]).find((v) => v != null);
       if (val == null) val = f.type === 'number' ? (f.default ?? 0) : (f.type === 'checkbox' ? false : (f.default ?? ''));
       else if (f.type === 'checkbox') val = val === 1 || val === true || val === '1';
@@ -27,13 +29,16 @@ function generateCrudConfig(schema) {
         fields.map((f) => [f.name, (form[f.name] ?? '').toString().trim()])
       );
     }
-    const out = { p_id: form.id || form[idKey] || 0 };
+    const out = {};
+    if (!schema.omitPId) out.p_id = form.id || form[idKey] || 0;
+    if (schema.idParam) out[schema.idParam] = form.id ?? form[idKey] ?? form[schema.idParam] ?? 0;
     if (!schema.omitPUsrId) out.p_usr_id = 1;
     fields.filter((f) => !f.omitFromParams).forEach((f) => {
       const key = f.param ?? `p_${f.name}_sp`;
       const val = form[f.name];
       if (f.type === 'number') out[key] = isNaN(parseFloat(val)) ? (f.default ?? 0) : parseFloat(val);
       else if (f.type === 'checkbox') out[key] = val ? '1' : '0';
+      else if (f.type === 'hidden') out[key] = (val ?? f.default ?? '').toString().trim();
       else out[key] = (val ?? '').toString().trim();
     });
     return out;
@@ -59,6 +64,7 @@ function generateCrudConfig(schema) {
     value: f.value ?? f.rowKey,
     nameKey: f.nameKey ?? f.labelRowKey,
     rows: f.rows,
+    default: f.default,
     ...(f.props && { props: f.props }),
   }));
 
@@ -75,6 +81,40 @@ function generateCrudConfig(schema) {
 
 /** Dhammaan entities – qaab isku mid: { key, title, fn|endpoint, idKey, fields[] } */
 const ENTITIES = [
+  {
+    key: 'ClassSetup',
+    title: 'Class Setup',
+    fn: 'class_sp',
+    idKey: 'cl_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    idParam: 'cl_id_sp',
+    fields: [
+      { name: 'class_sp', label: 'Class', type: 'text', required: true, param: 'class_sp' },
+      { name: 'lev_id_sp', label: 'Level ID', type: 'number', param: 'lev_id_sp', default: 0, props: { min: 0 } },
+      { name: 'gr_id_sp', label: 'Grade ID', type: 'number', param: 'gr_id_sp', default: 0, props: { min: 0 } },
+      { name: 'state_sp', label: 'State', type: 'select', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
+      { name: 'br_id_sp', label: 'Branch ID', type: 'hidden', param: 'br_id_sp', default: 1 },
+      { name: 'u_br_id_sp', label: 'U Branch ID', type: 'hidden', param: 'u_br_id_sp', default: 1 },
+    ],
+  },
+  {
+    key: 'LevelSetup',
+    title: 'Level Setup',
+    fn: 'level_sp',
+    idKey: 'lev_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    idParam: 'lev_id_sp',
+    fields: [
+      { name: 'level_sp', label: 'Level', type: 'text', required: true, param: 'level_sp' },
+      { name: 'l_ty_id_sp', label: 'Level Type', type: 'select', param: 'l_ty_id_sp', optionsKey: 'level_type', value: 'l_ty_id', rowKey: 'l_ty_id_sp', nameKey: 'level_name', default: '' },
+      { name: 'fee_sp', label: 'Fee', type: 'number', param: 'fee_sp', default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'state_sp', label: 'State', type: 'select', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
+      { name: 'br_id_sp', label: 'Branch ID', type: 'hidden', param: 'br_id_sp', default: 1 },
+      { name: 'u_br_id_sp', label: 'U Branch ID', type: 'hidden', param: 'u_br_id_sp', default: 1 },
+    ],
+  },
   {
     key: 'account',
     title: 'Account Form',

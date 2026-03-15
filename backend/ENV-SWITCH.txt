@@ -1,0 +1,15 @@
+============================================
+  Sida loo beddelo: Local ↔ 192 (Webmin)
+============================================
+
+HADDA – isticmaal LOCAL (PC-kaaga):
+  1. Copy .env.local → .env
+  2. Backend dib u bilow (npm start)
+  (Haddii aad PostgreSQL local ku sitaan, DB_HOST=localhost wuu shaqeeyaa.)
+
+MARKAAD DIB U NOQOTO 192 (Webmin):
+  1. Copy .env.remote-192 → .env
+  2. Backend dib u bilow (npm start)
+  (192 waa in uu remote u ogolaado – raac FURAN-TALAABO-TALAABO.md.)
+
+Faylka .env ee hadda la isticmaalayaa waa kan backend-ku akhriyo.

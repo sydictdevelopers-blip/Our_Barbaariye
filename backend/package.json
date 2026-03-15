@@ -5,7 +5,11 @@
   "main": "config/server.js",
   "scripts": {
     "start": "node config/server.js",
+    "dev": "nodemon config/server.js",
     "init-db": "node scripts/init-db.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   },
   "dependencies": {
     "body-parser": "^1.20.1",

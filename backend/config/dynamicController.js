@@ -1,63 +1,65 @@
 const db = require('./db');
 
+/** Allowed stored procedure names (security whitelist) – ku dar magacyada habraaca ee aad isticmaasho */
+const ALLOWED_PROCEDURES = new Set([
+    'level_sp', 'class_sp', 'accounts_sp', 'subjects_sp', 'student_classes_sp', 'studentsubjects_sp',
+    'students_sp', 'studentacademicyears_sp', 'people_sp'
+]);
+
+/** Param order to match PostgreSQL function signatures (add/modify per DB). */
+const PROCEDURE_PARAM_ORDER = {
+    level_sp: ['lev_id_sp', 'l_ty_id_sp', 'level_sp', 'fee_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+    class_sp: ['cl_id_sp', 'class_sp', 'lev_id_sp', 'gr_id_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+};
+
 /**
  * handleDynamicRequest() – U waca PostgreSQL stored procedures maraya /api/all
- * 
- * SIDEE UU U SHAQEEYO:
- * 1. Frontend-ka wuxuu soo gudbinayaa POST request adiga oo maraya JSON payload
- * 2. Payload-ka wuxuu leeyahay: fn (function name) + parameters (p_id, p_name_sp, iwm)
- * 3. dynamicController wuxuu u wacaa PostgreSQL function-ka + soo celiyaa result (text/plain)
- * 
- * TALLAABO:
- * - Step 1: Object.entries(req.body) → kala dhig body-ka (key-value pairs)
- * - Step 2: Hubi in body-ku ma aha empty → haddii empty, soo celi 400 error
- * - Step 3: Ka hel firstEntry → procedureName (function-ka Postgres)
- * - Step 4: Ka hel remaining entries → params (parameters-ka function-ka)
- * - Step 5: Hubi procedureName-ka (security validation) → haddii invalid, soo celi 400 error
- * - Step 6: Abuur SQL query → SELECT * FROM procedureName($1, $2, ...)
- * - Step 7: db.query() → u wac PostgreSQL function-ka
- * - Step 8: Soo celi result (first column value) → text/plain
+ * Body: { fn: 'level_sp', ...params } – p_operation waa la iska reebaa (ma u gudbin DB)
  */
 exports.handleDynamicRequest = async (req, res) => {
     let params = [];
     let procedureName = null;
-    
-    try {
-        /**
-         * Step 1: Kala dhig xogta codsiga (Parse the request body)
-         * 
-         * MUHIIM:
-         * Frontend-ka hore wuxuu xogta u soo gudbinayay $.post(url, $("#form").serialize())
-         * Tani waxay dhalineysaa jir (body) halkaas oo furayaasha iyo qiimayaashu yihiin URL-encoded.
-         * Shuruuddu waxay leedahay: "Qiimaha ugu horreeya ee POST had iyo jeer waa magaca habraaca la kaydiyay"
-         * "Qiimayaasha kale ee POST waa dooduha (arguments) habraaca"
-         */
-        const bodyEntries = Object.entries(req.body);
 
-        // Step 2: Hubi in body-ku ma aha empty → haddii empty, soo celi 400 error
-        if (bodyEntries.length === 0) {
-            return res.status(400).send('Empty request');
+    const sendJsonError = (status, message) => {
+        res.status(status).set('Content-Type', 'application/json');
+        res.send(JSON.stringify({ error: message }));
+    };
+
+    try {
+        const body = req.body || {};
+        if (Object.keys(body).length === 0) {
+            return res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'Empty request' }));
         }
 
-        // Step 3: Ka hel firstEntry → procedureName (function-ka Postgres)
-        const firstEntry = bodyEntries[0];
-        procedureName = firstEntry[1]; // Qiimaha input-ka hore (The value of the first field)
+        // Procedure name: use fn explicitly, else first entry value (legacy)
+        procedureName = (typeof body.fn === 'string' && body.fn.trim()) ? body.fn.trim() : null;
+        if (!procedureName) {
+            const firstEntry = Object.entries(body)[0];
+            procedureName = firstEntry ? String(firstEntry[1] || '').trim() : null;
+        }
+        if (!procedureName) {
+            return sendJsonError(400, 'Missing fn (procedure name)');
+        }
 
-        // Step 4: Ka hel remaining entries → params (parameters-ka function-ka)
-        // Qiimayaasha haray waa dooduha (The remaining entries are arguments)
-        params = bodyEntries.slice(1).map(entry => entry[1]);
+        // Params: exclude fn and p_operation. Use PROCEDURE_PARAM_ORDER if defined, else body key order
+        const bodyParams = { ...body };
+        delete bodyParams.fn;
+        delete bodyParams.p_operation;
+        const order = PROCEDURE_PARAM_ORDER[procedureName];
+        if (order && order.length) {
+            params = order.map((key) => (bodyParams[key] !== undefined && bodyParams[key] !== null ? bodyParams[key] : ''));
+        } else {
+            params = Object.entries(bodyParams).map(([, val]) => val);
+        }
 
-        /**
-         * Step 5: Hubinta Amniga (Security Validation)
-         * 
-         * TALLAABO:
-         * 1. Xaqiiji procedureName si loo hubiyo inuu yahay aqoonsi sax ah loona hortago duritaanka SQL (SQL injection)
-         * 2. Kaliya oggolow xarfo (a-zA-Z), tirooyin (0-9), iyo hoos-u-calaamad (_)
-         * 3. Haddii invalid → soo celi 400 error
-         */
+        // Security: format + whitelist
         if (!/^[a-zA-Z0-9_]+$/.test(procedureName)) {
-            console.warn(`Invalid procedure name attempt: ${procedureName}`);
-            return res.status(400).send('Invalid function name');
+            console.warn(`[api/all] Invalid procedure name: ${procedureName}`);
+            return sendJsonError(400, 'Invalid function name');
+        }
+        if (!ALLOWED_PROCEDURES.has(procedureName)) {
+            console.warn(`[api/all] Procedure not allowed: ${procedureName}`);
+            return sendJsonError(403, `Procedure not allowed: ${procedureName}. Add to ALLOWED_PROCEDURES in dynamicController.js if needed.`);
         }
 
         /**
@@ -73,8 +75,7 @@ exports.handleDynamicRequest = async (req, res) => {
         const paramPlaceholders = params.map((_, index) => `$${index + 1}`).join(', ');
         const query = `SELECT * FROM ${procedureName}(${paramPlaceholders})`;
 
-        // Cilad-baaris (Debug): Tus habka si loo arko qaladka
-        console.log(`[DEBUG] Waxaa la fulinayaa: SELECT * FROM ${procedureName}('${params.join("', '")}');`);
+        console.log(`[api/all] ${procedureName} params(${params.length}):`, params.map((p, i) => `$${i + 1}=${String(p).slice(0, 40)}`).join(' '));
 
         /**
          * Step 7: Fuli Weydiinta (Execute Query)
@@ -108,21 +109,17 @@ exports.handleDynamicRequest = async (req, res) => {
             res.set('Content-Type', 'text/plain');
             res.send(String(firstColumnValue));
         } else {
-            // Haddii aysan jirin wax natiijo ah (Handle case with no result)
-            res.send('');
+            // No row returned – treat as success with empty message (some procedures return nothing)
+            res.set('Content-Type', 'text/plain');
+            res.send('success');
         }
 
     } catch (error) {
-        console.error('Qalad Fulinta Xogta (Database Execution Error):', error);
-        // Production: ha ku tusin client-ka weydiinta iyo params (amniga)
+        console.error('[api/all] Database error:', error.message);
         const isProduction = process.env.NODE_ENV === 'production';
-        if (isProduction) {
-            res.status(500).send('Qalad nidaamka');
-        } else {
-            const paramPlaceholders = params && params.length > 0 ? params.map((_, index) => `$${index + 1}`).join(', ') : '';
-            const query = `SELECT * FROM ${procedureName || 'LAMA YAQAAN'}${paramPlaceholders ? `(${paramPlaceholders})` : '()'}`;
-            res.status(500).send(`Qalad Nidaamka: ${error.message}\nWeydiinta: ${query}\nXuduudaha: ${JSON.stringify(params)}`);
-        }
+        const message = isProduction ? 'Qalad nidaamka' : error.message;
+        res.status(500).set('Content-Type', 'application/json');
+        res.send(JSON.stringify({ error: message, procedure: procedureName || null }));
     }
 };
 
@@ -211,4 +208,3 @@ exports.handleStreamRequest = async (req, res, sql) => {
     client.release();
   }
 };
-

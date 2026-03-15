@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Database, Plus } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
@@ -13,13 +14,26 @@ import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
+const iconMap = { Database, Plus };
+
+function mapTab(tab) {
+  return {
+    ...tab,
+    icon: typeof tab.icon === 'string' ? (iconMap[tab.icon] ?? Database) : tab.icon,
+    loadButtons: (tab.loadButtons || []).map((btn) => ({
+      ...btn,
+      icon: typeof btn.icon === 'string' ? (iconMap[btn.icon] ?? Plus) : btn.icon,
+    })),
+  };
+}
 
 export default function AccountsPage() {
   const location = useLocation();
   const dispatch = useDispatch();
   const [modal, setModal] = useState({ entityKey: null, editRow: null });
 
-  const tabs = getTabsForPath(location.pathname);
+  const rawTabs = getTabsForPath(location.pathname);
+  const tabs = useMemo(() => rawTabs.map(mapTab), [rawTabs]);
   const { activeTab } = useSelector((state) => state.ui);
   const activeTabConfig = tabs.find((t) => t.id === activeTab);
   const modalEntities = getModalEntities(tabs);

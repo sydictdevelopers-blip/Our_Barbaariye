@@ -73,9 +73,10 @@ function DataTableCard({
 }) {
   const [sorting, setSorting] = useState([]);
 
-  // Client-side filter only – raadinta table-ka ka, database ma la raadino
+  // Server-side: onSearchSubmit → API returns paginated+filtered data; show data as-is. Else client-side filter.
   const filteredData = useMemo(() => {
     const list = data || [];
+    if (onSearchSubmit) return list; // API pagination + search; no client filter
     const q = (searchValue != null ? String(searchValue) : '').trim().toLowerCase();
     if (!q) return list;
     const keys = (columns || []).map((c) => c.key).filter(Boolean);
@@ -85,7 +86,7 @@ function DataTableCard({
         return v != null && String(v).toLowerCase().includes(q);
       })
     );
-  }, [data, searchValue, columns]);
+  }, [data, searchValue, columns, onSearchSubmit]);
 
   const from = total > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const to = total > 0 ? Math.min(currentPage * itemsPerPage, total) : 0;

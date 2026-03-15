@@ -83,7 +83,7 @@ export const defaultMenuItems = [
             "queryName": "LevelSetup",
             "loadButtons": [
               { "id": "LevelSetup", "label": "Level Setup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "SubjectClassSetup" }
+              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "LevelSetup" }
             ]
           },
           {

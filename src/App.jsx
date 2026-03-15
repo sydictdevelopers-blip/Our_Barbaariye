@@ -75,11 +75,11 @@ function AppContent() {
                   <Route path="/AcademicSaylapus" element={<AcademicSetup />} />
                   <Route path="/LessonPlan" element={<AcademicSetup />} />
                   <Route path="/StudentSetup" element={<AcademicSetup />} />
-                  <Route path="/frontend/classes" element={<AcademicSetup />} />
-                  <Route path="/frontend/student_register" element={<AcademicSetup />} />
-                  <Route path="/frontend/people_section" element={<AcademicSetup />} />
-                  <Route path="/frontend/student_attendence" element={<AcademicSetup />} />
-                  <Route path="/frontend/student_marks" element={<AcademicSetup />} />
+                  <Route path="/classes" element={<AcademicSetup />} />
+                  <Route path="/student_register" element={<AcademicSetup />} />
+                  <Route path="/people_section" element={<AcademicSetup />} />
+                  <Route path="/student_attendence" element={<AcademicSetup />} />
+                  <Route path="/student_marks" element={<AcademicSetup />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
                   
                   <Route path="/user-privilege" element={<UserPrivilegePage />} />
@@ -97,7 +97,7 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <BrowserRouter>
+      <BrowserRouter basename="/frontend">
         <AppContent />
       </BrowserRouter>
     </Provider>

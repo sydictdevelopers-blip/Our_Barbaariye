@@ -25,12 +25,13 @@ const toLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1, -1);
 // Halkaan ka qeexo query-ka academic year – automatic loo isticmaalo haddii tab kuu pass gudbin
 const DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY = 'academicYeartab';
 
-// Search ma la dirin database – kaliya table-ka (client-side) ayaa la filter-garaynayaa
-const loadPayload = (entityKey, page, limit, academicYearId) => ({
+/** Server-side: api/data supports page, limit, search. Pagination + search waa API. */
+const loadPayload = (entityKey, page, limit, academicYearId, search) => ({
   queryName: entityKey,
   page,
   limit: limit || 10,
   ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
+  ...(search != null && String(search).trim() && { search: String(search).trim() }),
 });
 
 const CHEVRON_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231F2937'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E";
@@ -84,7 +85,7 @@ export default function EntityTab({
   const onShowData = useCallback(
     (btnId, academicYearId) => {
       setShowDataPanel(true);
-      dispatch(loadData(loadPayload(btnId, 1, limit, academicYearId)));
+      dispatch(loadData(loadPayload(btnId, 1, limit, academicYearId, '')));
     },
     [limit, dispatch]
   );
@@ -93,31 +94,31 @@ export default function EntityTab({
     async (row) => {
       try {
         await deleteRow(row, config, () => {
-          dispatch(loadData(loadPayload(entityKey, 1, limit, academicYearIdForLoad)));
+          dispatch(loadData(loadPayload(entityKey, entity.currentPage, limit, academicYearIdForLoad, entity.searchQuery)));
           swalSuccess('Wa la guulaystey', 'Xogtada waa la tirtay.');
         });
       } catch (err) {
         swalError('Khalad ayaa dhacay', err.message || 'Tirtirku wuu ku fashilmay.');
       }
     },
-    [config, entityKey, limit, dispatch, academicYearIdForLoad]
+    [config, entityKey, limit, dispatch, academicYearIdForLoad, entity.currentPage, entity.searchQuery]
   );
 
   const goToPage = useCallback(
     (page) => {
       dispatch(setCurrentPage({ entityKey, value: page }));
-      dispatch(loadData(loadPayload(entityKey, page, limit, academicYearIdForLoad)));
+      dispatch(loadData(loadPayload(entityKey, page, limit, academicYearIdForLoad, entity.searchQuery)));
     },
-    [entityKey, limit, dispatch, academicYearIdForLoad]
+    [entityKey, limit, dispatch, academicYearIdForLoad, entity.searchQuery]
   );
 
   const handlePageSizeChange = useCallback(
     (newSize) => {
       dispatch(setItemsPerPage({ entityKey, value: newSize }));
-      dispatch(loadData(loadPayload(entityKey, 1, newSize, academicYearIdForLoad)));
       dispatch(setCurrentPage({ entityKey, value: 1 }));
+      dispatch(loadData(loadPayload(entityKey, 1, newSize, academicYearIdForLoad, entity.searchQuery)));
     },
-    [entityKey, dispatch, academicYearIdForLoad]
+    [entityKey, dispatch, academicYearIdForLoad, entity.searchQuery]
   );
 
   const renderActions = useCallback(
@@ -192,8 +193,9 @@ export default function EntityTab({
     loadBtns.length > 1 ? 'Click a button to load or Add to create' : `Click Load ${label} or Add to create`;
 
   const handleSearchSubmit = useCallback(() => {
-    dispatch(loadData(loadPayload(entityKey, 1, limit, academicYearIdForLoad)));
-  }, [entityKey, limit, academicYearIdForLoad, dispatch]);
+    dispatch(setCurrentPage({ entityKey, value: 1 }));
+    dispatch(loadData(loadPayload(entityKey, 1, limit, academicYearIdForLoad, entity.searchQuery)));
+  }, [entityKey, limit, academicYearIdForLoad, dispatch, entity.searchQuery]);
 
   return (
     <DataTableCard

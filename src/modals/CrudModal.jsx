@@ -76,6 +76,10 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true) {
 /** Submit – kaliya /api/all (fn + params + p_operation) */
 async function submitOperation(config, form, operation) {
   const params = config.toParams(form);
+  const operFns = ['class_sp', 'level_sp'];
+  if (operFns.includes(config.fn)) {
+    params.oper = operation === 'insert' ? 'I' : operation === 'update' ? 'U' : 'D';
+  }
   await crud({ operation, fn: config.fn, params });
 }
 
@@ -223,6 +227,9 @@ export default function CrudModal({
   const renderField = (f) => {
     const val = form[f.name];
     const opts = getOptions(f);
+    if (f.type === 'hidden') {
+      return <input key={f.name} type="hidden" name={f.name} value={val ?? f.default ?? ''} readOnly />;
+    }
     if (f.type === 'select') {
       const key = f.optionsKey;
       const useAsync = !!key;
