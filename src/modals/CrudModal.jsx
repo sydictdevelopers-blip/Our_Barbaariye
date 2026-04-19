@@ -73,13 +73,9 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true) {
   return opts;
 }
 
-/** Submit – kaliya /api/all (fn + params + p_operation) */
+/** Submit – kaliya /api/all (fn + params + oper) */
 async function submitOperation(config, form, operation) {
   const params = config.toParams(form);
-  const operFns = ['class_sp', 'level_sp'];
-  if (operFns.includes(config.fn)) {
-    params.oper = operation === 'insert' ? 'I' : operation === 'update' ? 'U' : 'D';
-  }
   await crud({ operation, fn: config.fn, params });
 }
 
@@ -195,19 +191,14 @@ export default function CrudModal({
     handleSubmit('update');
   };
 
-  const handleDelete = () => {
-    if (!window.confirm('Ma hubtaa inaad tirtid?')) return;
-    handleSubmit('delete');
-  };
-
   const handleClose = () => {
     setForm({});
     setErrors({});
     onClose();
   };
 
-  const isEdit = mode === 'update' && (form.id ?? form.acc_id ?? form.subject_id ?? 0) > 0;
-  const showUpdateDelete = !!config.fn;
+  const isEdit = mode === 'update';
+  const showUpdate = !!config.fn;
 
   const FieldWrapper = ({ label, error, children }) => (
     <div className="space-y-1">
@@ -336,13 +327,10 @@ export default function CrudModal({
               {loading ? '...' : 'Save'}
             </Button>
           )}
-          {isEdit && showUpdateDelete && (
+          {isEdit && showUpdate && (
             <>
               <Button type="button" onClick={handleUpdate} disabled={loading}>
                 {loading ? '...' : 'Update'}
-              </Button>
-              <Button variant="danger" onClick={handleDelete} disabled={loading}>
-                Delete
               </Button>
             </>
           )}

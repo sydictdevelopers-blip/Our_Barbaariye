@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronLeft, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { toggleSidebarCollapse, setSidebarOpen } from '../../slices/uiSlice';
 import { defaultMenuItems } from '../../config/menuConfig';
 
@@ -16,10 +17,13 @@ export default function Sidebar({
 }) {
   const location = useLocation();
   const dispatch = useDispatch();
+  const { t, i18n } = useTranslation();
   const { sidebarCollapsed, sidebarOpen } = useSelector((state) => state.ui);
   const [openMenus, setOpenMenus] = useState({});
   const [hoveredSubmenu, setHoveredSubmenu] = useState(null);
   const closeTimeoutRef = useRef(null);
+  const isRtl = i18n.language === 'ar';
+  const tr = (item) => (item.labelKey ? t(item.labelKey, item.label) : item.label);
 
   useEffect(() => {
     if (!sidebarCollapsed) setHoveredSubmenu(null);
@@ -128,7 +132,7 @@ export default function Sidebar({
                 {Icon && <Icon className="w-5 h-5 flex-shrink-0 opacity-95" />}
                 {!sidebarCollapsed && (
                   <>
-                    <span className="flex-1 text-sm">{item.label}</span>
+                    <span className="flex-1 text-sm">{tr(item)}</span>
                     <ChevronDown
                       className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
                         openMenus[item.id] ? 'rotate-180' : ''
@@ -160,7 +164,7 @@ export default function Sidebar({
                         }`}
                       >
                         {ChildIcon && <ChildIcon className="w-4 h-4 flex-shrink-0 opacity-90" />}
-                        <span className="capitalize">{child.label}</span>
+                        <span className="capitalize">{tr(child)}</span>
                       </Link>
                     ); })}
                   </motion.div>
@@ -177,7 +181,7 @@ export default function Sidebar({
               } ${sidebarCollapsed ? 'justify-center' : ''}`}
             >
               {Icon && <Icon className="w-5 h-5 flex-shrink-0 opacity-95" />}
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {!sidebarCollapsed && <span>{tr(item)}</span>}
             </Link>
           );
         })}
@@ -205,15 +209,18 @@ export default function Sidebar({
           }}
           style={{
             position: 'fixed',
-            left: 80,
-            top: hoveredSubmenu.rect.top,
+            ...(isRtl
+              ? { right: 80, top: hoveredSubmenu.rect.top }
+              : { left: 80, top: hoveredSubmenu.rect.top }),
             zIndex: 60,
           }}
-          className="min-w-[176px] w-max max-w-[220px] py-0 rounded-r-lg rounded-b-lg shadow-lg shadow-slate-900/40 bg-gradient-to-b from-[#0f3d5e] via-[#0e3856] to-[#0a2a3d] border border-l-0 border-white/10 font-['Plus_Jakarta_Sans',sans-serif] ring-1 ring-black/5"
+          className={`min-w-[176px] w-max max-w-[220px] py-0 rounded-b-lg shadow-lg shadow-slate-900/40 bg-gradient-to-b from-[#0f3d5e] via-[#0e3856] to-[#0a2a3d] border border-white/10 font-['Plus_Jakarta_Sans',sans-serif] ring-1 ring-black/5 ${
+            isRtl ? 'rounded-l-lg border-r-0' : 'rounded-r-lg border-l-0'
+          }`}
         >
-          <div className="border-l-2 border-teal-400/60 rounded-r-lg overflow-hidden">
+          <div className={`${isRtl ? 'border-r-2 rounded-l-lg' : 'border-l-2 rounded-r-lg'} border-teal-400/60 overflow-hidden`}>
             <p className="px-3 py-2.5 text-teal-300/95 text-[11px] font-semibold uppercase tracking-wider border-b border-white/10">
-              {hoveredSubmenu.item.label}
+              {tr(hoveredSubmenu.item)}
             </p>
             <div className="py-1.5 px-0.5 space-y-0.5">
               {hoveredSubmenu.item.children.map((child) => {
@@ -230,7 +237,7 @@ export default function Sidebar({
                   }`}
                 >
                   {ChildIcon && <ChildIcon className="w-3.5 h-3.5 flex-shrink-0 opacity-90" />}
-                  <span className="capitalize">{child.label}</span>
+                  <span className="capitalize">{tr(child)}</span>
                 </Link>
               ); })}
             </div>
@@ -260,20 +267,24 @@ export default function Sidebar({
         initial={false}
         animate={{ width: sidebarCollapsed ? 80 : 260 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 h-full bg-gradient-to-b from-[#0f3d5e] via-[#0d3552] to-[#0a2a3d] z-50 hidden lg:flex flex-col shadow-xl shadow-slate-900/25 border-r border-white/5"
+        className={`fixed top-0 h-full bg-gradient-to-b from-[#0f3d5e] via-[#0d3552] to-[#0a2a3d] z-50 hidden lg:flex flex-col shadow-xl shadow-slate-900/25 ${
+          isRtl ? 'right-0 border-l border-white/5' : 'left-0 border-r border-white/5'
+        }`}
       >
-        <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-teal-400/40 to-transparent pointer-events-none" aria-hidden />
+        <div className={`absolute top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-teal-400/40 to-transparent pointer-events-none ${isRtl ? 'left-0' : 'right-0'}`} aria-hidden />
         {sidebarContent}
       </motion.aside>
 
       <AnimatePresence>
         {sidebarOpen && (
           <motion.aside
-            initial={{ x: -300 }}
+            initial={{ x: isRtl ? 300 : -300 }}
             animate={{ x: 0 }}
-            exit={{ x: -300 }}
+            exit={{ x: isRtl ? 300 : -300 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] lg:hidden h-full bg-gradient-to-b from-[#0f3d5e] via-[#0d3552] to-[#0a2a3d] shadow-2xl shadow-slate-900/30 border-r border-white/5"
+            className={`fixed inset-y-0 z-50 w-[280px] max-w-[85vw] lg:hidden h-full bg-gradient-to-b from-[#0f3d5e] via-[#0d3552] to-[#0a2a3d] shadow-2xl shadow-slate-900/30 ${
+              isRtl ? 'right-0 border-l border-white/5' : 'left-0 border-r border-white/5'
+            }`}
           >
             {sidebarContent}
           </motion.aside>

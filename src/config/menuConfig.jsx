@@ -1,101 +1,105 @@
 import {
-LayoutDashboard,
-  GraduationCap,
+  LayoutDashboard,
   BookOpen,
-  Database,
-  Plus,
-  DollarSign,
   Users,
   ClipboardList,
   BookMarked,
-  UserPlus,
 } from 'lucide-react';
 
 export const defaultMenuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  { id: 'dashboard', label: 'Dashboard', labelKey: 'menu.dashboard', icon: LayoutDashboard, path: '/' },
   {
     id: 'academic',
     label: 'Academic Office',
+    labelKey: 'menu.academic',
     icon: BookOpen,
     children: [
       {
         id: 'AcademicSetup',
         label: 'Academic setup',
+        labelKey: 'menu.academicSetup',
         icon: BookMarked,
         path: '/AcademicSetup',
         tabs: [
           {
             "id": "ClassSetup",
             "label": "Class",
+            "labelKey": "tabs.class",
             "entityKey": "ClassSetup",
             "modalKey": "ClassSetup",
             "icon": "Database",
-            "queryName": "ClassSetup", 
+            "queryName": "ClassSetup",
             "showAcademicYearSelect": true,
             "loadButtons": [
-              { "id": "ClassSetup", "label": "Class Setup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "ClassSetup" }
+              { "id": "ClassSetup", "label": "Class Setup", "labelKey": "tabs.classSetup", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassSetup" }
             ]
           },
           {
             "id": "ClassFormaster",
             "label": "Class Formaster",
+            "labelKey": "tabs.classFormaster",
             "entityKey": "ClassFormaster",
             "modalKey": "ClassFormaster",
             "icon": "Database",
             "queryName": "ClassFormaster",
             "showAcademicYearSelect": true,
             "loadButtons": [
-              { "id": "ClassFormaster", "label": "Go to Academic Transfer", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "ClassFormaster" }
+              { "id": "ClassFormaster", "label": "Go to Academic Transfer", "labelKey": "tabs.classFormaster", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassFormaster" }
             ]
           },
           {
             "id": "SubjectsSetup",
             "label": "Subjects Setup",
+            "labelKey": "tabs.subjectsSetup",
             "entityKey": "SubjectsSetup",
             "modalKey": "SubjectsSetup",
             "icon": "Database",
             "queryName": "SubjectsSetup",
             "loadButtons": [
-              { "id": "ClassFormaster", "label": "Class Formaster", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "ClassFormaster" }
+              { "id": "SubjectsSetup", "label": "Show Subjects", "labelKey": "tabs.subjectsSetup", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "subject" }
             ]
           },
           {
             "id": "SubjectClassSetup",
             "label": "Subject Class Setup",
+            "labelKey": "tabs.subjectClassSetup",
             "entityKey": "SubjectClassSetup",
             "modalKey": "SubjectClassSetup",
             "icon": "Database",
             "queryName": "SubjectClassSetup",
             "loadButtons": [
-              { "id": "SubjectClassSetup", "label": "Subject Class Setup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "SubjectClassSetup" }
+              { "id": "SubjectClassSetup", "label": "Subject Class Setup", "labelKey": "tabs.subjectClassSetup", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectClassSetup" }
             ]
           },
           {
             "id": "LevelSetup",
             "label": "Level Setup",
+            "labelKey": "tabs.levelSetup",
             "entityKey": "LevelSetup",
             "modalKey": "LevelSetup",
             "icon": "Database",
             "queryName": "LevelSetup",
+            "hiddenColumns": ["l_ty_id"],
             "loadButtons": [
-              { "id": "LevelSetup", "label": "Level Setup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "LevelSetup" }
+              { "id": "LevelSetup", "label": "Level Setup", "labelKey": "tabs.levelSetup", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "LevelSetup" }
             ]
           },
           {
             "id": "academicYeartab",
             "label": "Academic Year",
+            "labelKey": "tabs.academicYear",
             "entityKey": "academicYeartab",
             "modalKey": "academicYeartab",
             "icon": "Database",
             "queryName": "academicYeartab",
             "loadButtons": [
-              { "id": "academicYeartab", "label": "Academic Year", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "SubjectClassSetup" }
+              { "id": "academicYeartab", "label": "Academic Year", "labelKey": "tabs.academicYear", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "academicYeartab" }
             ]
           }
         ]
@@ -104,6 +108,7 @@ export const defaultMenuItems = [
       {
         id: 'AcademicTransfer',
         label: 'Academic transfer',
+        labelKey: 'menu.academicTransfer',
         icon: BookMarked,
         path: '/AcademicTransfer',
         tabs: [
@@ -149,6 +154,7 @@ export const defaultMenuItems = [
       {
         id: 'AcademicSaylapus',
         label: 'Academic Saylapus',
+        labelKey: 'menu.academicSaylapus',
         icon: BookMarked,
         path: '/AcademicSaylapus',
         tabs: [
@@ -170,6 +176,7 @@ export const defaultMenuItems = [
       {
         id: 'LessonPlan',
         label: 'Lesson Plan',
+        labelKey: 'menu.lessonPlan',
         icon: BookMarked,
         path: '/LessonPlan',
         tabs: [
@@ -188,13 +195,13 @@ export const defaultMenuItems = [
           {
             "id": "LessonActivityResults",
             "label": "Lesson Activity Results",
-            "entityKey": "LessonActivityResults",     
-            "modalKey": "LessonActivityResults",  
+            "entityKey": "LessonActivityResults",
+            "modalKey": "LessonActivityResults",
             "icon": "Database",
             "queryName": "LessonActivityResults",
             "loadButtons": [
               { "id": "LessonActivityResults", "label": "Lesson Activity Results", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "BranchTransfer" }
+              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "LessonActivityResults" }
             ]
           }
         ]
@@ -204,12 +211,14 @@ export const defaultMenuItems = [
   },
   {
     id: 'StudentsOffice',
-    label: 'Students Office',    
+    label: 'Students Office',
+    labelKey: 'menu.studentsOffice',
     icon: BookOpen,
     children: [
       {
         id: 'StudentsOffice',
         label: 'Students',
+        labelKey: 'menu.students',
         icon: BookMarked,
         path: '/StudentsOffice',
         tabs: [
@@ -234,16 +243,17 @@ export const defaultMenuItems = [
             "id": "Responsible",
             "label": "Responsible",
             "entityKey": "Responsible",
-            "modalKey": "Responsible",
+            "modalKey": "ResponsibleModal",
             "icon": "Database",
             "queryName": "Responsible",
+            "hiddenColumns": ["state"],
             "loadButtons": [
-              { "id": "showData_Responsible", "label": "Show Responsible", "icon": "Database" },
+              { "id": "Responsible", "label": "Show Responsible", "icon": "Database" },
               { "id": "All_Responsible", "label": "All Responsible", "icon": "Plus", "modalKey": "Responsible" },
               { "id": "change_Responsible", "label": "Change Responsible", "icon": "Plus", "modalKey": "Responsible" },
               { "id": "showprentwithnostudents", "label": "Show parent with no students", "icon": "Plus", "modalKey": "Responsible" },
               { "id": "Deleteprentwithnostudents", "label": "Delete parent with no students", "icon": "Plus", "modalKey": "Responsible" },
-              { "id": "Add_new_responsible", "label": "Add new responsible", "icon": "Plus", "modalKey": "Responsible" },
+              { "id": "Add_new_responsible", "label": "Add new responsible", "icon": "Plus", "modalKey": "ResponsibleModal" },
 
             ]
           },
@@ -277,7 +287,7 @@ export const defaultMenuItems = [
           {
             "id": "update school",
             "label": "Update School",
-            "entityKey": "bus",
+            "entityKey": "update school",
             "modalKey": "update school",
             "icon": "Database",
             "queryName": "update school",
@@ -304,8 +314,62 @@ export const defaultMenuItems = [
     ],
   },
   {
+    id: 'ActivityManagement',
+    label: 'Activity Management',
+    labelKey: 'menu.activityManagement',
+    icon: ClipboardList,
+    children: [
+      {
+        id: 'ActivityManagement',
+        label: 'Activity',
+        labelKey: 'menu.activity',
+        icon: BookMarked,
+        path: '/ActivityManagement',
+        tabs: [
+          {
+            "id": "Activity",
+            "label": "Activity",
+            "entityKey": "Activity",
+            "modalKey": "Activity",
+            "icon": "Database",
+            "queryName": "Activity",
+            "loadButtons": [
+              { "id": "Activity", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "Activity" }
+            ]
+          },
+          {
+            "id": "SubjectActivity",
+            "label": "Subject Activity",
+            "entityKey": "SubjectActivity",
+            "modalKey": "SubjectActivity",
+            "icon": "Database",
+            "queryName": "SubjectActivity",
+            "loadButtons": [
+              { "id": "SubjectActivity", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "SubjectActivity" }
+            ]
+          },
+          {
+            "id": "StudentActivityEdit",
+            "label": "Student Activity Edit",
+            "entityKey": "StudentActivityEdit",
+            "modalKey": "StudentActivityEdit",
+            "icon": "Database",
+            "queryName": "StudentActivityEdit",
+            "loadButtons": [
+              { "id": "StudentActivityEdit", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentActivityEdit" }
+            ]
+          }
+        ],
+      },
+    ],
+  },
+  {
     id: 'userPrivilege',
     label: 'User Privillage',
+    labelKey: 'menu.userPrivilege',
     icon: Users,
     path: '/user-privilege',
   },

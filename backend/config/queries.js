@@ -10,23 +10,32 @@ const QUERIES = {
   gendersections: 'SELECT * FROM accounts ORDER BY acc_id',
 
   // ---- Datatable / entity queries (queryName in menuConfig) ----
-  LevelSetup: 'SELECT lev.*, lt.name AS level_name FROM level lev LEFT JOIN level_type lt ON lt.l_ty_id = COALESCE(lev.l_ty_id_sp, lev.l_ty_id) ORDER BY lev.lev_id_sp',
-  ClassSetup: 'SELECT * FROM class ORDER BY cl_id_sp',
+  LevelSetup: 'SELECT * FROM levels_show(1)',
+  ClassSetup: 'SELECT * FROM class',
   ClassFormaster: 'SELECT * FROM class_formaster ORDER BY 1',
-  SubjectsSetup: 'SELECT * FROM subjects ORDER BY subject_id',
+  SubjectsSetup: 'SELECT * FROM subjects ORDER BY sub_id',
   SubjectClassSetup: 'SELECT * FROM subject_class ORDER BY 1',
-  academicYeartab: 'SELECT * FROM studentacademicyears ORDER BY studentacademicyear_id',
+  academicYeartab: 'select * from academic_year_show()',
   BranchTransfer: 'SELECT * FROM branch_transfer ORDER BY 1',
   AcademicTransfer: 'SELECT * FROM academic_transfer ORDER BY 1',
   ClassTransfer: 'SELECT * FROM class_transfer ORDER BY 1',
   LessonActivityMark: 'SELECT * FROM lesson_activity_mark ORDER BY 1',
   LessonActivityResults: 'SELECT * FROM lesson_activity_results ORDER BY 1',
   Students: 'SELECT * FROM students ORDER BY student_id',
-  Responsible: 'SELECT * FROM responsible ORDER BY 1',
+  Responsible: 'SELECT * FROM responsible',
   studentstate: 'SELECT * FROM student_state ORDER BY 1',
   bus: 'SELECT * FROM bus ORDER BY 1',
   Studentinfo: 'SELECT * FROM students ORDER BY student_id',
   'update school': 'SELECT * FROM school ORDER BY 1',
+
+  // ---- Activity Management ----
+  Activity: 'SELECT * FROM activity ORDER BY act_id',
+  SubjectActivity: 'SELECT sa.sub_act_id, sa.act_id, a.activity_name, sa.subject_id, s.subject_name, sa.max_marks, sa.state FROM subject_activity sa LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY sa.sub_act_id',
+  StudentActivityEdit: 'SELECT sae.sta_id, sae.student_id, st.student_name, sae.sub_act_id, CONCAT(a.activity_name, \' - \', s.subject_name) AS subject_activity, sae.marks_obtained, sae.state FROM student_activity_edit sae LEFT JOIN students st ON st.student_id = sae.student_id LEFT JOIN subject_activity sa ON sa.sub_act_id = sae.sub_act_id LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY sae.sta_id',
+
+  // ---- Dropdown option queries ----
+  activity_options: 'SELECT act_id, activity_name FROM activity ORDER BY activity_name',
+  subject_activity_options: 'SELECT sa.sub_act_id, CONCAT(a.activity_name, \' - \', s.subject_name) AS sub_act_name FROM subject_activity sa LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY 2',
 
   // Legacy / aliases
   students: 'SELECT * FROM students ORDER BY student_id',

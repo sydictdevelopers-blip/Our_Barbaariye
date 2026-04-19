@@ -58,6 +58,12 @@ const uiSlice = createSlice({
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
     },
+    setBranch: (state, action) => {
+      if (state.user) {
+        state.user.br_id = action.payload;
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.user));
+      }
+    },
     logout: (state) => {
       state.user = null;
       localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -65,6 +71,6 @@ const uiSlice = createSlice({
   },
 });
 
-export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, logout } = uiSlice.actions;
+export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, logout } = uiSlice.actions;
 
 export default uiSlice.reducer;

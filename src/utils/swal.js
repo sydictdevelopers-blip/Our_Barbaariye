@@ -29,11 +29,16 @@ export function swalSuccess(title = 'Wa la guulaystey', text = 'Xogtada waa la k
 
 /** Error – marka khalad dhaco. Haddii title loo bixiyo (e.g. fariin database), kaliya title ayaa la tusi. */
 export function swalError(title, text) {
-  const textMsg = text || '';
-  const titleMsg = title || '';
+  const textMsg = text == null ? '' : String(text);
+  let titleMsg = title == null ? '' : String(title);
+  if (titleMsg === 'null' || titleMsg.trim() === '') titleMsg = '';
   const fullMsg = titleMsg + (textMsg ? (titleMsg ? ' ' : '') + textMsg : '');
   const isAlreadyExists = /already exists/i.test(fullMsg);
-  const finalTitle = title ?? (isAlreadyExists ? 'Waa horey u jira' : 'Khalad ayaa dhacay');
+  const finalTitle = titleMsg
+    ? titleMsg
+    : isAlreadyExists
+      ? 'Waa horey u jira'
+      : 'Khalad ayaa dhacay';
   return Swal.fire({
     icon: isAlreadyExists ? 'warning' : 'error',
     title: finalTitle,

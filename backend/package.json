@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node config/server.js",
     "dev": "nodemon config/server.js",
-    "init-db": "node scripts/init-db.js"
+    "init-db": "node scripts/init-db.js",
+    "env:local": "node -e \"require('fs').copyFileSync('.env.local','.env'); console.log('OK: .env waxaa laga soo qaaday .env.local (PostgreSQL local)')\"",
+    "env:remote": "node -e \"require('fs').copyFileSync('.env.remote-192','.env'); console.log('OK: .env waxaa laga soo qaaday .env.remote-192 (PostgreSQL Webmin 192)')\"",
+    "my-ip": "node scripts/show-my-ip.js"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"

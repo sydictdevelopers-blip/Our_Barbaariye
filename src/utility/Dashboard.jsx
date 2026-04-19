@@ -8,6 +8,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import StatValue from '../components/StatValue';
 import Tabs from '../components/ui/Tabs';
 import {
@@ -45,20 +46,20 @@ import {
 
 const COLORS = { primary: '#0B3C5D', secondary: '#0D9488' };
 
-const DASHBOARD_TABS = [
-  { id: 'admission', label: 'Admission', icon: UserPlus },
-  { id: 'finance', label: 'Finance', icon: Wallet },
-  { id: 'attendance', label: 'Attendance', icon: ClipboardCheck },
-  { id: 'activity', label: 'Activity', icon: Activity },
-  { id: 'academic', label: 'Academic', icon: GraduationCap },
+const DASHBOARD_TAB_DEFS = [
+  { id: 'admission', icon: UserPlus },
+  { id: 'finance', icon: Wallet },
+  { id: 'attendance', icon: ClipboardCheck },
+  { id: 'activity', icon: Activity },
+  { id: 'academic', icon: GraduationCap },
 ];
 
-const summaryCards = [
-  { id: 'students', label: 'Students', value: 1247, icon: Users, color: '#0B3C5D' },
-  { id: 'graduated', label: 'Graduated', value: 89, icon: GraduationCap, color: '#2ECC71' },
-  { id: 'free', label: 'Free', value: 42, icon: Gift, color: '#F4A261' },
-  { id: 'employees', label: 'Employees', value: 156, icon: UserCheck, color: '#0D9488' },
-  { id: 'inactive', label: 'Inactive', value: 12, icon: UserX, color: '#9CA3AF' },
+const summaryCardDefs = [
+  { id: 'students', value: 1247, icon: Users, color: '#0B3C5D' },
+  { id: 'graduated', value: 89, icon: GraduationCap, color: '#2ECC71' },
+  { id: 'free', value: 42, icon: Gift, color: '#F4A261' },
+  { id: 'employees', value: 156, icon: UserCheck, color: '#0D9488' },
+  { id: 'inactive', value: 12, icon: UserX, color: '#9CA3AF' },
 ];
 
 const chartData = [
@@ -81,10 +82,10 @@ const trendData = [
   { month: 'Dec', enrollment: 1247, attendance: 97 },
 ];
 
-const pieData = [
-  { name: 'Primary', value: 520, color: COLORS.primary },
-  { name: 'Middle', value: 385, color: COLORS.secondary },
-  { name: 'High', value: 342, color: '#2ECC71' },
+const pieDataDefs = [
+  { id: 'primary', value: 520, color: COLORS.primary },
+  { id: 'middle', value: 385, color: COLORS.secondary },
+  { id: 'high', value: 342, color: '#2ECC71' },
 ];
 
 const recentActivity = [
@@ -102,18 +103,34 @@ const upcomingEvents = [
   { date: 'Feb 25', title: 'Sports Day', type: 'event' },
 ];
 
-function getGreeting() {
+function useGreeting(t) {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('greeting.morning');
+  if (hour < 17) return t('greeting.afternoon');
+  return t('greeting.evening');
 }
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const { sidebarCollapsed } = useSelector((state) => state.ui);
   const [activeTab, setActiveTab] = useState('admission');
   const [modalOpen, setModalOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const DASHBOARD_TABS = DASHBOARD_TAB_DEFS.map((tab) => ({
+    ...tab,
+    label: t(`dashboard.tabs.${tab.id}`),
+  }));
+  const summaryCards = summaryCardDefs.map((c) => ({
+    ...c,
+    label: t(`dashboard.cards.${c.id}`),
+  }));
+  const pieData = pieDataDefs.map((p) => ({
+    ...p,
+    name: t(`dashboard.charts.${p.id}`),
+  }));
+  const localeMap = { so: 'en-US', en: 'en-US', ar: 'ar' };
+  const dateLocale = localeMap[i18n.language] || 'en-US';
 
   const openModal = useCallback(() => setModalOpen(true), []);
   const closeModal = useCallback(() => setModalOpen(false), []);
@@ -124,7 +141,7 @@ export default function Dashboard() {
   }, []);
 
   const maxW = sidebarCollapsed ? 'max-w-[1800px]' : 'max-w-[1600px]';
-  const activeTabLabel = DASHBOARD_TABS.find((t) => t.id === activeTab)?.label;
+  const activeTabLabel = DASHBOARD_TABS.find((tab) => tab.id === activeTab)?.label;
 
   return (
     <main
@@ -138,22 +155,22 @@ export default function Dashboard() {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <span className="block text-[0.8125rem] font-medium text-slate-500 dark:text-slate-400 tracking-wide mb-1">
-              {getGreeting()}, Admin
+              {useGreeting(t)}, {t('greeting.admin')}
             </span>
             <h1 className="text-2xl font-bold tracking-tight mb-1.5 leading-snug">
               <span className="bg-gradient-to-br from-[#0B3C5D] to-[#1565a0] bg-clip-text text-transparent">
-                Dashboard Overview
+                {t('dashboard.overview')}
               </span>
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Here&apos;s what&apos;s happening at Barbaariye System today.
+              {t('dashboard.todayLine')}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 py-2 px-3.5 border border-slate-200 dark:border-slate-600 rounded-[10px] text-[0.8125rem] font-medium text-slate-600 dark:text-slate-300 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/80 shadow-sm">
               <Calendar size={18} className="shrink-0 text-[#0B3C5D]" aria-hidden="true" />
               <span>
-                {`${currentTime.toLocaleDateString('en-US', { weekday: 'short' })}, ${currentTime.toLocaleDateString('en-US', { month: 'short' })} ${currentTime.getDate()}, ${currentTime.getFullYear()}`}
+                {`${currentTime.toLocaleDateString(dateLocale, { weekday: 'short' })}, ${currentTime.toLocaleDateString(dateLocale, { month: 'short' })} ${currentTime.getDate()}, ${currentTime.getFullYear()}`}
               </span>
             </div>
           </div>
@@ -206,9 +223,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 items-start">
         <div className="bg-white dark:bg-slate-800/95 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between flex-wrap gap-2 p-4 md:p-5 border-b border-slate-200 dark:border-slate-600">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Students by Grade</h2>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.charts.studentsByGrade')}</h2>
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 py-1 px-2 rounded">
-              Male / Female / Total
+              {t('dashboard.charts.maleFemaleTotal')}
             </span>
           </div>
           <div className="p-4 md:p-5">
@@ -239,9 +256,9 @@ export default function Dashboard() {
                   }}
                 />
                 <Legend />
-                <Bar dataKey="male" fill="url(#barMale)" name="Male" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="female" fill="url(#barFemale)" name="Female" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="total" fill="url(#barTotal)" name="Total" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="male" fill="url(#barMale)" name={t('dashboard.charts.male')} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="female" fill="url(#barFemale)" name={t('dashboard.charts.female')} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" fill="url(#barTotal)" name={t('dashboard.charts.total')} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -249,7 +266,7 @@ export default function Dashboard() {
 
         <div className="bg-white dark:bg-slate-800/95 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="p-4 border-b border-slate-200 dark:border-slate-600">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Enrollment Trend</h2>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.charts.enrollmentTrend')}</h2>
           </div>
           <div className="p-2">
             <ResponsiveContainer width="100%" height={180}>
@@ -277,7 +294,7 @@ export default function Dashboard() {
 
         <div className="bg-white dark:bg-slate-800/95 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="p-4 border-b border-slate-200 dark:border-slate-600">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Grade Distribution</h2>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.charts.gradeDistribution')}</h2>
           </div>
           <div className="p-4 flex flex-col items-center">
             <ResponsiveContainer width="100%" height={180}>
@@ -317,12 +334,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section className="bg-white dark:bg-slate-800/95 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between py-4 px-5 border-b border-slate-200 dark:border-slate-600">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Recent Activity</h2>
+            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.activity.title')}</h2>
             <button
               type="button"
               className="inline-flex items-center text-sm font-medium text-[#0B3C5D] hover:opacity-80 transition-opacity"
             >
-              View all <ArrowRight size={14} aria-hidden="true" />
+              {t('dashboard.activity.viewAll')} <ArrowRight size={14} aria-hidden="true" />
             </button>
           </div>
           <ul className="list-none">
@@ -354,12 +371,12 @@ export default function Dashboard() {
 
         <section className="bg-white dark:bg-slate-800/95 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]">
           <div className="flex items-center justify-between py-5 px-6 border-b border-slate-100 dark:border-slate-700/50">
-            <h2 className="text-[0.9375rem] font-semibold text-slate-800 dark:text-slate-100">Upcoming Events</h2>
+            <h2 className="text-[0.9375rem] font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.events.title')}</h2>
             <button
               type="button"
               className="inline-flex items-center text-sm font-medium text-[#0B3C5D] hover:opacity-80 transition-opacity"
             >
-              Calendar <ChevronRight size={16} aria-hidden="true" />
+              {t('dashboard.events.calendar')} <ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
           <ul className="list-none py-3">
@@ -383,7 +400,7 @@ export default function Dashboard() {
         </div>
         <div className="p-6">
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Content for <strong>{activeTabLabel}</strong> will appear here.
+            {t('dashboard.tabContent', { tab: activeTabLabel })}
           </p>
         </div>
       </section>

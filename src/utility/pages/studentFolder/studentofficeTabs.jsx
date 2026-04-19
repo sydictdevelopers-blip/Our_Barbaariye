@@ -12,6 +12,7 @@ import { getTabsForPath } from '../../../config/menuConfig';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
+import { store } from '../../../store/store';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
 const iconMap = { Database, Plus };
@@ -66,6 +67,7 @@ export default function StudentofficeTabs() {
             onEdit={openModal}
             showAcademicYearSelect={cfg.showAcademicYearSelect}
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
+            hiddenColumns={cfg.hiddenColumns}
           />
         </motion.div>
       );
@@ -113,7 +115,17 @@ export default function StudentofficeTabs() {
             mode={editRow ? 'update' : 'insert'}
             onSuccess={() => {
               const q = getQueryForModalKey(tabs, entityKey);
-              if (q) dispatch(loadData(q));
+              if (q) {
+                const tabCfg = tabs.find((t) => t.modalKey === entityKey);
+                const entKey = tabCfg?.entityKey ?? q;
+                const entity = store.getState().data.entities[entKey] ?? {};
+                dispatch(loadData({
+                  queryName: q,
+                  page: entity.currentPage ?? 1,
+                  limit: entity.itemsPerPage ?? 10,
+                  search: entity.searchQuery ?? '',
+                }));
+              }
             }}
           />
         );

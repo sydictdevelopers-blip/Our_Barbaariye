@@ -1,173 +1,347 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { motion } from 'framer-motion';
-import { User, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Lock, Eye, EyeOff, Globe, Building2, ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { setUser } from '../slices/uiSlice';
+import { LANGUAGES } from '../i18n/i18n';
+import { loginUser, fetchUserBranches } from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { t, i18n } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Branch selection step
+  const [step, setStep] = useState('login'); // 'login' | 'branch'
+  const [pendingUser, setPendingUser] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [branchError, setBranchError] = useState('');
+
+  const LOGO_URL = 'https://sydimg.s3.eu-west-2.amazonaws.com/SYDICT/LOGO.jpeg';
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setLogoFailed(false);
+    img.onerror = () => setLogoFailed(true);
+    img.src = LOGO_URL;
+  }, []);
+
+  const dispatchAndGo = (u, chosenBrId) => {
+    const initials = (u.username).slice(0, 2).toUpperCase();
+    dispatch(setUser({
+      usr_id: u.usr_id,
+      p_id: u.p_id,
+      name: u.username,
+      fullName: u.username,
+      username: u.username,
+      authkey: u.authkey,
+      u_br_id: u.u_br_id,
+      br_id: chosenBrId ?? u.br_id,
+      user_type: u.user_type,
+      privalage: u.privalage,
+      initials,
+    }));
+    navigate('/', { replace: true });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const user = (username || '').trim();
     const pass = (password || '').trim();
-    if (!user) {
-      setError('Fadlan geli username-ka');
-      return;
+    if (!user) { setError(t('login.errors.username')); return; }
+    if (!pass) { setError(t('login.errors.password')); return; }
+
+    setLoading(true);
+    try {
+      const resp = await loginUser(user, pass);
+      if (!resp?.success) {
+        setError(resp?.message || 'Login waa fashilmay');
+        return;
+      }
+      const u = resp.user || {};
+      if ((u.user_branch_count ?? resp.user_branch_count ?? 1) > 1) {
+        // Multi-branch: fetch branch list then show picker
+        setBranchLoading(true);
+        setBranchError('');
+        setPendingUser(u);
+        const brResp = await fetchUserBranches(u.usr_id);
+        setBranchLoading(false);
+        if (!brResp?.success || !brResp.branches?.length) {
+          setBranchError(t('branch.error'));
+          setStep('branch');
+          return;
+        }
+        setBranches(brResp.branches);
+        setStep('branch');
+      } else {
+        dispatchAndGo(u, null);
+      }
+    } finally {
+      setLoading(false);
     }
-    if (!pass) {
-      setError('Fadlan geli password-ka');
-      return;
-    }
-    const initials = user.slice(0, 2).toUpperCase();
-    dispatch(
-      setUser({
-        name: user,
-        fullName: user,
-        email: `${user}@barbaariye.com`,
-        initials,
-      })
-    );
-    navigate('/', { replace: true });
   };
 
+  const handleBranchSelect = (br_id) => {
+    if (!pendingUser) return;
+    dispatchAndGo(pendingUser, br_id);
+  };
+
+  const currentLang = LANGUAGES.find((l) => l.code === i18n.language) || LANGUAGES[0];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f3d5e] p-4 py-8">
+    <div className="min-h-screen flex flex-col bg-[#0f3d5e] p-4">
+      {/* ── Language switcher (top-right) ── */}
+      <div className="flex justify-end">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setLangOpen((v) => !v)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-colors border border-white/15"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="font-semibold">{currentLang.flag}</span>
+            <span className="hidden sm:inline">{currentLang.label}</span>
+          </button>
+          {langOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setLangOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden z-20">
+                {LANGUAGES.map((lng) => (
+                  <button
+                    key={lng.code}
+                    type="button"
+                    onClick={() => {
+                      i18n.changeLanguage(lng.code);
+                      setLangOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                      i18n.language === lng.code
+                        ? 'bg-[#0f3d5e]/10 text-[#0f3d5e] font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-xs font-bold w-6">{lng.flag}</span>
+                    <span>{lng.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center">
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row bg-white min-h-[520px]"
+        className="w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row bg-white"
       >
-        {/* Left panel – Welcome + spheres */}
-        <div className="relative lg:w-[45%] bg-gradient-to-br from-[#0f3d5e] via-[#0a2f4a] to-[#062535] text-white p-8 lg:p-10 flex flex-col items-center justify-center text-center min-h-[280px] lg:min-h-0">
-          {/* Decorative spheres */}
-          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/10 -translate-x-1/2 translate-y-1/2" />
-          <div className="absolute top-1/2 left-0 w-72 h-72 rounded-full bg-white/10 -translate-x-1/3 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/10 translate-x-1/3 translate-y-1/3" />
+        {/* ── Left panel ── */}
+        <div className="relative lg:w-[45%] bg-gradient-to-br from-[#0f3d5e] via-[#0a2f4a] to-[#062535] text-white p-10 flex flex-col items-center justify-center text-center min-h-[320px] lg:min-h-[560px] overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-white/10 -translate-x-1/2 translate-y-1/2 pointer-events-none" />
+          <div className="absolute top-1/2 left-0 w-72 h-72 rounded-full bg-white/10 -translate-x-1/3 -translate-y-1/2 pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/10 translate-x-1/3 translate-y-1/3 pointer-events-none" />
 
-          <div className="relative z-10 space-y-4">
-            <h2 className="text-2xl lg:text-3xl font-bold tracking-[0.2em] uppercase text-white/95">
-              Welcome
-            </h2>
-            <h3 className="text-lg lg:text-xl font-bold tracking-widest uppercase text-white/90">
-              Barbaariye
-            </h3>
-            <p className="text-sm text-white/80 max-w-xs leading-relaxed">
-              Maanta ku soo dhawoow maamulka Barbaariye. Geli xogtaada si aad ugu gasho bogga.
-            </p>
+          <div className="relative z-10 flex flex-col items-center space-y-5">
+            {/* ── Simple Logo ── */}
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-white flex items-center justify-center shadow-lg overflow-hidden"
+            >
+              {!logoFailed ? (
+                <img
+                  src={LOGO_URL}
+                  alt="Barbaariye logo"
+                  className="w-20 h-20 lg:w-24 lg:h-24 object-contain select-none"
+                  draggable={false}
+                />
+              ) : (
+                <span className="text-[#0f3d5e] font-extrabold text-3xl">B</span>
+              )}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.5 }}
+              className="space-y-2"
+            >
+              <h2 className="text-3xl font-bold tracking-[0.25em] uppercase text-white">
+                {t('login.welcome')}
+              </h2>
+              <h3 className="text-lg font-semibold tracking-widest uppercase text-white/85">
+                {t('common.appName')}
+              </h3>
+              <p className="text-sm text-white/70 max-w-xs leading-relaxed mt-2">
+                {t('login.subtitle')}<br />
+                {t('login.instruction')}
+              </p>
+            </motion.div>
           </div>
         </div>
 
-        {/* Right panel – Sign in form */}
-        <div className="flex-1 bg-white p-8 lg:p-10 flex flex-col justify-center">
-          <div className="max-w-sm mx-auto w-full">
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Sign in</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6">
-              Geli username-ka iyo password-ka si aad ugu gasho
-            </p>
+        {/* ── Right panel ── */}
+        <div className="flex-1 bg-white p-8 lg:p-12 flex flex-col justify-center overflow-hidden">
+          <AnimatePresence mode="wait">
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-xl">
-                  {error}
-                </div>
-              )}
-
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  id="login-username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="User Name"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-[#0f3d5e]/20 focus:border-[#0f3d5e] outline-none transition"
-                  autoComplete="username"
-                />
-              </div>
-
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="w-full pl-11 pr-20 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:ring-2 focus:ring-[#0f3d5e]/20 focus:border-[#0f3d5e] outline-none transition"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#0f3d5e] hover:underline"
-                >
-                  {showPassword ? 'HIDE' : 'SHOW'}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-[#0f3d5e] focus:ring-[#0f3d5e]"
-                  />
-                  <span className="text-sm text-slate-600 dark:text-slate-300">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  className="text-sm font-medium text-[#0f3d5e] hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-xl bg-[#0f3d5e] hover:bg-[#0a2a3d] text-white font-semibold transition-colors shadow-lg shadow-[#0f3d5e]/25"
+            {step === 'login' && (
+              <motion.div
+                key="login-form"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.25 }}
+                className="max-w-sm mx-auto w-full"
               >
-                Sign in
-              </button>
-            </form>
+                <div className="mb-8">
+                  <h1 className="text-2xl font-bold text-[#0f3d5e]">{t('login.signIn')}</h1>
+                  <p className="text-sm text-slate-500 mt-1">{t('login.signInDesc')}</p>
+                </div>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-600" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-white dark:bg-slate-900 px-3 text-sm text-slate-500 dark:text-slate-400">
-                  Or
-                </span>
-              </div>
-            </div>
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                  {error && (
+                    <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">
+                      <span className="shrink-0">⚠</span>
+                      {error}
+                    </div>
+                  )}
 
-            <button
-              type="button"
-              className="w-full py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-            >
-              Sign in with other
-            </button>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder={t('login.username')}
+                      autoComplete="username"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#0f3d5e]/25 focus:border-[#0f3d5e] outline-none transition text-sm"
+                    />
+                  </div>
 
-            <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-              Don&apos;t have an account?{' '}
-              <button type="button" className="font-semibold text-[#0f3d5e] hover:underline">
-                Sign Up
-              </button>
-            </p>
-          </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={t('login.password')}
+                      autoComplete="current-password"
+                      className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#0f3d5e]/25 focus:border-[#0f3d5e] outline-none transition text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0f3d5e] transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3.5 mt-2 rounded-xl bg-[#0f3d5e] hover:bg-[#0c3250] disabled:opacity-70 text-white font-semibold text-sm transition-colors shadow-md shadow-[#0f3d5e]/30"
+                  >
+                    {loading ? t('login.loading') : t('login.signIn')}
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            {step === 'branch' && (
+              <motion.div
+                key="branch-picker"
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.25 }}
+                className="max-w-sm mx-auto w-full"
+              >
+                <button
+                  type="button"
+                  onClick={() => { setStep('login'); setBranches([]); setPendingUser(null); setBranchError(''); }}
+                  className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-[#0f3d5e] mb-6 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {t('login.signIn')}
+                </button>
+
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold text-[#0f3d5e]">{t('branch.title')}</h1>
+                  <p className="text-sm text-slate-500 mt-1">{t('branch.subtitle')}</p>
+                </div>
+
+                {branchError && (
+                  <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl mb-4">
+                    <span className="shrink-0">⚠</span>
+                    {branchError}
+                  </div>
+                )}
+
+                {branchLoading ? (
+                  <p className="text-sm text-slate-400 text-center py-8">{t('branch.loading')}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {branches.map((br) => (
+                      <button
+                        key={br.br_id}
+                        type="button"
+                        onClick={() => handleBranchSelect(br.br_id)}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 hover:border-[#0f3d5e] hover:bg-[#0f3d5e]/5 text-left transition-colors group"
+                      >
+                        <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-[#0f3d5e]/10 flex items-center justify-center group-hover:bg-[#0f3d5e]/20 transition-colors">
+                          <Building2 className="w-4 h-4 text-[#0f3d5e]" />
+                        </span>
+                        <span className="flex-1 font-medium text-slate-700 group-hover:text-[#0f3d5e] text-sm">{br.br_name}</span>
+                        <span className="text-xs text-[#0f3d5e] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">{t('branch.select')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+          </AnimatePresence>
         </div>
       </motion.div>
+      </div>
+
+      {/* ── Footer ── */}
+      <footer className="mt-6 pt-4 border-t border-white/10 text-white/75 text-xs">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
+          <nav className="flex items-center gap-5">
+            <a href="#" className="font-semibold text-white hover:text-sky-300 transition-colors">
+              SYD ICT SOLUTIONS
+            </a>
+            <a href="#" className="hover:text-sky-300 transition-colors">{t('footer.about')}</a>
+            <a href="#" className="hover:text-sky-300 transition-colors">{t('footer.blog')}</a>
+            <a href="#" className="hover:text-sky-300 transition-colors">{t('footer.licenses')}</a>
+          </nav>
+          <p className="text-center sm:text-right">
+            ©2017- {new Date().getFullYear()}, {t('footer.rights')}{' '}
+            <span className="text-rose-400">♥</span> by{' '}
+            <span className="font-semibold text-white">SYD ICT SOLUTIONS</span> {t('footer.slogan')}
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

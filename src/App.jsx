@@ -71,7 +71,7 @@ function AppContent() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/AcademicSetup" element={<AcademicSetup />} />
-                    <Route path="/AcademicTransfer" element={<AcademicSetup />} />
+                   <Route path="/AcademicTransfer" element={<AcademicSetup />} />
                   <Route path="/AcademicSaylapus" element={<AcademicSetup />} />
                   <Route path="/LessonPlan" element={<AcademicSetup />} />
                   <Route path="/StudentSetup" element={<AcademicSetup />} />
@@ -81,7 +81,7 @@ function AppContent() {
                   <Route path="/student_attendence" element={<AcademicSetup />} />
                   <Route path="/student_marks" element={<AcademicSetup />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
-                  
+                  <Route path="/ActivityManagement" element={<AcademicSetup />} />
                   <Route path="/user-privilege" element={<UserPrivilegePage />} />
                   <Route path="*" element={<Navigate to="/" replace />}/>
                 </Routes>

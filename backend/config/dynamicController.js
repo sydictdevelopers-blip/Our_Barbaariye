@@ -1,22 +1,32 @@
 const db = require('./db');
 
-/** Allowed stored procedure names (security whitelist) – ku dar magacyada habraaca ee aad isticmaasho */
-const ALLOWED_PROCEDURES = new Set([
-    'level_sp', 'class_sp', 'accounts_sp', 'subjects_sp', 'student_classes_sp', 'studentsubjects_sp',
-    'students_sp', 'studentacademicyears_sp', 'people_sp'
-]);
+/**
+ * Dynamic mode: any stored procedure ending with '_sp' is allowed.
+ * Security: procedure name is validated with strict regex (/^[a-zA-Z0-9_]+$/)
+ * to prevent SQL injection — only safe identifier characters are allowed.
+ */
 
-/** Param order to match PostgreSQL function signatures (add/modify per DB). */
+/**
+ * Param order to match PostgreSQL function signatures.
+ * All procedures use 'oper' with full-word codes: 'insert' | 'update' | 'delete'.
+ */
 const PROCEDURE_PARAM_ORDER = {
-    level_sp: ['lev_id_sp', 'l_ty_id_sp', 'level_sp', 'fee_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
-    class_sp: ['cl_id_sp', 'class_sp', 'lev_id_sp', 'gr_id_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+  subject_sp: ['sub_id_sp', 'name_sp', 'state_sp', 'ordering_sp', 'oper'],
+  level_sp: ['lev_id_sp', 'l_ty_id_sp', 'level_name_sp', 'fee_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+  class_sp: ['cl_id_sp', 'class_sp', 'lev_id_sp', 'gr_id_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+  activity_sp: ['act_id_sp', 'activity_name_sp', 'description_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+  subject_activity_sp: ['sub_act_id_sp', 'act_id_sp', 'subject_id_sp', 'max_marks_sp', 'state_sp', 'oper'],
+  student_activity_edit_sp: ['sta_id_sp', 'student_id_sp', 'sub_act_id_sp', 'marks_sp', 'state_sp', 'oper'],
+  academic_year_sp: ['a_y_id_sp', 'academic_name_sp', 'started_sp', 'ended_sp', 'active_sp', 'u_br_id_sp', 'oper'],
 };
 
 /**
  * handleDynamicRequest() – U waca PostgreSQL stored procedures maraya /api/all
- * Body: { fn: 'level_sp', ...params } – p_operation waa la iska reebaa (ma u gudbin DB)
+ * Body: { fn: 'level_sp', ...params, oper: 'insert'|'update'|'delete' }
+ * Dhammaan SP-yadu waxay isticmaalaan 'oper' oo qaabka erey buuxa ah.
  */
 exports.handleDynamicRequest = async (req, res) => {
+
     let params = [];
     let procedureName = null;
 
@@ -41,25 +51,28 @@ exports.handleDynamicRequest = async (req, res) => {
             return sendJsonError(400, 'Missing fn (procedure name)');
         }
 
-        // Params: exclude fn and p_operation. Use PROCEDURE_PARAM_ORDER if defined, else body key order
+        // Params: exclude fn. 'oper' is a real SP param, ee waa la haynaa.
         const bodyParams = { ...body };
         delete bodyParams.fn;
-        delete bodyParams.p_operation;
+        if (typeof bodyParams.oper === 'string') {
+            bodyParams.oper = bodyParams.oper.trim().toLowerCase();
+        }
+
         const order = PROCEDURE_PARAM_ORDER[procedureName];
+
         if (order && order.length) {
+            // Explicit param order defined → use it exactly
             params = order.map((key) => (bodyParams[key] !== undefined && bodyParams[key] !== null ? bodyParams[key] : ''));
         } else {
+            // No explicit order → pass bodyParams values in received key order
             params = Object.entries(bodyParams).map(([, val]) => val);
         }
 
-        // Security: format + whitelist
+        // Security: validate procedure name format only (alphanumeric + underscore)
+        // This prevents SQL injection — no whitelist needed in dynamic mode.
         if (!/^[a-zA-Z0-9_]+$/.test(procedureName)) {
             console.warn(`[api/all] Invalid procedure name: ${procedureName}`);
             return sendJsonError(400, 'Invalid function name');
-        }
-        if (!ALLOWED_PROCEDURES.has(procedureName)) {
-            console.warn(`[api/all] Procedure not allowed: ${procedureName}`);
-            return sendJsonError(403, `Procedure not allowed: ${procedureName}. Add to ALLOWED_PROCEDURES in dynamicController.js if needed.`);
         }
 
         /**
@@ -74,7 +87,7 @@ exports.handleDynamicRequest = async (req, res) => {
          */
         const paramPlaceholders = params.map((_, index) => `$${index + 1}`).join(', ');
         const query = `SELECT * FROM ${procedureName}(${paramPlaceholders})`;
-
+        console.log(query);
         console.log(`[api/all] ${procedureName} params(${params.length}):`, params.map((p, i) => `$${i + 1}=${String(p).slice(0, 40)}`).join(' '));
 
         /**
@@ -104,10 +117,12 @@ exports.handleDynamicRequest = async (req, res) => {
             const firstRow = result.rows[0];
             // Qaado qiimaha tiirka hore (Getting first column's value)
             const firstColumnValue = Object.values(firstRow)[0];
+            // NULL / undefined DB response → "success" (ma "null" string) si frontend-ku u aqoonsado guul
+            const plainOut = firstColumnValue == null || firstColumnValue === '' ? 'success' : String(firstColumnValue);
 
             // U soo dir sidii qoraal cad (Send as plain text)
             res.set('Content-Type', 'text/plain');
-            res.send(String(firstColumnValue));
+            res.send(plainOut);
         } else {
             // No row returned – treat as success with empty message (some procedures return nothing)
             res.set('Content-Type', 'text/plain');

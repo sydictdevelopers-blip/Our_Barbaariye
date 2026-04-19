@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3000', // backend-ka – must match backend .env PORT (3000 or 3030)
+        target: 'http://127.0.0.1:3030', // backend-ka – must match backend .env PORT
         changeOrigin: true,
       },
     },

@@ -119,13 +119,19 @@
 @media (max-width: 1023px) {
   .main-content {
     margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 }
 
 @media (min-width: 1024px) {
   .main-content {
     margin-left: var(--sidebar-width, 260px) !important;
+    margin-right: 0 !important;
     width: calc(100% - var(--sidebar-width, 260px)) !important;
+  }
+  [dir="rtl"] .main-content {
+    margin-left: 0 !important;
+    margin-right: var(--sidebar-width, 260px) !important;
   }
 }
 

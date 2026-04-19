@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError } from '../utils/swal';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
@@ -45,9 +46,19 @@ export default function EntityTab({
   onEdit,
   showAcademicYearSelect = false,
   academicYearOptionsQuery,
+  hiddenColumns,
 }) {
+  const { t } = useTranslation();
+  const tr = (btn) => {
+    if (btn.labelKey) return t(btn.labelKey, btn.label);
+    if (btn.id === 'addNew') return t('entity.addNew');
+    return btn.label;
+  };
   const entity = useSelector(selectEntity(entityKey)) ?? {};
-  const columns = useSelector(selectColumns(entityKey));
+  const rawColumns = useSelector(selectColumns(entityKey));
+  const columns = hiddenColumns?.length
+    ? (rawColumns || []).filter((c) => !hiddenColumns.includes(c.key))
+    : rawColumns;
   const paginatedData = useSelector(selectPaginatedData(entityKey));
   const totalPages = useSelector(selectTotalPages(entityKey));
   const totalRows = useSelector(selectTotalRows(entityKey)) ?? paginatedData?.length ?? 0;
@@ -155,7 +166,7 @@ export default function EntityTab({
           value={selectedAcademicYearId}
           onChange={(e) => setSelectedAcademicYearId(e.target.value)}
         >
-          <option value="">Select Academic</option>
+          <option value="">{t('entity.selectAcademic')}</option>
           {academicYearOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -177,20 +188,19 @@ export default function EntityTab({
             }
             disabled={!isAddNew && entity.isLoading}
           >
-            { btn.label }
+            { tr(btn) }
           </Button>
         );
       })}
       {!loadBtns.some((b) => b.modalKey) && modalKey && (
         <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => onEdit(modalKey)(null)}>
-          ADD NEW
+          {t('entity.addNew')}
         </Button>
       )}
     </>
   );
 
-  const emptyDesc =
-    loadBtns.length > 1 ? 'Click a button to load or Add to create' : `Click Load ${label} or Add to create`;
+  const emptyDesc = t('entity.loadHint');
 
   const handleSearchSubmit = useCallback(() => {
     dispatch(setCurrentPage({ entityKey, value: 1 }));
@@ -200,13 +210,13 @@ export default function EntityTab({
   return (
     <DataTableCard
       showDataPanel={showDataPanel}
-      searchPlaceholder={`Search ${label.toLowerCase()}...`}
+      searchPlaceholder={t('entity.search')}
       searchValue={entity.searchQuery}
       onSearchChange={(e) => dispatch(setSearchQuery({ entityKey, value: e.target.value }))}
       onSearchSubmit={handleSearchSubmit}
       headerActions={headerActions}
-      emptyTitleClickToLoad={`No ${label.toLowerCase()} loaded`}
-      emptyDescClickToLoad={loadBtns.length > 1 ? 'Click a button above to load or Add to create' : `Click "SHOW DATA" above to load ${label.toLowerCase()}.`}
+      emptyTitleClickToLoad={t('entity.noLoaded')}
+      emptyDescClickToLoad={t('entity.loadHint')}
       emptyIconClickToLoad={Icon}
       columns={columns?.length ? columns : [{ key: 'id', label: 'ID' }]}
       data={paginatedData}
@@ -214,7 +224,7 @@ export default function EntityTab({
       error={entity.error}
       errorHint="Backend: npm start. DB: npm run init-db"
       emptyIcon={Icon}
-      emptyTitle={`No ${label.toLowerCase()} loaded`}
+      emptyTitle={t('entity.noLoaded')}
       emptyDescription={emptyDesc}
       hasActions
       renderActions={renderActions}
