@@ -51,17 +51,20 @@ function normalizeRow(row, columns, idKey) {
   return normalized;
 }
 
-/** Fetch data – api/data (paginated + search). loadData({ queryName, page?, limit?, search?, academicYearId? }) */
+/** Fetch data – api/data (paginated + search). loadData({ queryName, page?, limit?, search?, academicYearId?, ...extra }) */
 export const loadData = createAsyncThunk(
   'data/load',
   async (arg, { rejectWithValue }) => {
+    const isObj = typeof arg === 'object' && arg !== null;
     const queryName = typeof arg === 'string' ? arg : (arg?.queryName || 'accounts');
-    const page = typeof arg === 'object' && arg?.page != null ? arg.page : 1;
-    const limit = typeof arg === 'object' && arg?.limit != null ? arg.limit : 10;
-    const search = typeof arg === 'object' ? arg?.search : undefined;
-    const academicYearId = typeof arg === 'object' ? arg?.academicYearId : undefined;
+    const page = isObj && arg?.page != null ? arg.page : 1;
+    const limit = isObj && arg?.limit != null ? arg.limit : 10;
+    const search = isObj ? arg?.search : undefined;
+    const academicYearId = isObj ? arg?.academicYearId : undefined;
+    // Dhammaan fields-ka intaas ka dambeeya ayaa lagu gudbinayaa backend-ka (tusaale: br_id)
+    const { queryName: _q, page: _p, limit: _l, search: _s, academicYearId: _a, ...extra } = isObj ? arg : {};
     try {
-      const data = await fetchDataPaginated({ queryName, page, limit, search, academicYearId });
+      const data = await fetchDataPaginated({ queryName, page, limit, search, academicYearId, ...extra });
       return { queryName, data };
     } catch (err) {
       return rejectWithValue({ queryName, error: err.message });

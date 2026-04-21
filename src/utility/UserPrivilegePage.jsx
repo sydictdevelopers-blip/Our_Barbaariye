@@ -1,62 +1,62 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  ChevronDown,
-  ChevronRight,
   CheckSquare2,
   Eraser,
-  Minimize2,
-  Maximize2,
   Save,
   XCircle,
+  Database,
+  Plus,
+  Users as UsersIcon,
+  ShieldCheck,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { defaultMenuItems } from '../config/menuConfig';
 import Modal from '../components/ui/Modal';
+import Tabs from '../components/ui/Tabs';
+import ActionButton from '../components/ui/ActionButton';
+import { defaultMenuItems } from '../config/menuConfig';
+import { CRUD_CONFIG } from '../config/crudConfig';
+import CrudModal from '../modals/CrudModal';
+import { EntityTab } from './index';
+import { loadData } from '../slices/dataSlice';
+import { store } from '../store/store';
+import { crud } from '../services/api';
+import { swalSuccess, swalError } from '../utils/swal';
 
-// ----- Permission tree generation from menuConfig -----
+/* ───────────────── Permission tree helpers ───────────────── */
 
 function buildPermissionTree(items = defaultMenuItems) {
   return items
-    .filter((m) => m.id !== 'dashboard')
+    .filter((m) => m.id !== 'dashboard' && m.id !== 'userPrivilege')
     .map((module) => ({
       id: `module:${module.id}`,
+      moduleKey: module.id,
       type: 'module',
       label: module.label,
       icon: module.icon,
       children: (module.children || []).map((menu) => ({
         id: `menu:${module.id}/${menu.id}`,
+        menuKey: menu.id,
         type: 'menu',
         label: menu.label,
         children: (menu.tabs || []).map((tab) => ({
           id: `tab:${module.id}/${menu.id}/${tab.id}`,
+          tabKey: tab.id,
           type: 'tab',
           label: tab.label,
-          children: buildActionsFromTab(module, menu, tab),
+          children: (tab.loadButtons || []).map((btn) => ({
+            id: `action:${module.id}/${menu.id}/${tab.id}/${btn.id}`,
+            actionKey: btn.id,
+            type: 'action',
+            label: btn.label,
+          })),
         })),
       })),
     }))
     .filter((m) => m.children.length > 0);
-}
-
-function buildActionsFromTab(module, menu, tab) {
-  const actions = (tab.loadButtons || []).map((btn) => ({
-    id: `action:${module.id}/${menu.id}/${tab.id}/${btn.id}`,
-    type: 'action',
-    label: btn.label,
-    children: [],
-  }));
-
-  if (!actions.length) {
-    actions.push({
-      id: `action:${module.id}/${menu.id}/${tab.id}/view`,
-      type: 'action',
-      label: 'View',
-      children: [],
-    });
-  }
-  return actions;
 }
 
 function flattenNodes(tree) {
@@ -93,17 +93,55 @@ function filterTree(tree, term) {
   return tree.map(walk).filter(Boolean);
 }
 
-// ----- Checkbox with indeterminate state -----
+function serializePrivilege(tree, selectedIds) {
+  return tree
+    .map((module) => {
+      const children = (module.children || [])
+        .map((menu) => {
+          const tabs = (menu.children || [])
+            .map((tab) => {
+              const buttons = (tab.children || [])
+                .filter((action) => selectedIds.has(action.id))
+                .map((action) => action.actionKey);
+              if (buttons.length === 0 && !selectedIds.has(tab.id)) return null;
+              return { id: tab.tabKey, buttons };
+            })
+            .filter(Boolean);
+          if (tabs.length === 0 && !selectedIds.has(menu.id)) return null;
+          return { id: menu.menuKey, tabs };
+        })
+        .filter(Boolean);
+      if (children.length === 0 && !selectedIds.has(module.id)) return null;
+      return { menuId: module.moduleKey, children };
+    })
+    .filter(Boolean);
+}
+
+function deserializePrivilege(privilege) {
+  const ids = new Set();
+  const list = Array.isArray(privilege) ? privilege : [];
+  list.forEach((module) => {
+    const moduleKey = module.menuId;
+    if (!moduleKey) return;
+    ids.add(`module:${moduleKey}`);
+    (module.children || []).forEach((menu) => {
+      ids.add(`menu:${moduleKey}/${menu.id}`);
+      (menu.tabs || []).forEach((tab) => {
+        ids.add(`tab:${moduleKey}/${menu.id}/${tab.id}`);
+        (tab.buttons || []).forEach((btn) => {
+          ids.add(`action:${moduleKey}/${menu.id}/${tab.id}/${btn}`);
+        });
+      });
+    });
+  });
+  return ids;
+}
 
 function IndeterminateCheckbox({ checked, indeterminate, onChange }) {
   const ref = useRef(null);
-
   useEffect(() => {
-    if (ref.current) {
-      ref.current.indeterminate = indeterminate;
-    }
+    if (ref.current) ref.current.indeterminate = indeterminate;
   }, [indeterminate]);
-
   return (
     <input
       ref={ref}
@@ -115,126 +153,177 @@ function IndeterminateCheckbox({ checked, indeterminate, onChange }) {
   );
 }
 
-// ----- Row + Card components -----
-
-function PermissionRow({ node, level, selectedIds, onToggleNode }) {
-  const state = getNodeState(node, selectedIds);
-  const checked = state === 'checked';
-  const indeterminate = state === 'indeterminate';
-  const paddingLeft = 12 + level * 18;
-  const hasChildren = node.children && node.children.length > 0;
-
+/**
+ * PermissionTreePanel — renders toolbar + module-pills + nested checkbox tree.
+ * Reused by both the Privileges tab (global) and the per-user modal.
+ */
+function PermissionTreePanel({
+  tree,
+  search,
+  setSearch,
+  selectedIds,
+  onToggleNode,
+  onSelectAll,
+  onClearAll,
+  activeModuleId,
+  setActiveModuleId,
+}) {
+  const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
   return (
-    <div className="space-y-0.5">
-      <div
-        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-all ${
-          checked
-            ? 'bg-violet-50/80 text-violet-800 ring-1 ring-violet-200 translate-x-[1px]'
-            : 'hover:bg-slate-50 text-slate-700'
-        }`}
-        style={{ paddingLeft }}
-      >
-        <IndeterminateCheckbox
-          checked={checked}
-          indeterminate={indeterminate}
-          onChange={(c) => onToggleNode(node, c)}
-        />
-        <span className="truncate">{node.label}</span>
-      </div>
-      {hasChildren && (
-        <div className="space-y-1">
-          {node.children.map((child) => (
-            <PermissionRow
-              key={child.id}
-              node={child}
-              level={level + 1}
-              selectedIds={selectedIds}
-              onToggleNode={onToggleNode}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PermissionCard({ node, expanded, onToggleExpand, selectedIds, onToggleNode }) {
-  const state = getNodeState(node, selectedIds);
-  const checked = state === 'checked';
-  const indeterminate = state === 'indeterminate';
-  const Icon = node.icon;
-
-  return (
-    <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-[0_18px_45px_-25px_rgba(15,23,42,0.45)] flex flex-col">
-      <button
-        type="button"
-        onClick={onToggleExpand}
-        className="relative flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-slate-50 to-slate-50/40 border-b border-slate-100"
-      >
-        <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-400" />
-        <div className="flex items-center gap-3">
-          <IndeterminateCheckbox
-            checked={checked}
-            indeterminate={indeterminate}
-            onChange={(c) => onToggleNode(node, c)}
+    <>
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:items-center sm:justify-between">
+        <div className="relative flex-1 sm:w-72">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search permission..."
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
           />
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-            {Icon && (
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 shadow-sm">
-                <Icon className="w-4 h-4" />
-              </span>
-            )}
-            <div className="flex flex-col items-start">
-              <span>{node.label}</span>
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                Module
-              </span>
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button size="sm" variant="primary" leftIcon={<CheckSquare2 className="w-4 h-4" />} onClick={onSelectAll}>
+            Select All
+          </Button>
+          <Button size="sm" variant="secondary" leftIcon={<Eraser className="w-4 h-4" />} onClick={onClearAll}>
+            Clear
+          </Button>
+        </div>
+      </div>
+
+      {/* Module pills */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+        {filteredTree.map((module) => {
+          const Icon = module.icon;
+          const isActive = module.id === activeModuleId;
+          return (
+            <button
+              key={module.id}
+              type="button"
+              onClick={() => setActiveModuleId(module.id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {Icon && <Icon className="w-4 h-4" />}
+              <span className="truncate">{module.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active module content */}
+      <div className="mt-4 rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-5">
+        {(() => {
+          const activeModule = filteredTree.find((m) => m.id === activeModuleId) || filteredTree[0] || null;
+          if (!activeModule) return <p className="text-sm text-slate-500">No permissions available.</p>;
+          return (
+            <div className="flex flex-wrap gap-6">
+              {activeModule.children.map((menu) => (
+                <div key={menu.id} className="min-w-[210px] space-y-2">
+                  <div className="text-sm font-semibold text-sky-700 border-b border-sky-100 pb-1">{menu.label}</div>
+                  <div className="space-y-1.5 pt-1">
+                    {menu.children.map((tab) => {
+                      const tabState = getNodeState(tab, selectedIds);
+                      return (
+                        <div key={tab.id} className="space-y-0.5">
+                          <div className="flex items-center gap-2 text-sm text-slate-800">
+                            <IndeterminateCheckbox
+                              checked={tabState === 'checked'}
+                              indeterminate={tabState === 'indeterminate'}
+                              onChange={(c) => onToggleNode(tab, c)}
+                            />
+                            <span className="font-medium">{tab.label}</span>
+                          </div>
+                          {tab.children?.length > 0 && (
+                            <div className="pl-6 space-y-0.5">
+                              {tab.children.map((action) => {
+                                const actionChecked = getNodeState(action, selectedIds) === 'checked';
+                                return (
+                                  <button
+                                    key={action.id}
+                                    type="button"
+                                    onClick={() => onToggleNode(action, !actionChecked)}
+                                    className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors ${
+                                      actionChecked
+                                        ? 'bg-violet-50 text-violet-700 border-violet-400'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    <span>{action.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-        <span className="text-slate-400">
-          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </span>
-      </button>
-      {expanded && (
-        <div className="p-3 space-y-2">
-          {node.children.map((menu) => (
-            <PermissionRow
-              key={menu.id}
-              node={menu}
-              level={1}
-              selectedIds={selectedIds}
-              onToggleNode={onToggleNode}
-            />
-          ))}
-        </div>
-      )}
-    </Card>
+          );
+        })()}
+      </div>
+    </>
   );
 }
 
-// ----- Main page -----
+/* ─────────────────────── Main Page ─────────────────────── */
 
 export default function UserPrivilegePage() {
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.ui.user);
   const tree = useMemo(() => buildPermissionTree(defaultMenuItems), []);
-  const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState(() => new Set(tree.map((m) => m.id)));
-  const [selectedIds, setSelectedIds] = useState(() => new Set(flattenNodes(tree).map((n) => n.id)));
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeModuleId, setActiveModuleId] = useState(tree[0]?.id || '');
 
-  const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
+  /* Top tabs */
+  const [activeTab, setActiveTab] = useState('users');
 
-  const handleToggleExpand = (id) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  /* Users CRUD modal */
+  const [userModal, setUserModal] = useState({ isOpen: false, editRow: null });
+
+  const usersLoadParams = useMemo(
+    () => ({ br_id: String(currentUser?.br_id ?? 0) }),
+    [currentUser?.br_id]
+  );
+
+  const openUserModal = () => (row = null) => {
+    const config = CRUD_CONFIG.Users;
+    if (row) {
+      const editRow = config?.fromRow ? config.fromRow(row) : row;
+      setUserModal({ isOpen: true, editRow });
+    } else {
+      setUserModal({ isOpen: true, editRow: { br_id_sp: currentUser?.br_id ?? '' } });
+    }
   };
+  const closeUserModal = () => setUserModal({ isOpen: false, editRow: null });
 
-  const handleToggleNode = (node, checked) => {
-    setSelectedIds((prev) => {
+  /* ── Per-user privilege modal ── */
+  const [privModal, setPrivModal] = useState({ isOpen: false, user: null });
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalSelectedIds, setModalSelectedIds] = useState(() => new Set());
+  const [modalActiveModuleId, setModalActiveModuleId] = useState(tree[0]?.id || '');
+  const [savingPriv, setSavingPriv] = useState(false);
+
+  const openPrivModal = (row) => {
+    let priv = row?.privalage;
+    if (typeof priv === 'string') {
+      try { priv = JSON.parse(priv); } catch { priv = []; }
+    }
+    setModalSelectedIds(deserializePrivilege(priv));
+    setModalActiveModuleId(tree[0]?.id || '');
+    setModalSearch('');
+    setPrivModal({ isOpen: true, user: row });
+  };
+  const closePrivModal = () => setPrivModal({ isOpen: false, user: null });
+
+  const handleModalToggleNode = (node, checked) => {
+    setModalSelectedIds((prev) => {
       const next = new Set(prev);
       const stack = [node];
       while (stack.length) {
@@ -247,218 +336,193 @@ export default function UserPrivilegePage() {
       return next;
     });
   };
+  const modalSelectAll = () => setModalSelectedIds(new Set(flattenNodes(tree).map((n) => n.id)));
+  const modalClearAll = () => setModalSelectedIds(new Set());
 
-  const handleSelectAll = () => {
-    setSelectedIds(new Set(flattenNodes(tree).map((n) => n.id)));
+  const handleSavePriv = async () => {
+    if (!privModal.user?.usr_id) return;
+    const payload = serializePrivilege(tree, modalSelectedIds);
+    setSavingPriv(true);
+    try {
+      const result = await crud({
+        operation: 'update',
+        fn: 'user_privilege_sp',
+        params: {
+          usr_id_sp: String(privModal.user.usr_id),
+          privalage_sp: JSON.stringify(payload),
+        },
+      });
+      await swalSuccess('Wa la guulaystey', result?.message || '');
+      closePrivModal();
+      const entity = store.getState().data.entities?.Users ?? {};
+      dispatch(loadData({
+        queryName: 'Users',
+        page: entity.currentPage ?? 1,
+        limit: entity.itemsPerPage ?? 10,
+        search: entity.searchQuery ?? '',
+        br_id: String(currentUser?.br_id ?? 0),
+      }));
+    } catch (err) {
+      swalError('Khalad', err?.message || 'Save failed');
+    } finally {
+      setSavingPriv(false);
+    }
   };
 
-  const handleClearAll = () => {
-    setSelectedIds(new Set());
+  /* ── Privileges tab (global / reference) ── */
+  const [tabSearch, setTabSearch] = useState('');
+  const [tabSelectedIds, setTabSelectedIds] = useState(() => new Set());
+  const [tabActiveModuleId, setTabActiveModuleId] = useState(tree[0]?.id || '');
+
+  const handleTabToggleNode = (node, checked) => {
+    setTabSelectedIds((prev) => {
+      const next = new Set(prev);
+      const stack = [node];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (!cur) continue;
+        if (checked) next.add(cur.id);
+        else next.delete(cur.id);
+        cur.children?.forEach((c) => stack.push(c));
+      }
+      return next;
+    });
+  };
+  const tabSelectAll = () => setTabSelectedIds(new Set(flattenNodes(tree).map((n) => n.id)));
+  const tabClearAll = () => setTabSelectedIds(new Set());
+  const handleTabSave = () => {
+    // Placeholder — tab view is for reference/admin
   };
 
-  const handleCollapseAll = () => setExpanded(new Set());
-  const handleExpandAll = () => setExpanded(new Set(tree.map((m) => m.id)));
+  /* Per-row shield button */
+  const renderExtraRowActions = (row) => (
+    <ActionButton variant="warning" aria-label="Privileges" onClick={() => openPrivModal(row)}>
+      <ShieldCheck className="w-4 h-4" />
+    </ActionButton>
+  );
 
-  const handleSave = () => {
-    // Halkan ayaad backend ugu diri kartaa selectedIds
-    // console.log(Array.from(selectedIds));
-  };
+  const topTabs = [
+    { id: 'users', label: 'Users', icon: UsersIcon },
+    { id: 'privileges', label: 'Privileges', icon: ShieldCheck },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Page header with open-modal button */}
-      <Card className="p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gradient-to-r from-slate-50 via-white to-slate-50 border border-slate-200/80 shadow-sm">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            User Privilege Management
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Configure module, menu, tab and action permissions generated from your system menu.
-          </p>
+    <div className="space-y-4 min-w-0">
+      <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/60">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="relative px-5 py-5 bg-white border-b border-slate-200/70">
+          <Tabs tabs={topTabs} activeTab={activeTab} onTabChange={setActiveTab} className="w-full" />
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          leftIcon={<CheckSquare2 className="w-4 h-4" />}
-          onClick={() => setIsOpen(true)}
-        >
-          Manage Privileges
-        </Button>
+
+        <div className="px-3 pb-4 pt-2">
+          <AnimatePresence mode="wait">
+            {activeTab === 'users' && (
+              <motion.div
+                key="users"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <EntityTab
+                  entityKey="Users"
+                  modalKey="Users"
+                  icon={UsersIcon}
+                  hiddenColumns={['p_id', 'br_id', 'password', 'privalage']}
+                  loadButtons={[
+                    { id: 'Users', label: 'Show Users', icon: Database },
+                    { id: 'addNew', label: 'Add new', icon: Plus, modalKey: 'Users' },
+                  ]}
+                  dispatch={dispatch}
+                  onEdit={openUserModal}
+                  extraRowActions={renderExtraRowActions}
+                  extraLoadParams={usersLoadParams}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'privileges' && (
+              <motion.div
+                key="privileges"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="px-2 py-2"
+              >
+                <PermissionTreePanel
+                  tree={tree}
+                  search={tabSearch}
+                  setSearch={setTabSearch}
+                  selectedIds={tabSelectedIds}
+                  onToggleNode={handleTabToggleNode}
+                  onSelectAll={tabSelectAll}
+                  onClearAll={tabClearAll}
+                  activeModuleId={tabActiveModuleId}
+                  setActiveModuleId={setTabActiveModuleId}
+                />
+
+                <div className="mt-4 flex justify-end">
+                  <Button variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={handleTabSave}>
+                    Save Privileges
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </Card>
 
+      {/* User create/edit modal */}
+      <CrudModal
+        isOpen={userModal.isOpen}
+        onClose={closeUserModal}
+        config={CRUD_CONFIG.Users}
+        initialForm={userModal.editRow || {}}
+        mode={userModal.editRow?.id ? 'update' : 'insert'}
+        onSuccess={() => {
+          const entity = store.getState().data.entities?.Users ?? {};
+          dispatch(loadData({
+            queryName: 'Users',
+            page: entity.currentPage ?? 1,
+            limit: entity.itemsPerPage ?? 10,
+            search: entity.searchQuery ?? '',
+            br_id: String(currentUser?.br_id ?? 0),
+          }));
+        }}
+      />
+
+      {/* Per-user Privilege modal (opened via shield button in Users tab) */}
       <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title="User Privilege Management"
+        isOpen={privModal.isOpen}
+        onClose={closePrivModal}
+        title={`Privileges — ${privModal.user?.username ?? ''}`}
         size="xl"
         className="max-w-5xl"
-        bodyClassName="space-y-4 bg-gradient-to-b from-slate-50 via-slate-50/80 to-slate-100 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-950"
+        bodyClassName="space-y-4 bg-gradient-to-b from-slate-50 via-white to-slate-50"
         footer={
           <>
-            <Button
-              variant="ghost"
-              leftIcon={<XCircle className="w-4 h-4" />}
-              onClick={() => setIsOpen(false)}
-            >
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closePrivModal}>
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              leftIcon={<Save className="w-4 h-4" />}
-              onClick={handleSave}
-            >
-              Save
+            <Button variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={handleSavePriv} disabled={savingPriv}>
+              {savingPriv ? '...' : 'Save Privileges'}
             </Button>
           </>
         }
       >
-        {/* Toolbar inside modal */}
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search permission..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              size="sm"
-              variant="primary"
-              leftIcon={<CheckSquare2 className="w-4 h-4" />}
-              onClick={handleSelectAll}
-            >
-              Select All
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              leftIcon={<Eraser className="w-4 h-4" />}
-              onClick={handleClearAll}
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              leftIcon={<Minimize2 className="w-4 h-4" />}
-              onClick={handleCollapseAll}
-            >
-              Collapse All
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              leftIcon={<Maximize2 className="w-4 h-4" />}
-              onClick={handleExpandAll}
-            >
-              Expand All
-            </Button>
-          </div>
-        </div>
-
-        {/* Module tabs row */}
-        <div className="mt-4 flex flex-wrap items-center justify-start gap-2 border-b border-slate-200 pb-3">
-          {filteredTree.map((module) => {
-            const Icon = module.icon;
-            const isActive = module.id === activeModuleId;
-            return (
-              <button
-                key={module.id}
-                type="button"
-                onClick={() => setActiveModuleId(module.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  isActive
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {Icon && <Icon className="w-4 h-4" />}
-                <span className="truncate">{module.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Content for active module */}
-        <div className="mt-4 rounded-2xl bg-white/95 dark:bg-slate-900/90 border border-slate-100 dark:border-slate-700 shadow-sm px-4 py-5">
-          {(() => {
-            const activeModule =
-              filteredTree.find((m) => m.id === activeModuleId) ||
-              filteredTree[0] ||
-              null;
-            if (!activeModule) {
-              return (
-                <p className="text-sm text-slate-500">
-                  No permissions available for this selection.
-                </p>
-              );
-            }
-            return (
-              <div className="flex flex-wrap gap-6">
-                {activeModule.children.map((menu) => (
-                  <div key={menu.id} className="min-w-[210px] space-y-2">
-                    <div className="text-sm font-semibold text-sky-700 border-b border-sky-100 pb-1">
-                      {menu.label}
-                    </div>
-                    <div className="space-y-1.5 pt-1">
-                      {menu.children.map((tab) => {
-                        const tabState = getNodeState(tab, selectedIds);
-                        const tabChecked = tabState === 'checked';
-                        const tabIndeterminate = tabState === 'indeterminate';
-                        return (
-                          <div key={tab.id} className="space-y-0.5">
-                            <div className="flex items-center gap-2 text-sm text-slate-800">
-                              <IndeterminateCheckbox
-                                checked={tabChecked}
-                                indeterminate={tabIndeterminate}
-                                onChange={(c) => handleToggleNode(tab, c)}
-                              />
-                              <span className="font-medium">{tab.label}</span>
-                            </div>
-                            {tab.children?.length > 0 && (
-                              <div className="pl-6 space-y-0.5">
-                                {tab.children.map((action) => {
-                                  const actionState = getNodeState(
-                                    action,
-                                    selectedIds,
-                                  );
-                                  const actionChecked =
-                                    actionState === 'checked';
-                                  return (
-                                    <button
-                                      key={action.id}
-                                      type="button"
-                                      onClick={() =>
-                                        handleToggleNode(action, !actionChecked)
-                                      }
-                                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors ${
-                                        actionChecked
-                                          ? 'bg-violet-50 text-violet-700 border-violet-400'
-                                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <span>{action.label}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
+        <PermissionTreePanel
+          tree={tree}
+          search={modalSearch}
+          setSearch={setModalSearch}
+          selectedIds={modalSelectedIds}
+          onToggleNode={handleModalToggleNode}
+          onSelectAll={modalSelectAll}
+          onClearAll={modalClearAll}
+          activeModuleId={modalActiveModuleId}
+          setActiveModuleId={setModalActiveModuleId}
+        />
       </Modal>
     </div>
   );
 }
-

@@ -104,7 +104,7 @@ function registerApiRoutes(app) {
       if (search && process.env.NODE_ENV !== 'production') {
         console.log('[api/data] search:', JSON.stringify(search));
       }
-      const sql = getQuery(queryName || 'accounts');
+      const sql = getQuery(queryName || 'accounts', body);
       if (!sql) return res.status(404).json({ error: 'Query not allowed or not found', queryName: queryName || null });
       const { columns, data: rows, total } = await dynamicController.runSelectQueryPaginated(sql, page, limit, search);
       res.json({

@@ -5,7 +5,9 @@ import { swalSuccess, swalConfirm, swalError } from '../utils/swal';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ActionButton from '../components/ui/ActionButton';
+import Select2 from '../components/ui/Select2';
 import DataTableCard from '../components/DataTableCard';
+import Card from '../components/ui/Card';
 import { CRUD_CONFIG } from '../config/crudConfig';
 import { fetchSelectOptions } from '../services/api';
 import {
@@ -27,12 +29,12 @@ const toLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1, -1);
 const DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY = 'academicYeartab';
 
 /** Server-side: api/data supports page, limit, search. Pagination + search waa API. */
-const loadPayload = (entityKey, page, limit, academicYearId, search) => ({
+const loadPayload = (entityKey, page, limit, search, extra = {}) => ({
   queryName: entityKey,
   page,
   limit: limit || 10,
-  ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
   ...(search != null && String(search).trim() && { search: String(search).trim() }),
+  ...extra,
 });
 
 const CHEVRON_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231F2937'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E";
@@ -46,7 +48,12 @@ export default function EntityTab({
   onEdit,
   showAcademicYearSelect = false,
   academicYearOptionsQuery,
+  showClassSelect = false,
+  classOptionsQuery,
   hiddenColumns,
+  extraRowActions,
+  extraLoadParams,
+  bulkForm,
 }) {
   const { t } = useTranslation();
   const tr = (btn) => {
@@ -68,11 +75,15 @@ export default function EntityTab({
   const loadBtns = loadButtons ?? [{ id: entityKey, label: `Load ${label}` }];
   const limit = entity.itemsPerPage || 10;
   const [showDataPanel, setShowDataPanel] = useState(false);
+  const [viewMode, setViewMode] = useState('data'); // 'data' | 'form'
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
   const [academicYearOptions, setAcademicYearOptions] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [classOptions, setClassOptions] = useState([]);
 
   // Automatic: haddii academicYearOptionsQuery la gudbin waayo, default waa academicYeartab
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
+  const clsOptionsQuery = classOptionsQuery ?? 'class_options';
 
   useEffect(() => {
     if (!showAcademicYearSelect) return;
@@ -91,51 +102,80 @@ export default function EntityTab({
     return () => { cancelled = true; };
   }, [showAcademicYearSelect, optionsQuery]);
 
+  useEffect(() => {
+    if (!showClassSelect) return;
+    let cancelled = false;
+    fetchSelectOptions(clsOptionsQuery, 200, '')
+      .then((res) => {
+        if (cancelled) return;
+        const rows = res?.data ?? res?.rows ?? [];
+        const opts = rows.map((r) => ({
+          value: String(r.cl_id ?? r.id ?? Object.values(r)[0] ?? ''),
+          label: String(r.class ?? r.class_name ?? r.name ?? Object.values(r)[1] ?? ''),
+        }));
+        setClassOptions(opts);
+      })
+      .catch(() => setClassOptions([]));
+    return () => { cancelled = true; };
+  }, [showClassSelect, clsOptionsQuery]);
+
   const academicYearIdForLoad = showAcademicYearSelect ? selectedAcademicYearId : undefined;
+  const classIdForLoad = showClassSelect ? selectedClassId : undefined;
+
+  const buildExtra = useCallback(
+    (academicYearId, classId) => ({
+      ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
+      ...(classId != null && String(classId).trim() && { cl_id: String(classId).trim() }),
+      ...extraLoadParams,
+    }),
+    [extraLoadParams]
+  );
 
   const onShowData = useCallback(
-    (btnId, academicYearId) => {
+    (btnId, academicYearId, classId) => {
+      setViewMode('data');
       setShowDataPanel(true);
-      dispatch(loadData(loadPayload(btnId, 1, limit, academicYearId, '')));
+      dispatch(loadData(loadPayload(btnId, 1, limit, '', buildExtra(academicYearId, classId))));
     },
-    [limit, dispatch]
+    [limit, dispatch, buildExtra]
   );
 
   const doDelete = useCallback(
     async (row) => {
       try {
-        await deleteRow(row, config, () => {
-          dispatch(loadData(loadPayload(entityKey, entity.currentPage, limit, academicYearIdForLoad, entity.searchQuery)));
-          swalSuccess('Wa la guulaystey', 'Xogtada waa la tirtay.');
+        await deleteRow(row, config, (result) => {
+          dispatch(loadData(loadPayload(entityKey, entity.currentPage, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+          swalSuccess('Wa la guulaystey', result?.message || '');
         });
       } catch (err) {
-        swalError('Khalad ayaa dhacay', err.message || 'Tirtirku wuu ku fashilmay.');
+        swalError('Khalad ayaa dhacay', err.message || '');
       }
     },
-    [config, entityKey, limit, dispatch, academicYearIdForLoad, entity.currentPage, entity.searchQuery]
+    [config, entityKey, limit, dispatch, academicYearIdForLoad, classIdForLoad, entity.currentPage, entity.searchQuery, buildExtra]
   );
 
   const goToPage = useCallback(
     (page) => {
       dispatch(setCurrentPage({ entityKey, value: page }));
-      dispatch(loadData(loadPayload(entityKey, page, limit, academicYearIdForLoad, entity.searchQuery)));
+      dispatch(loadData(loadPayload(entityKey, page, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
     },
-    [entityKey, limit, dispatch, academicYearIdForLoad, entity.searchQuery]
+    [entityKey, limit, dispatch, academicYearIdForLoad, classIdForLoad, entity.searchQuery, buildExtra]
   );
 
   const handlePageSizeChange = useCallback(
     (newSize) => {
       dispatch(setItemsPerPage({ entityKey, value: newSize }));
       dispatch(setCurrentPage({ entityKey, value: 1 }));
-      dispatch(loadData(loadPayload(entityKey, 1, newSize, academicYearIdForLoad, entity.searchQuery)));
+      dispatch(loadData(loadPayload(entityKey, 1, newSize, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
     },
-    [entityKey, dispatch, academicYearIdForLoad, entity.searchQuery]
+    [entityKey, dispatch, academicYearIdForLoad, classIdForLoad, entity.searchQuery, buildExtra]
   );
 
   const renderActions = useCallback(
     (row) => (
       <div className="flex justify-center gap-1">
-        <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row)}>
+        {extraRowActions && extraRowActions(row)}
+        <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad })}>
           <Pencil className="w-4 h-4" />
         </ActionButton>
         <ActionButton
@@ -149,43 +189,56 @@ export default function EntityTab({
         </ActionButton>
       </div>
     ),
-    [modalKey, onEdit, doDelete]
+    [modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, academicYearIdForLoad]
   );
 
   const headerActions = (
     <>
       {showAcademicYearSelect && (
-        <select
-          className="min-w-[180px] cursor-pointer appearance-none rounded border border-[#D1D5DB] bg-white py-2 pl-4 pr-9 text-sm font-normal text-[#374151] focus:border-gray-400 focus:outline-none"
-          style={{
-            backgroundImage: `url(${CHEVRON_SVG})`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 0.5rem center',
-            backgroundSize: '1rem',
-          }}
-          value={selectedAcademicYearId}
-          onChange={(e) => setSelectedAcademicYearId(e.target.value)}
-        >
-          <option value="">{t('entity.selectAcademic')}</option>
-          {academicYearOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="min-w-[200px]">
+          <Select2
+            name="academicYear"
+            value={selectedAcademicYearId}
+            onChange={(e) => setSelectedAcademicYearId(e.target.value)}
+            options={academicYearOptions}
+            placeholder={t('entity.selectAcademic')}
+            isClearable={false}
+          />
+        </div>
+      )}
+      {showClassSelect && (
+        <div className="min-w-[180px]">
+          <Select2
+            name="classSelect"
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            options={classOptions}
+            placeholder="Select Class"
+            isClearable={false}
+          />
+        </div>
       )}
       {loadBtns.map((btn) => {
         const BtnIcon = btn.icon ?? Icon;
         const isAddNew = !!btn.modalKey;
+        const handleClick = () => {
+          if (isAddNew) {
+            if (bulkForm) {
+              setViewMode('form');
+            } else {
+              onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
+            }
+          } else {
+            onShowData(btn.id, academicYearIdForLoad, classIdForLoad);
+          }
+        };
         return (
           <Button
             key={btn.id}
             size="sm"
             variant="primary"
             leftIcon={<BtnIcon className="w-4 h-4" />}
-            onClick={() =>
-              isAddNew ? onEdit(btn.modalKey)(null) : onShowData(btn.id, academicYearIdForLoad)
-            }
+            onClick={handleClick}
             disabled={!isAddNew && entity.isLoading}
           >
             { tr(btn) }
@@ -193,7 +246,18 @@ export default function EntityTab({
         );
       })}
       {!loadBtns.some((b) => b.modalKey) && modalKey && (
-        <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={() => onEdit(modalKey)(null)}>
+        <Button
+          size="sm"
+          variant="primary"
+          leftIcon={<Plus className="w-4 h-4" />}
+          onClick={() => {
+            if (bulkForm) {
+              setViewMode('form');
+            } else {
+              onEdit(modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
+            }
+          }}
+        >
           {t('entity.addNew')}
         </Button>
       )}
@@ -204,8 +268,30 @@ export default function EntityTab({
 
   const handleSearchSubmit = useCallback(() => {
     dispatch(setCurrentPage({ entityKey, value: 1 }));
-    dispatch(loadData(loadPayload(entityKey, 1, limit, academicYearIdForLoad, entity.searchQuery)));
-  }, [entityKey, limit, academicYearIdForLoad, dispatch, entity.searchQuery]);
+    dispatch(loadData(loadPayload(entityKey, 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+  }, [entityKey, limit, academicYearIdForLoad, classIdForLoad, dispatch, entity.searchQuery, buildExtra]);
+
+  if (bulkForm && viewMode === 'form') {
+    return (
+      <Card className="overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,60,93,0.15)] border border-slate-200/70 dark:border-slate-700/80 bg-white dark:bg-slate-900/90">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-auto">{headerActions}</div>
+        </div>
+        <div className="p-4">
+          {bulkForm({
+            context: { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad },
+            onSuccess: () => {
+              setViewMode('data');
+              if (showDataPanel) {
+                dispatch(loadData(loadPayload(entityKey, entity.currentPage || 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+              }
+            },
+            onCancel: () => setViewMode('data'),
+          })}
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <DataTableCard

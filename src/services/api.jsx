@@ -1,6 +1,19 @@
 // API_BASE: no trailing slash. VITE_API_URL e.g. http://172.20.0.20/api. /api = local Vite proxy.
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
+const AUTH_STORAGE_KEY = 'brabaariye_user';
+function getSessionBrId() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const stored = window.localStorage?.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return '';
+    const user = JSON.parse(stored);
+    return user?.br_id != null ? String(user.br_id) : '';
+  } catch {
+    return '';
+  }
+}
+
 /**
  * loginUser – POST /api/login
  * Returns { success, message, user? }. On network/server error returns { success:false, message }.
@@ -27,7 +40,8 @@ export async function loginUser(username, password) {
  * fetchDataPaginated – POST /api/data { queryName, page, limit } (automatic pagination)
  * fetchSelectOptions – POST /api/data { queryName, page: 1, limit: 25 } (for dropdowns)
  */
-export async function fetchSelectOptions(queryName, limit = 25, search = '') {
+export async function fetchSelectOptions(queryName, limit = 25, search = '', extra = {}) {
+  const sessionBrId = getSessionBrId();
   return fetch(`${API_BASE}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -35,7 +49,9 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '') {
       queryName: queryName || 'accounts',
       page: 1,
       limit,
+      ...(sessionBrId && { br_id: sessionBrId }),
       ...(search && { search }),
+      ...extra,
     }),
   }).then((res) => {
     if (!res.ok) {
@@ -47,7 +63,8 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '') {
   });
 }
 
-export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '' }) {
+export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
+  const sessionBrId = getSessionBrId();
   const res = await fetch(`${API_BASE}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -55,8 +72,10 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
       queryName: queryName || 'accounts',
       page,
       limit,
+      ...(sessionBrId && { br_id: sessionBrId }),
       ...(search != null && String(search).trim() && { search: String(search).trim() }),
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
+      ...extra,
     }),
   });
   if (!res.ok) {

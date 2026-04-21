@@ -15,19 +15,26 @@ function detectKeys(columns, row) {
 }
 
 const HINT_LABEL = '💡 Waxaa jira wax ka badan 25 xog – geli erey raadinta si aad u hesho';
-const selectCache = {}; // Cache per optionsKey
+const selectCache = {}; // Cache per optionsKey (+ extra params signature)
 
-/** Soo qabo 25 row ugu horreeya, search marka 2+ xaraf – cache + hint */
-async function loadOptionsForKey(optionsKey, search = '', useCache = true) {
-  const cacheEntry = selectCache[optionsKey] ?? { items: [], cached: false };
-  selectCache[optionsKey] = cacheEntry;
+function cacheKeyFor(optionsKey, extra) {
+  const entries = Object.entries(extra || {}).filter(([, v]) => v !== '' && v != null);
+  if (!entries.length) return optionsKey;
+  const sig = entries.sort().map(([k, v]) => `${k}=${v}`).join(',');
+  return `${optionsKey}::${sig}`;
+}
+
+/** Soo qabo 25 row ugu horreeya, marka xaraf 1+ la qoro → client-cache filter + API fallback */
+async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra = {}) {
+  const ck = cacheKeyFor(optionsKey, extra);
+  const cacheEntry = selectCache[ck] ?? { items: [], cached: false };
+  selectCache[ck] = cacheEntry;
   const searchLower = search.trim().toLowerCase();
   const isFirstOpen = !searchLower && !cacheEntry.cached;
-  const isSearch = searchLower.length >= 2 || (!useCache && searchLower.length >= 1);
 
   // 1. First open: fetch 25 rows
   if (isFirstOpen) {
-    const res = await fetchSelectOptions(optionsKey, 25, '').catch(() => ({}));
+    const res = await fetchSelectOptions(optionsKey, 25, '', extra).catch(() => ({}));
     const rows = res?.data || [];
     const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
     const { valueKey, labelKey } = detectKeys(cols, rows[0]);
@@ -39,44 +46,43 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true) {
     return opts;
   }
 
-  // 2. Search: check cache first (client-side filter)
-  if (isSearch && useCache && cacheEntry.items.length > 0) {
+  // 2. Empty search + cached: return the cached 25
+  if (!searchLower) {
+    const opts = [...cacheEntry.items];
+    if (cacheEntry.items.length >= 25) opts.push({ value: '__hint__', label: HINT_LABEL, isHint: true });
+    return opts;
+  }
+
+  // 3. Search (1+ chars): client-side cache filter first
+  if (useCache && cacheEntry.items.length > 0) {
     const matched = cacheEntry.items.filter(
       (item) => !item.isHint && String(item.label ?? '').toLowerCase().includes(searchLower)
     );
     if (matched.length > 0) return matched;
   }
 
-  // 3. Search: fetch from API – haddii wax la helin, muuji "Xogtaad raadisay ma jirto"
-  if (isSearch) {
-    const res = await fetchSelectOptions(optionsKey, 20, search).catch(() => ({}));
-    const rows = res?.data || [];
-    const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
-    const { valueKey, labelKey } = detectKeys(cols, rows[0]);
-    const newItems = rows.map((r) => ({ value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') }));
-    if (newItems.length > 0) {
-      const existingIds = new Set(cacheEntry.items.map((x) => x.value));
-      newItems.forEach((item) => {
-        if (!existingIds.has(item.value)) {
-          cacheEntry.items.push(item);
-          existingIds.add(item.value);
-        }
-      });
-      return newItems;
-    }
-    return [];
+  // 4. Cache miss → hit API
+  const res = await fetchSelectOptions(optionsKey, 20, search, extra).catch(() => ({}));
+  const rows = res?.data || [];
+  const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
+  const { valueKey, labelKey } = detectKeys(cols, rows[0]);
+  const newItems = rows.map((r) => ({ value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') }));
+  if (newItems.length > 0) {
+    const existingIds = new Set(cacheEntry.items.map((x) => x.value));
+    newItems.forEach((item) => {
+      if (!existingIds.has(item.value)) {
+        cacheEntry.items.push(item);
+        existingIds.add(item.value);
+      }
+    });
   }
-
-  // 4. Fallback: cached 25 + hint
-  const opts = [...cacheEntry.items];
-  if (cacheEntry.items.length >= 25) opts.push({ value: '__hint__', label: HINT_LABEL, isHint: true });
-  return opts;
+  return newItems;
 }
 
-/** Submit – kaliya /api/all (fn + params + oper) */
+/** Submit – kaliya /api/all (fn + params + oper). Returns { success, message } ka imaanaya DB (alerts table). */
 async function submitOperation(config, form, operation) {
   const params = config.toParams(form);
-  await crud({ operation, fn: config.fn, params });
+  return await crud({ operation, fn: config.fn, params });
 }
 
 /**
@@ -106,6 +112,13 @@ export default function CrudModal({
     }
   }, [isOpen]);
 
+  const extraParamsFor = useCallback((f, source) => {
+    if (!f?.dependsOn) return {};
+    return Object.fromEntries(
+      Object.entries(f.dependsOn).map(([backendKey, formKey]) => [backendKey, source?.[formKey] ?? ''])
+    );
+  }, []);
+
   useEffect(() => {
     if (!isOpen || !config?.fields) return;
     const init = initialForm && typeof initialForm === 'object' ? initialForm : {};
@@ -113,24 +126,25 @@ export default function CrudModal({
       .filter((f) => f.optionsKey && (f.nameKey ?? f.labelRowKey) && (init[f.name] != null && init[f.name] !== '') && !init[`${f.name}_label`])
       .forEach((f) => {
         const searchVal = String(init[f.name]).trim();
-        loadOptionsForKey(f.optionsKey, searchVal.length >= 1 ? searchVal : '', false)
+        const extra = extraParamsFor(f, init);
+        loadOptionsForKey(f.optionsKey, searchVal.length >= 1 ? searchVal : '', false, extra)
           .then((opts) => {
             const found = opts.find((o) => String(o.value) === String(init[f.name]));
             if (found?.label) setFetchedLabels((prev) => ({ ...prev, [f.name]: found.label }));
           })
           .catch(() => {});
       });
-  }, [isOpen, config?.fields, initialForm]);
+  }, [isOpen, config?.fields, initialForm, extraParamsFor]);
 
-  const createLoadOptions = useCallback((optionsKey) => {
+  const createLoadOptions = useCallback((optionsKey, getExtra) => {
     if (!optionsKey) return undefined;
     let debounceTimer;
     return (inputValue) => {
       return new Promise((resolve) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          loadOptionsForKey(optionsKey, inputValue || '').then(resolve);
-        }, 400);
+          loadOptionsForKey(optionsKey, inputValue || '', true, getExtra?.() || {}).then(resolve);
+        }, 250);
       });
     };
   }, []);
@@ -143,12 +157,21 @@ export default function CrudModal({
       updates[`${name}_label`] = e.target.label;
       selectedLabelRef.current[name] = e.target.label;
     }
+    // Reset dependents: haddii field-kan la bedelay loo isticmaalo dependsOn field kale, clear-garee
+    config?.fields?.forEach((depF) => {
+      if (depF.dependsOn && Object.values(depF.dependsOn).includes(name)) {
+        updates[depF.name] = '';
+        updates[`${depF.name}_label`] = '';
+        delete selectedLabelRef.current[depF.name];
+      }
+    });
     setForm((prev) => ({ ...prev, ...updates }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const runValidation = () => {
-    const errs = config.validate ? config.validate(form) : {};
+    const currentMode = mode === 'update' ? 'update' : 'insert';
+    const errs = config.validate ? config.validate(form, currentMode) : {};
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -157,11 +180,10 @@ export default function CrudModal({
     if (!runValidation()) return;
     setLoading(true);
     try {
-      await submitOperation(config, form, operation);
+      const result = await submitOperation(config, form, operation);
       onClose();
       onSuccess?.();
-      const msg = operation === 'insert' ? 'Xogtada waa lagu daray.' : operation === 'update' ? 'Xogtada waa la cusboonaysiiyay.' : 'Xogtada waa la tirtay.';
-      await swal.swalSuccess('Wa la guulaystey', msg);
+      await swal.swalSuccess('Wa la guulaystey', result?.message || '');
     } catch (err) {
       const msg = err?.message || '';
       const isConnectionError = /failed to fetch|networkerror|load failed|econnrefused|err_network|connection/i.test(msg);
@@ -224,16 +246,22 @@ export default function CrudModal({
     if (f.type === 'select') {
       const key = f.optionsKey;
       const useAsync = !!key;
+      const extra = extraParamsFor(f, form);
+      const hasDeps = !!f.dependsOn;
+      const depsUnmet = hasDeps && Object.values(extra).some((v) => v === '' || v == null);
+      const depSig = hasDeps ? Object.values(extra).join('|') : '';
       return (
         <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
           <Select2
+            key={hasDeps ? `${f.name}:${depSig}` : f.name}
             name={f.name}
             value={val ?? ''}
             selectedLabel={(f.nameKey ?? f.labelRowKey) ? (form[`${f.name}_label`] ?? selectedLabelRef.current[f.name] ?? fetchedLabels[f.name]) : undefined}
             onChange={handleChange}
             options={useAsync ? [] : opts}
-            loadOptions={useAsync ? createLoadOptions(key) : undefined}
-            placeholder={f.placeholder ?? 'Raadi...'}
+            loadOptions={useAsync ? createLoadOptions(key, () => extraParamsFor(f, form)) : undefined}
+            placeholder={depsUnmet ? 'Marka hore dooro kala xiriirka...' : (f.placeholder ?? 'Raadi...')}
+            isDisabled={depsUnmet}
             noOptionsMessage={() => 'Xogtaad raadisay ma jirto'}
             loadingMessage={() => 'Waa la baarayaa...'}
             isOptionDisabled={(opt) => opt?.isHint}
@@ -314,12 +342,16 @@ export default function CrudModal({
     );
   };
 
+  const formClass = config.gridCols === 2
+    ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
+    : 'space-y-4';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title={config.title}
-      size="md"
+      size={config.modalSize || 'md'}
       footer={
         <div className="flex justify-end gap-2 w-full flex-wrap">
           {!isEdit && (
@@ -340,9 +372,11 @@ export default function CrudModal({
         </div>
       }
     >
-      <form id="crud-form" onSubmit={(e) => { e.preventDefault(); isEdit ? handleUpdate(e) : handleSave(e); }} className="space-y-4">
-        {errors.submit && <p className="text-sm text-red-600">{errors.submit}</p>}
-        {config.fields?.map((f) => renderField(f))}
+      <form id="crud-form" onSubmit={(e) => { e.preventDefault(); isEdit ? handleUpdate(e) : handleSave(e); }} className={formClass}>
+        {errors.submit && <p className={`text-sm text-red-600 ${config.gridCols === 2 ? 'md:col-span-2' : ''}`}>{errors.submit}</p>}
+        {config.fields
+          ?.filter((f) => !f.showOnMode || f.showOnMode === (isEdit ? 'update' : 'insert'))
+          .map((f) => renderField(f))}
       </form>
     </Modal>
   );

@@ -13,7 +13,11 @@ const select2Styles = {
   menu: (base) => ({
     ...base,
     borderRadius: '12px',
-    zIndex: 50,
+    zIndex: 9999,
+  }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 9999,
   }),
   option: (base, state) => ({
     ...base,
@@ -44,6 +48,8 @@ const darkSelect2Styles = {
   menu: (base) => ({
     ...base,
     backgroundColor: 'rgb(51 65 85)',
+    borderRadius: '12px',
+    zIndex: 9999,
   }),
   option: (base, state) => ({
     ...base,
@@ -72,6 +78,7 @@ export default function Select2({
   const selectedOpt = options?.find((o) => String(o.value) === String(value));
   const displayValue = selectedOpt ?? (value != null && value !== '' ? { value, label: selectedLabel ?? String(value) } : null);
   const common = {
+    ...props,
     value: displayValue,
     onChange: (v) => {
       if (v?.isHint || v?.value === '__hint__') return;
@@ -81,9 +88,14 @@ export default function Select2({
     isDisabled,
     isClearable: true,
     isSearchable: true,
+    openMenuOnFocus: true,
+    tabSelectsValue: false,
     styles,
     classNamePrefix: 'select2',
-    ...props,
+    menuPortalTarget: typeof document !== 'undefined' ? document.body : null,
+    menuPosition: 'fixed',
+    menuPlacement: 'auto',
+    menuShouldScrollIntoView: false,
   };
 
   if (loadOptions) {

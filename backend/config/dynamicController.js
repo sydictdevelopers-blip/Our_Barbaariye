@@ -13,11 +13,15 @@ const db = require('./db');
 const PROCEDURE_PARAM_ORDER = {
   subject_sp: ['sub_id_sp', 'name_sp', 'state_sp', 'ordering_sp', 'oper'],
   level_sp: ['lev_id_sp', 'l_ty_id_sp', 'level_name_sp', 'fee_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
-  class_sp: ['cl_id_sp', 'class_sp', 'lev_id_sp', 'gr_id_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
+  class_sp: ['cl_id_sp', 'class_sp', 'lev_id_sp', 'gr_id_sp', 'br_id_sp', 'u_br_id_sp', 'sh_id_sp', 'oper'],
+  class_formaster_sp: ['c_f_id_sp', 'cl_id_sp', 'emp_id_sp', 'std_id_sp', 'a_y_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  subject_class_sp: ['sub_cl_id_sp', 'cl_id_sp', 'sub_id_sp', 'emp_id_sp', 'no_of_period_sp', 'state_sp', 'u_br_id_sp', 'a_y_id_sp', 'oper'],
   activity_sp: ['act_id_sp', 'activity_name_sp', 'description_sp', 'state_sp', 'br_id_sp', 'u_br_id_sp', 'oper'],
   subject_activity_sp: ['sub_act_id_sp', 'act_id_sp', 'subject_id_sp', 'max_marks_sp', 'state_sp', 'oper'],
   student_activity_edit_sp: ['sta_id_sp', 'student_id_sp', 'sub_act_id_sp', 'marks_sp', 'state_sp', 'oper'],
   academic_year_sp: ['a_y_id_sp', 'academic_name_sp', 'started_sp', 'ended_sp', 'active_sp', 'u_br_id_sp', 'oper'],
+  users_sp: ['usr_id_sp', 'p_id_sp', 'username_sp', 'password_sp', 'br_id_sp', 'state_sp', 'lock_user_sp', 'oper'],
+  user_privilege_sp: ['usr_id_sp', 'privalage_sp', 'oper'],
 };
 
 /**

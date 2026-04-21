@@ -7,6 +7,7 @@ import { Database, Plus } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
+import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { getTabsForPath } from '../../../config/menuConfig';
@@ -33,7 +34,7 @@ export default function AccountsPage() {
   const location = useLocation();
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const [modal, setModal] = useState({ entityKey: null, editRow: null });
+  const [modal, setModal] = useState({ entityKey: null, editRow: null, context: {} });
 
   const rawTabs = getTabsForPath(location.pathname);
   const tabs = useMemo(
@@ -53,13 +54,29 @@ export default function AccountsPage() {
     }
   }, [location.pathname, tabs, activeTab, dispatch]);
 
-  const openModal = (entityKey) => (row = null) => {
+  const openModal = (entityKey) => (row = null, context = {}) => {
     const config = CRUD_CONFIG[entityKey];
     const editRow = row && config?.fromRow ? config.fromRow(row) : row;
-    setModal({ entityKey, editRow });
+    setModal({ entityKey, editRow, context });
   };
 
-  const closeModal = () => setModal({ entityKey: null, editRow: null });
+  const closeModal = () => setModal({ entityKey: null, editRow: null, context: {} });
+
+  const reloadEntity = (entityKey) => {
+    const q = getQueryForModalKey(tabs, entityKey);
+    if (!q) return;
+    const tabCfg = tabs.find((t) => t.modalKey === entityKey);
+    const entKey = tabCfg?.entityKey ?? q;
+    const entity = store.getState().data.entities[entKey] ?? {};
+    dispatch(loadData({
+      queryName: q,
+      page: entity.currentPage ?? 1,
+      limit: entity.itemsPerPage ?? 10,
+      search: entity.searchQuery ?? '',
+      ...(modal.context?.cl_id && { cl_id: modal.context.cl_id }),
+      ...(modal.context?.academicYearId && { academicYearId: modal.context.academicYearId }),
+    }));
+  };
 
   const renderTabContent = () => {
     const cfg = activeTabConfig?.entityKey ? activeTabConfig : null;
@@ -75,7 +92,14 @@ export default function AccountsPage() {
             onEdit={openModal}
             showAcademicYearSelect={cfg.showAcademicYearSelect}
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
+            showClassSelect={cfg.showClassSelect}
+            classOptionsQuery={cfg.classOptionsQuery}
             hiddenColumns={cfg.hiddenColumns}
+            bulkForm={cfg.entityKey === 'SubjectClassSetup'
+              ? ({ context, onSuccess }) => (
+                  <SubjectClassBulkForm context={context} onSuccess={onSuccess} />
+                )
+              : undefined}
           />
         </motion.div>
       );
@@ -91,16 +115,16 @@ export default function AccountsPage() {
     <div className="space-y-4 sm:space-y-6 min-w-0">
       {tabs.length > 0 && (
         <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/60">
-          <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] to-[#0D9488]" />
-          <div className="flex items-center justify-between flex-wrap gap-4 px-5 py-4 min-h-[58px] bg-gradient-to-r from-[#F8FAFC] to-[#EEF2F7] border-b border-slate-200/80">
+          <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+          <div className="relative px-5 py-5 bg-white border-b border-slate-200/70">
             <Tabs
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={(id) => dispatch(setActiveTab(id))}
-              className="flex-1 min-w-0"
+              className="w-full"
             />
           </div>
-          <div className="px-3 pb-4 pt-1">
+          <div className="px-3 pb-4 pt-2">
             <AnimatePresence mode="wait">{renderTabContent()}</AnimatePresence>
           </div>
         </Card>
@@ -108,9 +132,12 @@ export default function AccountsPage() {
 
       {modalEntities.map((entityKey) => {
         const config = CRUD_CONFIG[entityKey];
-        const isOpen = modal.entityKey === entityKey;
-        const editRow = modal.editRow;
         if (!config) return null;
+        // SubjectClassSetup: insert-ka waxaa qaabilsan inline bulk form-ka,
+        // sidaas darteed CrudModal kaliya waxaa loo furaa edit mode (editRow jiro).
+        const isBulkEntity = entityKey === 'SubjectClassSetup';
+        const editRow = modal.editRow;
+        const isOpen = modal.entityKey === entityKey && (isBulkEntity ? !!editRow : true);
         return (
           <CrudModal
             key={entityKey}
@@ -119,20 +146,7 @@ export default function AccountsPage() {
             config={config}
             initialForm={editRow || {}}
             mode={editRow ? 'update' : 'insert'}
-            onSuccess={() => {
-              const q = getQueryForModalKey(tabs, entityKey);
-              if (q) {
-                const tabCfg = tabs.find((t) => t.modalKey === entityKey);
-                const entKey = tabCfg?.entityKey ?? q;
-                const entity = store.getState().data.entities[entKey] ?? {};
-                dispatch(loadData({
-                  queryName: q,
-                  page: entity.currentPage ?? 1,
-                  limit: entity.itemsPerPage ?? 10,
-                  search: entity.searchQuery ?? '',
-                }));
-              }
-            }}
+            onSuccess={() => reloadEntity(entityKey)}
           />
         );
       })}

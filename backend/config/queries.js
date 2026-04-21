@@ -6,16 +6,31 @@
 const QUERIES = {
   // ---- Dropdowns (optionsKey in crudConfig) – must return value + label columns for selects ----
   level_type: 'SELECT l.l_ty_id, l.name AS level_name FROM level_type l ORDER BY l.name',
+  levels: (p) => `SELECT lev_id, level FROM levels_show(${Number(p?.br_id) || 0}) ORDER BY level`,
+  grades: 'SELECT gr_id, grade_name FROM grade ORDER BY gr_id',
+  class_options: (p) => `SELECT cl_id, class FROM class WHERE br_id = ${Number(p?.br_id) || 0} ORDER BY class`,
+  employee_options: 'SELECT e.emp_id, p.p_name FROM employee e JOIN people p ON p.p_id = e.p_id ORDER BY p.p_name',
+  subject_options: 'SELECT sub_id, name FROM subjects ORDER BY name',
+  shift_options: 'SELECT * FROM shift',
+  student_options: (p) => `SELECT s.std_id, p.p_name FROM student s JOIN people p ON p.p_id = s.p_id JOIN student_class sc ON sc.std_id = s.std_id WHERE p.state = 'Active' AND sc.a_y_id = ${Number(p?.a_y_id) || 0} AND sc.cl_id = ${Number(p?.cl_id) || 0} ORDER BY p.p_name`,
+  academic_options: 'SELECT a_y_id, academic_name FROM academic_year ac  ORDER BY a_y_id',
   accounts: 'SELECT * FROM accounts ORDER BY acc_id',
   gendersections: 'SELECT * FROM accounts ORDER BY acc_id',
 
   // ---- Datatable / entity queries (queryName in menuConfig) ----
-  LevelSetup: 'SELECT * FROM levels_show(1)',
-  ClassSetup: 'SELECT * FROM class',
-  ClassFormaster: 'SELECT * FROM class_formaster ORDER BY 1',
-  SubjectsSetup: 'SELECT * FROM subjects ORDER BY sub_id',
-  SubjectClassSetup: 'SELECT * FROM subject_class ORDER BY 1',
-  academicYeartab: 'select * from academic_year_show()',
+  LevelSetup: (p) => `SELECT * FROM levels_show(${Number(p?.br_id) || 0})`,
+  ClassSetup: (p) => {
+    const brId = Number(p?.br_id) || 0;
+    return `SELECT c.cl_id, c.class AS class_name, c.lev_id, lv.level AS level_name, c.gr_id, g.grade_name, c.sh_id, sh.shift AS shift_name, c.state, c.br_id, c.u_br_id, c.reg_date FROM class c LEFT JOIN (SELECT lev_id, level FROM levels_show(${brId})) lv ON lv.lev_id = c.lev_id LEFT JOIN grade g ON g.gr_id = c.gr_id LEFT JOIN shift sh ON sh.sh_id = c.sh_id WHERE c.br_id = ${brId} ORDER BY c.cl_id`;
+  },
+  ClassFormaster: (p) => {
+    const brId = Number(p?.br_id) || 0;
+    const ayId = Number(p?.academicYearId) || 0;
+    return `SELECT cf.c_f_id, cf.cl_id, c.class AS class_name, cf.emp_id, p1.p_name AS person_name, cf.std_id, p2.p_name AS student_name, cf.a_y_id, ay.academic_name, cf.state, cf.reg_date, u.username FROM class_formaster cf JOIN class c ON c.cl_id = cf.cl_id JOIN employee em ON em.emp_id = cf.emp_id JOIN people p1 ON p1.p_id = em.p_id JOIN student s ON cf.std_id = s.std_id JOIN people p2 ON p2.p_id = s.p_id JOIN user_branch ub ON ub.u_br_id = cf.u_br_id JOIN users u ON u.usr_id = ub.usr_id LEFT JOIN academic_year ay ON ay.a_y_id = cf.a_y_id WHERE ub.br_id = ${brId} AND cf.a_y_id = ${ayId} ORDER BY cf.c_f_id`;
+  },
+  SubjectsSetup: 'SELECT * FROM subjects_show()',
+  SubjectClassSetup: (p) => `SELECT * FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0})`,
+  academicYeartab: 'SELECT * FROM academic_year_show() ORDER BY id',
   BranchTransfer: 'SELECT * FROM branch_transfer ORDER BY 1',
   AcademicTransfer: 'SELECT * FROM academic_transfer ORDER BY 1',
   ClassTransfer: 'SELECT * FROM class_transfer ORDER BY 1',
@@ -33,6 +48,12 @@ const QUERIES = {
   SubjectActivity: 'SELECT sa.sub_act_id, sa.act_id, a.activity_name, sa.subject_id, s.subject_name, sa.max_marks, sa.state FROM subject_activity sa LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY sa.sub_act_id',
   StudentActivityEdit: 'SELECT sae.sta_id, sae.student_id, st.student_name, sae.sub_act_id, CONCAT(a.activity_name, \' - \', s.subject_name) AS subject_activity, sae.marks_obtained, sae.state FROM student_activity_edit sae LEFT JOIN students st ON st.student_id = sae.student_id LEFT JOIN subject_activity sa ON sa.sub_act_id = sae.sub_act_id LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY sae.sta_id',
 
+  // ---- User management ----
+  // Function-style entry — runtime params ayaa lagu soo gudbiyaa (br_id)
+  Users: (p) => `SELECT * FROM users_show(${Number(p?.br_id) || 0})`,
+  branch_options: 'SELECT br_id, br_name FROM branch ORDER BY br_name',
+  people_options: 'SELECT p_id, p_name FROM people ORDER BY p_name',
+
   // ---- Dropdown option queries ----
   activity_options: 'SELECT act_id, activity_name FROM activity ORDER BY activity_name',
   subject_activity_options: 'SELECT sa.sub_act_id, CONCAT(a.activity_name, \' - \', s.subject_name) AS sub_act_name FROM subject_activity sa LEFT JOIN activity a ON a.act_id = sa.act_id LEFT JOIN subjects s ON s.subject_id = sa.subject_id ORDER BY 2',
@@ -47,12 +68,14 @@ const QUERIES = {
 
 const DEFAULT_QUERY = 'accounts';
 
-/** Returns SQL for name, or null if not whitelisted. Case-insensitive lookup. */
-function getQuery(name) {
+/** Returns SQL for name, or null if not whitelisted. Case-insensitive lookup. Function entries receive runtime params. */
+function getQuery(name, params = {}) {
   const key = (name || '').trim().toLowerCase();
   if (!key) return null;
   const found = Object.keys(QUERIES).find((k) => k.toLowerCase() === key);
-  return found ? QUERIES[found] : null;
+  if (!found) return null;
+  const entry = QUERIES[found];
+  return typeof entry === 'function' ? entry(params) : entry;
 }
 
 function getAvailableQueries() {

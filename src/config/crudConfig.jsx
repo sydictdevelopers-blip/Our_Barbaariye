@@ -2,8 +2,26 @@ function toLabel(name) {
   return name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+const AUTH_STORAGE_KEY = 'brabaariye_user';
+function getSessionUser() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage?.getItem(AUTH_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+export const getSessionUBrId = () => getSessionUser()?.u_br_id ?? '';
+export const getSessionBrId = () => getSessionUser()?.br_id ?? '';
+export const getSessionShId = () => getSessionUser()?.sh_id ?? 1;
+
+function resolveDefault(f) {
+  return typeof f.default === 'function' ? f.default() : f.default;
+}
+
 function generateCrudConfig(schema) {
-  const { title, fn, endpoint, idKey = 'id', fields = [] } = schema;
+  const { title, fn, endpoint, idKey = 'id', fields = [], extraValidate } = schema;
 
   const fromRow = (row) => {
     const out = { id: row[idKey] ?? row.id };
@@ -12,7 +30,10 @@ function generateCrudConfig(schema) {
       const keyCandidates = [f.value, f.rowKey, f.name].filter(Boolean);
       const keys = [...new Set([...keyCandidates, f.name])];
       let val = keys.map((k) => row[k]).find((v) => v != null);
-      if (val == null) val = f.type === 'number' ? (f.default ?? 0) : (f.type === 'checkbox' ? false : (f.default ?? ''));
+      if (val == null) {
+        const dflt = resolveDefault(f);
+        val = f.type === 'number' ? (dflt ?? 0) : (f.type === 'checkbox' ? false : (dflt ?? ''));
+      }
       else if (f.type === 'checkbox') val = val === 1 || val === true || val === '1';
       else if (f.type === 'date' && val) {
         // DB returns ISO timestamp ('2025-04-30T21:00:00.000Z') or Date obj; <input type="date"> needs 'YYYY-MM-DD'
@@ -41,10 +62,11 @@ function generateCrudConfig(schema) {
     fields.filter((f) => !f.omitFromParams).forEach((f) => {
       const key = f.param ?? `p_${f.name}_sp`;
       const val = form[f.name];
-      if (f.type === 'number') out[key] = isNaN(parseFloat(val)) ? (f.default ?? 0) : parseFloat(val);
+      const dflt = resolveDefault(f);
+      if (f.type === 'number') out[key] = isNaN(parseFloat(val)) ? (dflt ?? 0) : parseFloat(val);
       else if (f.type === 'checkbox') out[key] = val ? '1' : '0';
       else if (f.type === 'hidden') {
-        const v = (val == null || val === '') ? f.default : val;
+        const v = (val == null || val === '') ? dflt : val;
         out[key] = (v ?? '').toString().trim();
       }
       else out[key] = (val ?? '').toString().trim();
@@ -52,20 +74,29 @@ function generateCrudConfig(schema) {
     return out;
   };
 
-  const validate = (form) => {
+  const validate = (form, mode = 'insert') => {
     const e = {};
-    fields.filter((f) => f.required).forEach((f) => {
-      const v = form[f.name];
-      const invalid = f.type === 'checkbox' ? v !== true : !(v ?? '').toString().trim();
-      if (invalid) e[f.name] = `${toLabel(f.label || f.name)} required`;
-    });
+    fields
+      .filter((f) => {
+        if (f.required) return true;
+        if (f.requiredOnMode && f.requiredOnMode === mode) return true;
+        return false;
+      })
+      .forEach((f) => {
+        const v = form[f.name];
+        const invalid = f.type === 'checkbox' ? v !== true : !(v ?? '').toString().trim();
+        if (invalid) e[f.name] = `${toLabel(f.label || f.name)} required`;
+      });
+    if (typeof extraValidate === 'function') {
+      Object.assign(e, extraValidate(form, mode) || {});
+    }
     return e;
   };
 
   const normalizedFields = fields.map((f) => ({
     name: f.name,
     label: f.label ?? toLabel(f.name),
-    placeholder: f.placeholder ?? `e.g. ${f.name}`,
+    placeholder: f.placeholder ?? `e.g. ${f.label ?? toLabel(f.name)}`,
     type: f.type ?? 'text',
     options: f.options,
     optionsKey: f.optionsKey,
@@ -73,6 +104,8 @@ function generateCrudConfig(schema) {
     nameKey: f.nameKey ?? f.labelRowKey,
     rows: f.rows,
     default: f.default,
+    showOnMode: f.showOnMode,
+    ...(f.dependsOn && { dependsOn: f.dependsOn }),
     ...(f.props && { props: f.props }),
   }));
 
@@ -80,6 +113,8 @@ function generateCrudConfig(schema) {
     title,
     ...(fn && { fn }),
     ...(endpoint && { endpoint }),
+    ...(schema.gridCols && { gridCols: schema.gridCols }),
+    ...(schema.modalSize && { modalSize: schema.modalSize }),
     fromRow,
     toParams,
     validate,
@@ -98,12 +133,51 @@ const ENTITIES = [
     omitPUsrId: true,
     idParam: 'cl_id_sp',
     fields: [
-      { name: 'class_sp', label: 'Class', type: 'text', required: true, rowKey: 'class', param: 'class_sp' },
-      { name: 'lev_id_sp', label: 'Level ID', type: 'number', rowKey: 'lev_id', param: 'lev_id_sp', default: 0, props: { min: 0 } },
-      { name: 'gr_id_sp', label: 'Grade ID', type: 'number', rowKey: 'gr_id', param: 'gr_id_sp', default: 0, props: { min: 0 } },
+      { name: 'class_sp', label: 'Class', type: 'text', required: true, rowKey: 'class_name', param: 'class_sp' },
+      { name: 'lev_id_sp', label: 'Level', type: 'select', required: true, optionsKey: 'levels', rowKey: 'lev_id', value: 'lev_id', nameKey: 'level_name', param: 'lev_id_sp', default: '' },
+      { name: 'gr_id_sp', label: 'Grade', type: 'select', required: true, optionsKey: 'grades', rowKey: 'gr_id', value: 'gr_id', nameKey: 'grade_name', param: 'gr_id_sp', default: '' },
+      { name: 'sh_id_sp', label: 'Shift', type: 'select', required: true, optionsKey: 'shift_options', rowKey: 'sh_id', value: 'sh_id', nameKey: 'shift_name', param: 'sh_id_sp', default: '' },
+      { name: 'br_id_sp', type: 'hidden', param: 'br_id_sp', default: getSessionBrId },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+  {
+    key: 'SubjectClassSetup',
+    title: 'Subject Class Edit',
+    fn: 'subject_class_sp',
+    idKey: 'sub_cl_id',
+    idParam: 'sub_cl_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 2,
+    modalSize: 'lg',
+    fields: [
+      { name: 'a_y_id_sp', label: 'Academic', type: 'select', required: true, optionsKey: 'academic_options', rowKey: 'a_y_id', value: 'a_y_id', nameKey: 'academic_name', param: 'a_y_id_sp', placeholder: 'Select Academic', default: '' },
+      { name: 'cl_id_sp', label: 'Class', type: 'select', required: true, optionsKey: 'class_options', rowKey: 'cl_id', value: 'cl_id', nameKey: 'class_name', param: 'cl_id_sp', placeholder: 'Select Class', default: '' },
+      { name: 'sub_id_sp', label: 'Subject', type: 'select', required: true, optionsKey: 'subject_options', rowKey: 'sub_id', value: 'sub_id', nameKey: 'subject_name', param: 'sub_id_sp', placeholder: 'Select Subject', default: '' },
+      { name: 'emp_id_sp', label: 'Teacher', type: 'select', required: true, optionsKey: 'employee_options', rowKey: 'emp_id', value: 'emp_id', nameKey: 'employee_name', param: 'emp_id_sp', placeholder: 'Select Teacher', default: '' },
+      { name: 'no_of_period_sp', label: 'No. of Periods', type: 'number', rowKey: 'no_of_period', param: 'no_of_period_sp', default: 0, props: { min: 0 } },
       { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
-      { name: 'br_id_sp', label: 'Branch ID', type: 'hidden', param: 'br_id_sp', default: 1 },
-      { name: 'u_br_id_sp', label: 'U Branch ID', type: 'hidden', param: 'u_br_id_sp', default: 1 },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+  {
+    key: 'ClassFormaster',
+    title: 'Class Formaster Form',
+    fn: 'class_formaster_sp',
+    idKey: 'c_f_id',
+    idParam: 'c_f_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 2,
+    modalSize: 'lg',
+    fields: [
+      { name: 'cl_id_sp', label: 'Class', type: 'select', required: true, optionsKey: 'class_options', rowKey: 'cl_id', value: 'cl_id', nameKey: 'class_name', param: 'cl_id_sp', placeholder: 'Select Class', default: '' },
+      { name: 'emp_id_sp', label: 'Class Formaster', type: 'select', required: true, optionsKey: 'employee_options', rowKey: 'emp_id', value: 'emp_id', nameKey: 'person_name', param: 'emp_id_sp', placeholder: 'Select Class formaster', default: '' },
+      { name: 'a_y_id_sp', label: 'Academic', type: 'select', required: true, optionsKey: 'academic_options', rowKey: 'a_y_id', value: 'a_y_id', nameKey: 'academic_name', param: 'a_y_id_sp', placeholder: 'Select Academic', default: '' },
+      { name: 'std_id_sp', label: 'Class Monitor', type: 'select', required: true, optionsKey: 'student_options', dependsOn: { a_y_id: 'a_y_id_sp', cl_id: 'cl_id_sp' }, rowKey: 'std_id', value: 'std_id', nameKey: 'student_name', param: 'std_id_sp', placeholder: 'Select Class Monitor', default: '' },
+      { name: 'state_sp', type: 'hidden', param: 'state_sp', default: 'Active' },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
   },
   {
@@ -157,14 +231,17 @@ const ENTITIES = [
     ],
   },
   {
-    key: 'subject',
+    key: 'SubjectsSetup',
     title: 'Subject Form',
     fn: 'subject_sp',
-    idKey: 'subject_id',
+    idKey: 'sub_id',
+    idParam: 'sub_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
     fields: [
-      { name: 'subject_name', label: 'Subject Name', type: 'text', required: true, param: 'p_name_sp' },
-      { name: 'subject_code', label: 'Subject Code', type: 'text', param: 'p_code_sp' },
-      { name: 'description', label: 'Description', type: 'textarea', rows: 3, param: 'p_description_sp' },
+      { name: 'name_sp', label: 'Subject Name', type: 'text', required: true, rowKey: 'name', param: 'name_sp' },
+      { name: 'ordering_sp', label: 'Ordering', type: 'number', rowKey: 'ordering', param: 'ordering_sp', default: 0, props: { min: 0 } },
+      { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
     ],
   },
   {
@@ -286,6 +363,38 @@ const ENTITIES = [
       { name: 'sub_act_id_sp', label: 'Subject Activity', type: 'select', required: true, optionsKey: 'subject_activity_options', rowKey: 'sub_act_id', param: 'sub_act_id_sp', default: '' },
       { name: 'marks_sp', label: 'Marks Obtained', type: 'number', rowKey: 'marks_obtained', param: 'marks_sp', default: 0, props: { min: 0, step: 0.01 } },
       { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
+    ],
+  },
+  {
+    key: 'Users',
+    title: 'User',
+    fn: 'users_sp',
+    idKey: 'usr_id',
+    idParam: 'usr_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    extraValidate: (form) => {
+      const e = {};
+      const pw = (form.password_sp ?? '').toString();
+      const pwc = (form.password_confirm_sp ?? '').toString();
+      // Had iyo goor (insert/update): password iyo confirm waa inay isle'egaadaan
+      if (pw !== pwc) e.password_confirm_sp = 'Passwords do not match';
+      return e;
+    },
+    fields: [
+      { name: 'p_id_sp', label: 'Person', type: 'select', required: true, optionsKey: 'people_options', rowKey: 'p_id', value: 'p_id', nameKey: 'p_name', param: 'p_id_sp', placeholder: 'Dooro qofka...' },
+      { name: 'username_sp', label: 'Username', type: 'text', required: true, rowKey: 'username', param: 'username_sp', placeholder: 'Username' },
+      // Password — INSERT: required; UPDATE: si toos ah ayaa loo soo akhriyaa row.password (display-ka ayuu masking-ku qariyaa ••••)
+      { name: 'password_sp', label: 'Password', type: 'password', requiredOnMode: 'insert', rowKey: 'password', param: 'password_sp', placeholder: '••••••••' },
+      // Confirm Password — labada mode (insert/update) ayaa lagu muujinayaa, oo backend loogu dirin
+      { name: 'password_confirm_sp', label: 'Confirm Password', type: 'password', requiredOnMode: 'insert', omitFromParams: true, rowKey: 'password', placeholder: '••••••••' },
+      // br_id waa field qarsoon — waa laga buuxiyaa logged-in user-ka (ma aha dropdown)
+      { name: 'br_id_sp', type: 'hidden', rowKey: 'br_id', param: 'br_id_sp', default: '' },
+      // state + lock_user — kaliya UPDATE modal ayaa lagu muujiyaa
+      { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', default: 'Active', showOnMode: 'update',
+        options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }] },
+      { name: 'lock_user_sp', label: 'Lock Status', type: 'select', rowKey: 'lock_user', param: 'lock_user_sp', default: 'Unlocked', showOnMode: 'update',
+        options: [{ value: 'Unlocked', label: 'Unlocked' }, { value: 'Locked', label: 'Locked' }] },
     ],
   },
   {

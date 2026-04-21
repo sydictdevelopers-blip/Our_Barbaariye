@@ -29,7 +29,7 @@ export const defaultMenuItems = [
             "modalKey": "ClassSetup",
             "icon": "Database",
             "queryName": "ClassSetup",
-            "showAcademicYearSelect": true,
+            "hiddenColumns": ["lev_id", "gr_id", "sh_id", "br_id", "u_br_id"],
             "loadButtons": [
               { "id": "ClassSetup", "label": "Class Setup", "labelKey": "tabs.classSetup", "icon": "Database" },
               { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassSetup" }
@@ -44,6 +44,7 @@ export const defaultMenuItems = [
             "icon": "Database",
             "queryName": "ClassFormaster",
             "showAcademicYearSelect": true,
+            "hiddenColumns": ["cl_id", "emp_id", "std_id", "a_y_id", "state", "academic_name"],
             "loadButtons": [
               { "id": "ClassFormaster", "label": "Go to Academic Transfer", "labelKey": "tabs.classFormaster", "icon": "Database" },
               { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassFormaster" }
@@ -59,7 +60,7 @@ export const defaultMenuItems = [
             "queryName": "SubjectsSetup",
             "loadButtons": [
               { "id": "SubjectsSetup", "label": "Show Subjects", "labelKey": "tabs.subjectsSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "subject" }
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectsSetup" }
             ]
           },
           {
@@ -70,6 +71,9 @@ export const defaultMenuItems = [
             "modalKey": "SubjectClassSetup",
             "icon": "Database",
             "queryName": "SubjectClassSetup",
+            "showAcademicYearSelect": true,
+            "showClassSelect": true,
+            "hiddenColumns": ["cl_id", "sub_id", "emp_id", "u_br_id", "a_y_id", "academic_name"],
             "loadButtons": [
               { "id": "SubjectClassSetup", "label": "Subject Class Setup", "labelKey": "tabs.subjectClassSetup", "icon": "Database" },
               { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectClassSetup" }

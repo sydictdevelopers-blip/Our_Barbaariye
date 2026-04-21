@@ -90,6 +90,8 @@ const resources = {
         students: 'Ardayda',
         activityManagement: 'Maaraynta Dhaqdhaqaaqa',
         activity: 'Dhaqdhaqaaqa',
+        userManagement: 'Maaraynta Isticmaalayaasha',
+        users: 'Isticmaalayaasha',
         userPrivilege: 'Xuquuqda Isticmaalaha',
       },
       entity: {
@@ -109,6 +111,7 @@ const resources = {
         subjectClassSetup: 'Diyaarinta Maaddo-Fasal',
         levelSetup: 'Diyaarinta Heerka',
         academicYear: 'Sanad Waxbarasho',
+        users: 'Isticmaalayaasha',
       },
       navbar: {
         searchPlaceholder: 'Raadi...',
@@ -232,6 +235,8 @@ const resources = {
         students: 'Students',
         activityManagement: 'Activity Management',
         activity: 'Activity',
+        userManagement: 'User Management',
+        users: 'Users',
         userPrivilege: 'User Privileges',
       },
       entity: {
@@ -251,6 +256,7 @@ const resources = {
         subjectClassSetup: 'Subject Class Setup',
         levelSetup: 'Level Setup',
         academicYear: 'Academic Year',
+        users: 'Users',
       },
       navbar: {
         searchPlaceholder: 'Search...',
@@ -374,6 +380,8 @@ const resources = {
         students: 'الطلاب',
         activityManagement: 'إدارة الأنشطة',
         activity: 'النشاط',
+        userManagement: 'إدارة المستخدمين',
+        users: 'المستخدمون',
         userPrivilege: 'صلاحيات المستخدم',
       },
       entity: {
@@ -393,6 +401,7 @@ const resources = {
         subjectClassSetup: 'مادة/صف',
         levelSetup: 'إعداد المستوى',
         academicYear: 'السنة الدراسية',
+        users: 'المستخدمون',
       },
       navbar: {
         searchPlaceholder: 'بحث...',
