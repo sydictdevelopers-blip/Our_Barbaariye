@@ -44,13 +44,17 @@ const QUERIES = {
   LessonActivityMark: 'SELECT * FROM lesson_activity_mark ORDER BY 1',
   LessonActivityResults: (p) => `SELECT * FROM show_lesson_activity_results_sp(${Number(p?.a_y_id)||0}, ${Number(p?.cl_id)||0}, ${Number(p?.b_id)||0}, ${Number(p?.sub_cl_id)||0}, ${Number(p?.ac_id)||0}, ${Number(p?.ex_reg_id)||0})`,
   LessonActivityResultRow: (p) => `SELECT lar.lar_id, lar.ac_t_id, lar.std_cl_id, lar.marks_obtained, lar.state FROM lesson_activity_result lar WHERE lar.lar_id = ${Number(p?.lar_id)||0}`,
-  Students: 'SELECT * FROM students ORDER BY student_id',
+  Students: (p) => `SELECT * FROM fn_class_students(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   Responsible: 'SELECT * FROM responsible',
   StudentResponsible: (p) => `SELECT id, student, responsible, phone1, phone2 FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0}) WHERE student IS NOT NULL`,
   showprentwithnostudents: `SELECT r.res_id, p.p_name AS responsible_name, p.tel AS phone1, r.phone AS phone2 FROM responsible r JOIN people p ON p.p_id = r.p_id WHERE r.res_id NOT IN (SELECT DISTINCT s.res_id FROM student s JOIN student_class sc ON s.std_id = sc.std_id WHERE s.state = 'Active' AND sc.state = 'Continue') ORDER BY p.p_name`,
-  studentstate: 'SELECT * FROM student_state ORDER BY 1',
+  studentstate: (p) => `SELECT * FROM fn_student_state(${Number(p?.br_id) || 0})`,
   bus: 'SELECT * FROM bus ORDER BY 1',
-  Studentinfo: 'SELECT * FROM students ORDER BY student_id',
+  Studentinfo: (p) => {
+    const stdId = Number(p?.std_id) || 0;
+    return `SELECT s.std_id, p.p_name AS student_name, s.emis_id, s.id_card, p.tel, p.sex, s.dob, s.mothername, s.mother_phone, p.state FROM student s JOIN people p ON p.p_id = s.p_id WHERE (${stdId} = 0 OR s.std_id = ${stdId}) ORDER BY p.p_name`;
+  },
+  StudentinfoDuplicates: 'SELECT s.std_id, p.p_name AS student_name, s.emis_id, s.id_card, p.tel, p.sex, COUNT(*) OVER (PARTITION BY p.p_name) AS dup_count FROM student s JOIN people p ON p.p_id = s.p_id WHERE p.p_name IN (SELECT p2.p_name FROM student s2 JOIN people p2 ON p2.p_id = s2.p_id GROUP BY p2.p_name HAVING COUNT(*) > 1) ORDER BY p.p_name',
   'update school': 'SELECT * FROM school ORDER BY 1',
 
   // ---- Activity Management ----
@@ -68,6 +72,7 @@ const QUERIES = {
   lesson_activity_options: (p) => `SELECT la.ac_t_id, CONCAT(at.type, ' - ', su.name) AS activity_label FROM lesson_activity la JOIN activity_type at ON at.ac_id = la.ac_id JOIN subject_class sc ON sc.sub_cl_id = la.sub_cl_id JOIN subjects su ON su.sub_id = sc.sub_id WHERE la.cl_id = ${Number(p?.cl_id)||0} AND sc.a_y_id = ${Number(p?.a_y_id)||0} ORDER BY activity_label`,
   exam_reg_options: 'SELECT ex.ex_reg_id,e.exam FROM exam_reg ex, exam e where e.ex_id=ex.ex_id',
   people_options: 'SELECT p_id, p_name FROM people ORDER BY p_name',
+  all_students_options: 'SELECT s.std_id, p.p_name FROM student s JOIN people p ON p.p_id = s.p_id ORDER BY p.p_name',
 
   // ---- Dropdown option queries ----
   activity_type_options: 'SELECT ac_id, type AS activity_type FROM activity_type ORDER BY type',

@@ -71,10 +71,20 @@ export default function Select2({
   isDisabled = false,
   onMenuOpen,
   className = '',
+  styles: stylesOverride,
   ...props
 }) {
   const isDark = document.documentElement.classList.contains('dark');
-  const styles = isDark ? darkSelect2Styles : select2Styles;
+  const baseStyles = isDark ? darkSelect2Styles : select2Styles;
+  const styles = stylesOverride
+    ? [...new Set([...Object.keys(baseStyles), ...Object.keys(stylesOverride)])].reduce((acc, k) => {
+        acc[k] = (base, state) => {
+          const a = baseStyles[k] ? baseStyles[k](base, state) : base;
+          return stylesOverride[k] ? stylesOverride[k](a, state) : a;
+        };
+        return acc;
+      }, {})
+    : baseStyles;
   const selectedOpt = options?.find((o) => String(o.value) === String(value));
   const displayValue = selectedOpt ?? (value != null && value !== '' ? { value, label: selectedLabel ?? String(value) } : null);
   const common = {

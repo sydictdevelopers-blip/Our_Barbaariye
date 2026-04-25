@@ -106,7 +106,13 @@ function registerApiRoutes(app) {
       }
       const sql = getQuery(queryName || 'accounts', body);
       if (!sql) return res.status(404).json({ error: 'Query not allowed or not found', queryName: queryName || null });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[api/data] queryName=${queryName} sql=${sql}`);
+      }
       const { columns, data: rows, total } = await dynamicController.runSelectQueryPaginated(sql, page, limit, search);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[api/data] queryName=${queryName} total=${total} rows=${rows.length} sample=`, rows.slice(0, 3));
+      }
       res.json({
         columns,
         data: rows,
@@ -118,7 +124,9 @@ function registerApiRoutes(app) {
       const safeLimit = typeof limit !== 'undefined' ? limit : 10;
       console.error('[api/data] queryName:', qn, 'error:', err.message);
       let msg = err.message || 'Query failed';
-      const isMissingTable = /relation\s+["']?[\w.]+["']?\s+does not exist|does not exist/i.test(msg);
+      // Mask only true "missing relation" (table/view) errors — keep "function does not exist"
+      // visible so missing stored procedures surface as real errors during development.
+      const isMissingTable = /relation\s+["']?[\w.]+["']?\s+does not exist/i.test(msg);
       if (isMissingTable && process.env.NODE_ENV !== 'production') {
         res.json({ columns: [], data: [], pagination: { total: 0, page: 1, limit: safeLimit, totalPages: 0 } });
         return;

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useSelector, useDispatch } from 'react-redux';
 import { store } from './store/store';
 import Layout from './components/layout/Layout';
 import Dashboard from './utility/Dashboard';
@@ -9,6 +9,8 @@ import UserPrivilegePage from './utility/UserPrivilegePage';
 import AcademicSetup from './utility/pages/academicfolder/AcademicSetup';
 import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
+import { setBranch } from './slices/uiSlice';
+import { fetchUserBranches } from './services/api';
 function DarkModeInit() {
   const darkMode = useSelector((state) => state.ui.darkMode);
   useEffect(() => {
@@ -18,6 +20,25 @@ function DarkModeInit() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+  return null;
+}
+
+/** Guarantee user has a br_id; if missing, fetch first branch and persist. */
+function BranchGuard() {
+  const user = useSelector((state) => state.ui.user);
+  const dispatch = useDispatch();
+  useEffect(() => {
+    if (!user || user.br_id != null) return;
+    if (!user.usr_id) return;
+    fetchUserBranches(user.usr_id).then((resp) => {
+      const first = resp?.branches?.[0];
+      if (first?.br_id != null) {
+        // eslint-disable-next-line no-console
+        console.warn('[BranchGuard] user logged in without br_id — auto-assigning', first.br_id);
+        dispatch(setBranch(first.br_id));
+      }
+    });
+  }, [user, dispatch]);
   return null;
 }
 
@@ -42,6 +63,7 @@ function AppContent() {
   return (
     <>
       <DarkModeInit />
+      <BranchGuard />
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route

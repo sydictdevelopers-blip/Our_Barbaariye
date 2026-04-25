@@ -54,6 +54,13 @@ const uiSlice = createSlice({
       state.user = action.payload;
       if (action.payload) {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(action.payload));
+        if (action.payload.br_id == null) {
+          // eslint-disable-next-line no-console
+          console.warn('[setUser] saved without br_id — queries u baahan branch ID won\'t work', action.payload);
+        } else {
+          // eslint-disable-next-line no-console
+          console.log('[setUser] session saved with br_id =', action.payload.br_id);
+        }
       } else {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
@@ -62,6 +69,8 @@ const uiSlice = createSlice({
       if (state.user) {
         state.user.br_id = action.payload;
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.user));
+        // eslint-disable-next-line no-console
+        console.log('[setBranch] session br_id updated →', action.payload);
       }
     },
     logout: (state) => {

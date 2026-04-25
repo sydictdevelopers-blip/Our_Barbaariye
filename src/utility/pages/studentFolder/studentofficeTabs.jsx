@@ -6,6 +6,9 @@ import { Database, Plus } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
+import StudentsTab from './StudentsTab';
+import StudentInfoTab from './StudentInfoTab';
+import StudentStateTab from './StudentStateTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { getTabsForPath } from '../../../config/menuConfig';
@@ -56,6 +59,27 @@ export default function StudentofficeTabs() {
 
   const renderTabContent = () => {
     const cfg = activeTabConfig?.entityKey ? activeTabConfig : null;
+    if (activeTab === 'Students' && location.pathname === '/StudentsOffice') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentsTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'Studentinfo' && location.pathname === '/StudentsOffice') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentInfoTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'studentstate' && location.pathname === '/StudentsOffice') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentStateTab />
+        </motion.div>
+      );
+    }
     if (cfg) {
       return (
         <motion.div key={activeTab} {...motionProps}>
