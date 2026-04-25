@@ -52,6 +52,7 @@ export default function EntityTab({
   classOptionsQuery,
   hiddenColumns,
   extraRowActions,
+  extraHeaderActions,
   extraLoadParams,
   bulkForm,
 }) {
@@ -261,6 +262,7 @@ export default function EntityTab({
           {t('entity.addNew')}
         </Button>
       )}
+      {extraHeaderActions}
     </>
   );
 
@@ -271,29 +273,33 @@ export default function EntityTab({
     dispatch(loadData(loadPayload(entityKey, 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
   }, [entityKey, limit, academicYearIdForLoad, classIdForLoad, dispatch, entity.searchQuery, buildExtra]);
 
+
   if (bulkForm && viewMode === 'form') {
     return (
-      <Card className="overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,60,93,0.15)] border border-slate-200/70 dark:border-slate-700/80 bg-white dark:bg-slate-900/90">
-        <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
-          <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-auto">{headerActions}</div>
-        </div>
-        <div className="p-4">
-          {bulkForm({
-            context: { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad },
-            onSuccess: () => {
-              setViewMode('data');
-              if (showDataPanel) {
-                dispatch(loadData(loadPayload(entityKey, entity.currentPage || 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
-              }
-            },
-            onCancel: () => setViewMode('data'),
-          })}
-        </div>
-      </Card>
+      <>
+        <Card className="overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,60,93,0.15)] border border-slate-200/70 dark:border-slate-700/80 bg-white dark:bg-slate-900/90">
+          <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
+            <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-auto">{headerActions}</div>
+          </div>
+          <div className="p-4">
+            {bulkForm({
+              context: { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad },
+              onSuccess: () => {
+                setViewMode('data');
+                if (showDataPanel) {
+                  dispatch(loadData(loadPayload(entityKey, entity.currentPage || 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+                }
+              },
+              onCancel: () => setViewMode('data'),
+            })}
+          </div>
+        </Card>
+      </>
     );
   }
 
   return (
+    <>
     <DataTableCard
       showDataPanel={showDataPanel}
       searchPlaceholder={t('entity.search')}
@@ -323,5 +329,6 @@ export default function EntityTab({
       onPageClick={goToPage}
       onPageSizeChange={handlePageSizeChange}
     />
+    </>
   );
 }

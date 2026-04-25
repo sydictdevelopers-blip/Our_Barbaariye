@@ -4,6 +4,7 @@ import {
   Users,
   ClipboardList,
   BookMarked,
+  Video,
 } from 'lucide-react';
 
 export const defaultMenuItems = [
@@ -118,7 +119,7 @@ export const defaultMenuItems = [
         tabs: [
           {
             "id": "BranchTransfer",
-            "label": "Branch",
+            "label": "Branch Transfer",
             "entityKey": "BranchTransfer",
             "modalKey": "BranchTransfer",
             "icon": "Database",
@@ -157,22 +158,15 @@ export const defaultMenuItems = [
       },
       {
         id: 'AcademicSaylapus',
-        label: 'Academic Saylapus',
+        label: 'Academic Syllabus',
         labelKey: 'menu.academicSaylapus',
         icon: BookMarked,
         path: '/AcademicSaylapus',
         tabs: [
           {
-            "id": "BranchTransfer",
-            "label": "Branch",
-            "entityKey": "BranchTransfer",
-            "modalKey": "BranchTransfer",
-            "icon": "Database",
-            "queryName": "BranchTransfer",
-            "loadButtons": [
-              { "id": "BranchTransfer", "label": "Branch Transfer", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "BranchTransfer" }
-            ]
+            "id": "TeacherSyllabus",
+            "label": "Teacher Syllabus",
+            "icon": "Database"
           }
         ]
         ,
@@ -376,6 +370,13 @@ export const defaultMenuItems = [
     labelKey: 'menu.userPrivilege',
     icon: Users,
     path: '/user-privilege',
+  },
+  {
+    id: 'moduleVideos',
+    label: 'Module Videos',
+    labelKey: 'menu.moduleVideos',
+    icon: Video,
+    path: '/module-videos',
   },
 ];
 

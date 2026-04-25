@@ -32,6 +32,7 @@ if (fs.existsSync(envConfig)) require('dotenv').config({ path: envConfig });
 // Step 2: Soo deji dynamicController iyo api config
 const dynamicController = require('./dynamicController');
 const api = require('./api');
+const moduleHelp = require('./moduleHelpController');
 
 // Step 3: Abuur Express app instance
 const app = express();
@@ -43,7 +44,8 @@ app.use(compression());
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Step 4c: Ku dar helmet middleware (Security headers) – ilaali XSS, clickjacking, iwm
-app.use(helmet());
+// crossOriginResourcePolicy='cross-origin' → ogolow in /uploads ka la arko frontend origin kale
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // Step 4d: CORS – allow frontend at localhost:5173 to call backend at 192.x.x.x:3030
 const defaultOrigins = [
@@ -117,6 +119,7 @@ app.get('/health', (req, res) => {
 
 // Step 6b: Barbaariye API routes (from api config)
 api.registerApiRoutes(app);
+moduleHelp.registerModuleHelpRoutes(app);
 
 // 404 – return JSON so frontend can parse (avoid "Cannot POST /data" plain text)
 app.use((req, res) => {

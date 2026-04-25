@@ -16,14 +16,14 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Tabs from '../components/ui/Tabs';
-import ActionButton from '../components/ui/ActionButton';
+import Select2 from '../components/ui/Select2';
 import { defaultMenuItems } from '../config/menuConfig';
 import { CRUD_CONFIG } from '../config/crudConfig';
 import CrudModal from '../modals/CrudModal';
 import { EntityTab } from './index';
 import { loadData } from '../slices/dataSlice';
 import { store } from '../store/store';
-import { crud } from '../services/api';
+import { crud, fetchSelectOptions } from '../services/api';
 import { swalSuccess, swalError } from '../utils/swal';
 
 /* ───────────────── Permission tree helpers ───────────────── */
@@ -309,18 +309,57 @@ export default function UserPrivilegePage() {
   const [modalSelectedIds, setModalSelectedIds] = useState(() => new Set());
   const [modalActiveModuleId, setModalActiveModuleId] = useState(tree[0]?.id || '');
   const [savingPriv, setSavingPriv] = useState(false);
+  const [userOptions, setUserOptions] = useState([]);
+  const [usersById, setUsersById] = useState({});
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
-  const openPrivModal = (row) => {
-    let priv = row?.privalage;
+  const loadUsersForPicker = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetchSelectOptions('Users', 500, '', { br_id: String(currentUser?.br_id ?? 0) });
+      const rows = res?.data ?? res?.rows ?? [];
+      const opts = rows.map((r) => ({
+        value: String(r.usr_id ?? r.id ?? ''),
+        label: String(r.username ?? r.p_name ?? r.usr_id ?? ''),
+      }));
+      const map = {};
+      rows.forEach((r) => { map[String(r.usr_id ?? r.id ?? '')] = r; });
+      setUserOptions(opts);
+      setUsersById(map);
+    } catch {
+      setUserOptions([]);
+      setUsersById({});
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const openPrivModal = () => {
+    setModalSelectedIds(new Set());
+    setModalActiveModuleId(tree[0]?.id || '');
+    setModalSearch('');
+    setPrivModal({ isOpen: true, user: null });
+    loadUsersForPicker();
+  };
+  const closePrivModal = () => setPrivModal({ isOpen: false, user: null });
+
+  const handleModalUserChange = (e) => {
+    const userId = e?.target?.value ?? '';
+    if (!userId) {
+      setPrivModal((p) => ({ ...p, user: null }));
+      setModalSelectedIds(new Set());
+      return;
+    }
+    const row = usersById[userId];
+    if (!row) return;
+    let priv = row.privalage;
     if (typeof priv === 'string') {
       try { priv = JSON.parse(priv); } catch { priv = []; }
     }
     setModalSelectedIds(deserializePrivilege(priv));
     setModalActiveModuleId(tree[0]?.id || '');
-    setModalSearch('');
-    setPrivModal({ isOpen: true, user: row });
+    setPrivModal((p) => ({ ...p, user: row }));
   };
-  const closePrivModal = () => setPrivModal({ isOpen: false, user: null });
 
   const handleModalToggleNode = (node, checked) => {
     setModalSelectedIds((prev) => {
@@ -394,11 +433,16 @@ export default function UserPrivilegePage() {
     // Placeholder — tab view is for reference/admin
   };
 
-  /* Per-row shield button */
-  const renderExtraRowActions = (row) => (
-    <ActionButton variant="warning" aria-label="Privileges" onClick={() => openPrivModal(row)}>
-      <ShieldCheck className="w-4 h-4" />
-    </ActionButton>
+  /* Toolbar: User Privileges button (replaces per-row shield) */
+  const renderExtraHeaderActions = (
+    <Button
+      size="sm"
+      variant="primary"
+      leftIcon={<ShieldCheck className="w-4 h-4" />}
+      onClick={openPrivModal}
+    >
+      User Privileges
+    </Button>
   );
 
   const topTabs = [
@@ -435,7 +479,7 @@ export default function UserPrivilegePage() {
                   ]}
                   dispatch={dispatch}
                   onEdit={openUserModal}
-                  extraRowActions={renderExtraRowActions}
+                  extraHeaderActions={renderExtraHeaderActions}
                   extraLoadParams={usersLoadParams}
                 />
               </motion.div>
@@ -492,36 +536,55 @@ export default function UserPrivilegePage() {
         }}
       />
 
-      {/* Per-user Privilege modal (opened via shield button in Users tab) */}
+      {/* User Privileges modal (opened via toolbar button) */}
       <Modal
         isOpen={privModal.isOpen}
         onClose={closePrivModal}
-        title={`Privileges — ${privModal.user?.username ?? ''}`}
+        title={privModal.user ? `User Privilege Form — ${privModal.user.username}` : 'User Privilege Form'}
         size="xl"
         className="max-w-5xl"
         bodyClassName="space-y-4 bg-gradient-to-b from-slate-50 via-white to-slate-50"
         footer={
           <>
             <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closePrivModal}>
-              Cancel
+              Close
             </Button>
-            <Button variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={handleSavePriv} disabled={savingPriv}>
-              {savingPriv ? '...' : 'Save Privileges'}
+            <Button
+              variant="primary"
+              leftIcon={<Save className="w-4 h-4" />}
+              onClick={handleSavePriv}
+              disabled={savingPriv || !privModal.user}
+            >
+              {savingPriv ? '...' : 'Save'}
             </Button>
           </>
         }
       >
-        <PermissionTreePanel
-          tree={tree}
-          search={modalSearch}
-          setSearch={setModalSearch}
-          selectedIds={modalSelectedIds}
-          onToggleNode={handleModalToggleNode}
-          onSelectAll={modalSelectAll}
-          onClearAll={modalClearAll}
-          activeModuleId={modalActiveModuleId}
-          setActiveModuleId={setModalActiveModuleId}
-        />
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Select User</label>
+          <Select2
+            name="privUser"
+            value={privModal.user ? String(privModal.user.usr_id) : ''}
+            onChange={handleModalUserChange}
+            options={userOptions}
+            placeholder={loadingUsers ? 'Loading users...' : 'Select User'}
+            isDisabled={loadingUsers}
+          />
+        </div>
+
+        {privModal.user && (
+          <PermissionTreePanel
+            tree={tree}
+            search={modalSearch}
+            setSearch={setModalSearch}
+            selectedIds={modalSelectedIds}
+            onToggleNode={handleModalToggleNode}
+            onSelectAll={modalSelectAll}
+            onClearAll={modalClearAll}
+            activeModuleId={modalActiveModuleId}
+            setActiveModuleId={setModalActiveModuleId}
+          />
+        )}
       </Modal>
     </div>
   );

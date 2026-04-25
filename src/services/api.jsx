@@ -99,6 +99,92 @@ export async function fetchUserBranches(usr_id) {
   }
 }
 
+/* ─────────────── Module Help API ─────────────── */
+
+/** Soo qaad help-ka module gaar ah (hal luuqad). Wuxuu soo celiyaa row ama null. */
+export async function fetchModuleHelp(moduleKey, lang = 'so') {
+  if (!moduleKey) return null;
+  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}/${encodeURIComponent(lang)}`);
+  if (!res.ok) return null;
+  const body = await res.json().catch(() => ({}));
+  return body?.data ?? null;
+}
+
+/** Soo qaad dhamaan luuqadaha module gaar ah (rows array). */
+export async function fetchModuleHelpAll(moduleKey) {
+  if (!moduleKey) return [];
+  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}`);
+  if (!res.ok) return [];
+  const body = await res.json().catch(() => ({}));
+  return body?.data ?? [];
+}
+
+/** Soo qaad dhamaan records-ka help-ka (admin listing). */
+export async function fetchAllModuleHelp() {
+  const res = await fetch(`${API_BASE}/module-help`);
+  if (!res.ok) return [];
+  const body = await res.json().catch(() => ({}));
+  return body?.data ?? [];
+}
+
+/** Kaydi/Cusboonaysii help record. oper: 'insert' (upsert) ama 'update'. */
+export async function saveModuleHelp({ mh_id = 0, module_key, lang = 'so', title = '', description = '', video_url = '', oper = 'insert' }) {
+  const res = await fetch(`${API_BASE}/module-help`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mh_id, module_key, lang, title, description, video_url, oper }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || 'Save failed');
+  return body;
+}
+
+export async function deleteModuleHelp(mh_id) {
+  const res = await fetch(`${API_BASE}/module-help/${Number(mh_id) || 0}`, { method: 'DELETE' });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || 'Delete failed');
+  return body;
+}
+
+/** Upload video file → soo celi { url, filename }. file waa File object. */
+export async function uploadModuleVideo(file, onProgress) {
+  if (!file) throw new Error('No file');
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}/module-help/upload-video`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && typeof onProgress === 'function') {
+        onProgress(Math.round((e.loaded * 100) / e.total));
+      }
+    };
+    xhr.onload = () => {
+      try {
+        const body = JSON.parse(xhr.responseText || '{}');
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(body);
+        reject(new Error(body?.error || 'Upload failed'));
+      } catch (err) {
+        reject(err);
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    const fd = new FormData();
+    fd.append('video', file);
+    xhr.send(fd);
+  });
+}
+
+/** U rog URL-ka relative (/uploads/...) mid buuxa oo la isticmaali karo <video src>. */
+export function resolveMediaUrl(url) {
+  if (!url) return '';
+  if (/^(https?:)?\/\//i.test(url)) return url;
+  if (url.startsWith('/uploads')) {
+    // API_BASE dhamaad '/api' leh → ka saar /api si loo geeyo root-ka backend-ka
+    const root = API_BASE.replace(/\/api$/i, '');
+    return `${root}${url}`;
+  }
+  return url;
+}
+
 export async function crud({ operation, fn, params = {}, query }) {
   if (operation === 'fetch') {
     const res = await fetch(`${API_BASE}/data`, {

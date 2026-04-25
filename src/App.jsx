@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Provider, useSelector } from 'react-redux';
 import { store } from './store/store';
 import Layout from './components/layout/Layout';
@@ -8,6 +8,7 @@ import LoginPage from './utility/LoginPage';
 import UserPrivilegePage from './utility/UserPrivilegePage';
 import AcademicSetup from './utility/pages/academicfolder/AcademicSetup';
 import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
+import ModuleVideosPage from './utility/pages/ModuleVideosPage';
 function DarkModeInit() {
   const darkMode = useSelector((state) => state.ui.darkMode);
   useEffect(() => {
@@ -37,30 +38,10 @@ function PublicRoute({ children }) {
   return children;
 }
 
-function RefreshToDashboard() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const didRun = useRef(false);
-  useEffect(() => {
-    if (didRun.current) return;
-    try {
-      const nav = performance.getEntriesByType?.('navigation')?.[0];
-      const isReload = nav?.type === 'reload';
-      const isLogin = location.pathname === '/login' || location.pathname.startsWith('/login');
-      if (isReload && location.pathname !== '/' && !isLogin) {
-        didRun.current = true;
-        navigate('/', { replace: true });
-      }
-    } catch (_) {}
-  }, [location.pathname, navigate]);
-  return null;
-}
-
 function AppContent() {
   return (
     <>
       <DarkModeInit />
-      <RefreshToDashboard />
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route
@@ -83,6 +64,7 @@ function AppContent() {
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
                   <Route path="/ActivityManagement" element={<AcademicSetup />} />
                   <Route path="/user-privilege" element={<UserPrivilegePage />} />
+                  <Route path="/module-videos" element={<ModuleVideosPage />} />
                   <Route path="*" element={<Navigate to="/" replace />}/>
                 </Routes>
               </Layout>

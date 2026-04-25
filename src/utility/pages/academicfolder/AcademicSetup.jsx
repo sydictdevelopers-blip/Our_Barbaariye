@@ -8,6 +8,12 @@ import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
 import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
+import BranchTransferTab from './BranchTransferTab';
+import AcademicTransferTab from './AcademicTransferTab';
+import ClassTransferTab from './ClassTransferTab';
+import TeacherSyllabusTab from './TeacherSyllabusTab';
+import LessonActivityMarksTab from './LessonActivityMarksTab';
+import LessonActivityResultsTab from './LessonActivityResultsTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { getTabsForPath } from '../../../config/menuConfig';
@@ -80,6 +86,48 @@ export default function AccountsPage() {
 
   const renderTabContent = () => {
     const cfg = activeTabConfig?.entityKey ? activeTabConfig : null;
+    if (activeTab === 'BranchTransfer' && location.pathname === '/AcademicTransfer') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <BranchTransferTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'AcademicTransfer' && location.pathname === '/AcademicTransfer') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <AcademicTransferTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'ClassTransfer' && location.pathname === '/AcademicTransfer') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <ClassTransferTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'TeacherSyllabus' && location.pathname === '/AcademicSaylapus') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <TeacherSyllabusTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'LessonActivityMarks' && location.pathname === '/LessonPlan') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <LessonActivityMarksTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'LessonActivityResults' && location.pathname === '/LessonPlan') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <LessonActivityResultsTab />
+        </motion.div>
+      );
+    }
     if (cfg) {
       return (
         <motion.div key={activeTab} {...motionProps}>

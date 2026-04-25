@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { HelpCircle, Info, PlayCircle } from 'lucide-react';
 import Modal from '../components/ui/Modal';
+import ModuleHelpModal from '../components/ModuleHelpModal';
 import * as swal from '../utils/swal';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Select2 from '../components/ui/Select2';
-import { crud, fetchSelectOptions } from '../services/api';
+import { crud, fetchSelectOptions, fetchModuleHelp } from '../services/api';
 
 /** Auto-detect valueKey (first *_id) iyo labelKey (first *_name ama column 2) */
 function detectKeys(columns, row) {
@@ -15,7 +18,7 @@ function detectKeys(columns, row) {
 }
 
 const HINT_LABEL = '💡 Waxaa jira wax ka badan 25 xog – geli erey raadinta si aad u hesho';
-const selectCache = {}; // Cache per optionsKey (+ extra params signature)
+const selectCache = {};
 
 function cacheKeyFor(optionsKey, extra) {
   const entries = Object.entries(extra || {}).filter(([, v]) => v !== '' && v != null);
@@ -24,7 +27,6 @@ function cacheKeyFor(optionsKey, extra) {
   return `${optionsKey}::${sig}`;
 }
 
-/** Soo qabo 25 row ugu horreeya, marka xaraf 1+ la qoro → client-cache filter + API fallback */
 async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra = {}) {
   const ck = cacheKeyFor(optionsKey, extra);
   const cacheEntry = selectCache[ck] ?? { items: [], cached: false };
@@ -32,7 +34,6 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
   const searchLower = search.trim().toLowerCase();
   const isFirstOpen = !searchLower && !cacheEntry.cached;
 
-  // 1. First open: fetch 25 rows
   if (isFirstOpen) {
     const res = await fetchSelectOptions(optionsKey, 25, '', extra).catch(() => ({}));
     const rows = res?.data || [];
@@ -46,14 +47,12 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
     return opts;
   }
 
-  // 2. Empty search + cached: return the cached 25
   if (!searchLower) {
     const opts = [...cacheEntry.items];
     if (cacheEntry.items.length >= 25) opts.push({ value: '__hint__', label: HINT_LABEL, isHint: true });
     return opts;
   }
 
-  // 3. Search (1+ chars): client-side cache filter first
   if (useCache && cacheEntry.items.length > 0) {
     const matched = cacheEntry.items.filter(
       (item) => !item.isHint && String(item.label ?? '').toLowerCase().includes(searchLower)
@@ -61,7 +60,6 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
     if (matched.length > 0) return matched;
   }
 
-  // 4. Cache miss → hit API
   const res = await fetchSelectOptions(optionsKey, 20, search, extra).catch(() => ({}));
   const rows = res?.data || [];
   const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
@@ -79,7 +77,6 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
   return newItems;
 }
 
-/** Submit – kaliya /api/all (fn + params + oper). Returns { success, message } ka imaanaya DB (alerts table). */
 async function submitOperation(config, form, operation) {
   const params = config.toParams(form);
   return await crud({ operation, fn: config.fn, params });
@@ -96,13 +93,20 @@ export default function CrudModal({
   initialForm = {},
   mode = 'insert',
   onSuccess,
+  moduleKey,
 }) {
   if (!config) return null;
+
+  const { i18n } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetchedLabels, setFetchedLabels] = useState({});
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpPreview, setHelpPreview] = useState(null);
   const selectedLabelRef = useRef({});
+
+  const helpKey = moduleKey || config.moduleKey || '';
 
   useEffect(() => {
     if (isOpen) setForm(initialForm && typeof initialForm === 'object' ? { ...initialForm } : {});
@@ -111,6 +115,14 @@ export default function CrudModal({
       selectedLabelRef.current = {};
     }
   }, [isOpen]);
+
+  // Soo qaad sharaxaadda module-ka marka modal-ka la furo
+  useEffect(() => {
+    if (!isOpen || !helpKey) { setHelpPreview(null); return; }
+    fetchModuleHelp(helpKey, i18n.language || 'so')
+      .then((row) => setHelpPreview(row || null))
+      .catch(() => setHelpPreview(null));
+  }, [isOpen, helpKey, i18n.language]);
 
   const extraParamsFor = useCallback((f, source) => {
     if (!f?.dependsOn) return {};
@@ -157,7 +169,6 @@ export default function CrudModal({
       updates[`${name}_label`] = e.target.label;
       selectedLabelRef.current[name] = e.target.label;
     }
-    // Reset dependents: haddii field-kan la bedelay loo isticmaalo dependsOn field kale, clear-garee
     config?.fields?.forEach((depF) => {
       if (depF.dependsOn && Object.values(depF.dependsOn).includes(name)) {
         updates[depF.name] = '';
@@ -203,30 +214,16 @@ export default function CrudModal({
     }
   };
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    handleSubmit('insert');
-  };
-
-  const handleUpdate = (e) => {
-    e.preventDefault();
-    handleSubmit('update');
-  };
-
-  const handleClose = () => {
-    setForm({});
-    setErrors({});
-    onClose();
-  };
+  const handleSave = (e) => { e.preventDefault(); handleSubmit('insert'); };
+  const handleUpdate = (e) => { e.preventDefault(); handleSubmit('update'); };
+  const handleClose = () => { setForm({}); setErrors({}); onClose(); };
 
   const isEdit = mode === 'update';
   const showUpdate = !!config.fn;
 
   const FieldWrapper = ({ label, error, children }) => (
     <div className="space-y-1">
-      {label && (
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
-      )}
+      {label && <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
       {children}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
@@ -280,14 +277,7 @@ export default function CrudModal({
           <div className="flex flex-wrap gap-4">
             {opts.map((opt) => (
               <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name={f.name}
-                  value={opt.value}
-                  checked={val === opt.value}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-[#0f3d5e]"
-                />
+                <input type="radio" name={f.name} value={opt.value} checked={val === opt.value} onChange={handleChange} className="w-4 h-4 text-[#0f3d5e]" />
                 <span className="text-sm">{opt.label}</span>
               </label>
             ))}
@@ -298,15 +288,7 @@ export default function CrudModal({
     if (f.type === 'textarea') {
       return (
         <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
-          <textarea
-            name={f.name}
-            value={val ?? ''}
-            onChange={handleChange}
-            rows={f.rows ?? 3}
-            placeholder={f.placeholder}
-            className={getInputClasses(f.name)}
-            {...f.props}
-          />
+          <textarea name={f.name} value={val ?? ''} onChange={handleChange} rows={f.rows ?? 3} placeholder={f.placeholder} className={getInputClasses(f.name)} {...f.props} />
         </FieldWrapper>
       );
     }
@@ -314,70 +296,107 @@ export default function CrudModal({
       return (
         <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name={f.name}
-              checked={!!val}
-              onChange={handleChange}
-              className="w-4 h-4 rounded text-[#0f3d5e]"
-              {...f.props}
-            />
+            <input type="checkbox" name={f.name} checked={!!val} onChange={handleChange} className="w-4 h-4 rounded text-[#0f3d5e]" {...f.props} />
             <span className="text-sm text-slate-600 dark:text-slate-400">{f.placeholder || f.label}</span>
           </label>
         </FieldWrapper>
       );
     }
     return (
-      <Input
-        key={f.name}
-        label={f.label}
-        name={f.name}
-        type={f.type || 'text'}
-        value={val ?? ''}
-        onChange={handleChange}
-        placeholder={f.placeholder}
-        error={errors[f.name]}
-        {...f.props}
-      />
+      <Input key={f.name} label={f.label} name={f.name} type={f.type || 'text'} value={val ?? ''} onChange={handleChange} placeholder={f.placeholder} error={errors[f.name]} {...f.props} />
     );
   };
 
-  const formClass = config.gridCols === 2
-    ? 'grid grid-cols-1 md:grid-cols-2 gap-4'
-    : 'space-y-4';
+  const formClass = config.gridCols === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4';
+  const hasDesc = !!helpPreview?.description;
+  const hasVideo = !!helpPreview?.video_url;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={config.title}
-      size={config.modalSize || 'md'}
-      footer={
-        <div className="flex justify-end gap-2 w-full flex-wrap">
-          {!isEdit && (
-            <Button type="button" onClick={handleSave} disabled={loading}>
-              {loading ? '...' : 'Save'}
-            </Button>
-          )}
-          {isEdit && showUpdate && (
-            <>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        header={
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-100 tracking-tight truncate">
+              {config.title}
+            </h2>
+            {helpKey && (
+              <button
+                type="button"
+                title="Sharaxaad / Video"
+                onClick={() => setHelpOpen(true)}
+                className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0f3d5e]/10 hover:bg-[#0f3d5e]/20 dark:bg-white/10 dark:hover:bg-white/20 text-[#0f3d5e] dark:text-slate-300 transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        }
+        size={config.modalSize || 'md'}
+        footer={
+          <div className="flex justify-end gap-2 w-full flex-wrap">
+            {!isEdit && (
+              <Button type="button" onClick={handleSave} disabled={loading}>
+                {loading ? '...' : 'Save'}
+              </Button>
+            )}
+            {isEdit && showUpdate && (
               <Button type="button" onClick={handleUpdate} disabled={loading}>
                 {loading ? '...' : 'Update'}
               </Button>
-            </>
-          )}
-          <Button type="button" variant="secondary" onClick={handleClose}>
-            Close
-          </Button>
-        </div>
-      }
-    >
-      <form id="crud-form" onSubmit={(e) => { e.preventDefault(); isEdit ? handleUpdate(e) : handleSave(e); }} className={formClass}>
-        {errors.submit && <p className={`text-sm text-red-600 ${config.gridCols === 2 ? 'md:col-span-2' : ''}`}>{errors.submit}</p>}
-        {config.fields
-          ?.filter((f) => !f.showOnMode || f.showOnMode === (isEdit ? 'update' : 'insert'))
-          .map((f) => renderField(f))}
-      </form>
-    </Modal>
+            )}
+            <Button type="button" variant="secondary" onClick={handleClose}>Close</Button>
+          </div>
+        }
+      >
+        {/* Help preview banner – muuqda kaliya haddii sharaxaad ama video jiro */}
+        {(hasDesc || hasVideo) && (
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="w-full mb-4 flex items-start gap-3 rounded-xl border border-[#0f3d5e]/20 bg-[#0f3d5e]/5 hover:bg-[#0f3d5e]/10 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 px-4 py-3 text-left transition-colors group"
+          >
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#0f3d5e] dark:text-teal-400" />
+            <div className="flex-1 min-w-0">
+              {helpPreview?.title && (
+                <p className="text-xs font-semibold text-[#0f3d5e] dark:text-teal-400 mb-0.5">
+                  {helpPreview.title}
+                </p>
+              )}
+              {hasDesc && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                  {helpPreview.description}
+                </p>
+              )}
+              <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-medium text-[#0f3d5e]/70 dark:text-teal-400/80 group-hover:text-[#0f3d5e] dark:group-hover:text-teal-300 transition-colors">
+                {hasVideo && <PlayCircle className="w-3 h-3" />}
+                {hasVideo ? 'Arag sharaxaadda iyo video-ga →' : 'Arag sharaxaadda buuxda →'}
+              </span>
+            </div>
+          </button>
+        )}
+
+        <form
+          id="crud-form"
+          onSubmit={(e) => { e.preventDefault(); isEdit ? handleUpdate(e) : handleSave(e); }}
+          className={formClass}
+        >
+          {errors.submit && <p className={`text-sm text-red-600 ${config.gridCols === 2 ? 'md:col-span-2' : ''}`}>{errors.submit}</p>}
+          {config.fields
+            ?.filter((f) => !f.showOnMode || f.showOnMode === (isEdit ? 'update' : 'insert'))
+            .map((f) => renderField(f))}
+        </form>
+      </Modal>
+
+      {helpKey && (
+        <ModuleHelpModal
+          isOpen={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          moduleKey={helpKey}
+          moduleLabel={config.title || helpKey}
+        />
+      )}
+    </>
   );
 }
