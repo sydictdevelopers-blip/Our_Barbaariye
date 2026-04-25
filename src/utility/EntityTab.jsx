@@ -50,6 +50,8 @@ export default function EntityTab({
   academicYearOptionsQuery,
   showClassSelect = false,
   classOptionsQuery,
+  showResponsibleSelect = false,
+  responsibleOptionsQuery,
   hiddenColumns,
   extraRowActions,
   extraHeaderActions,
@@ -62,14 +64,19 @@ export default function EntityTab({
     if (btn.id === 'addNew') return t('entity.addNew');
     return btn.label;
   };
-  const entity = useSelector(selectEntity(entityKey)) ?? {};
-  const rawColumns = useSelector(selectColumns(entityKey));
+  const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
+  const [activeExtra, setActiveExtra] = useState({});
+  const [selectedResponsibleId, setSelectedResponsibleId] = useState('');
+  const [responsibleOptions, setResponsibleOptions] = useState([]);
+
+  const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
+  const rawColumns = useSelector(selectColumns(activeEntityKey));
   const columns = hiddenColumns?.length
     ? (rawColumns || []).filter((c) => !hiddenColumns.includes(c.key))
     : rawColumns;
-  const paginatedData = useSelector(selectPaginatedData(entityKey));
-  const totalPages = useSelector(selectTotalPages(entityKey));
-  const totalRows = useSelector(selectTotalRows(entityKey)) ?? paginatedData?.length ?? 0;
+  const paginatedData = useSelector(selectPaginatedData(activeEntityKey));
+  const totalPages = useSelector(selectTotalPages(activeEntityKey));
+  const totalRows = useSelector(selectTotalRows(activeEntityKey)) ?? paginatedData?.length ?? 0;
 
   const config = CRUD_CONFIG[modalKey];
   const label = toLabel(entityKey);
@@ -85,6 +92,7 @@ export default function EntityTab({
   // Automatic: haddii academicYearOptionsQuery la gudbin waayo, default waa academicYeartab
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
   const clsOptionsQuery = classOptionsQuery ?? 'class_options';
+  const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
 
   useEffect(() => {
     if (!showAcademicYearSelect) return;
@@ -120,23 +128,45 @@ export default function EntityTab({
     return () => { cancelled = true; };
   }, [showClassSelect, clsOptionsQuery]);
 
+  useEffect(() => {
+    if (!showResponsibleSelect) return;
+    let cancelled = false;
+    fetchSelectOptions(resOptionsQuery, 200, '')
+      .then((res) => {
+        if (cancelled) return;
+        const rows = res?.data ?? res?.rows ?? [];
+        const opts = rows.map((r) => ({
+          value: String(r.res_id ?? Object.values(r)[0] ?? ''),
+          label: String(r.p_name ?? Object.values(r)[1] ?? ''),
+        }));
+        setResponsibleOptions(opts);
+      })
+      .catch(() => setResponsibleOptions([]));
+    return () => { cancelled = true; };
+  }, [showResponsibleSelect, resOptionsQuery]);
+
   const academicYearIdForLoad = showAcademicYearSelect ? selectedAcademicYearId : undefined;
   const classIdForLoad = showClassSelect ? selectedClassId : undefined;
+  const responsibleIdForLoad = showResponsibleSelect ? selectedResponsibleId : undefined;
 
   const buildExtra = useCallback(
-    (academicYearId, classId) => ({
+    (academicYearId, classId, responsibleId) => ({
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
       ...(classId != null && String(classId).trim() && { cl_id: String(classId).trim() }),
+      ...(responsibleId != null && String(responsibleId).trim() && { res_id: String(responsibleId).trim() }),
       ...extraLoadParams,
     }),
     [extraLoadParams]
   );
 
   const onShowData = useCallback(
-    (btnId, academicYearId, classId) => {
+    (btnId, academicYearId, classId, responsibleId) => {
+      const extra = buildExtra(academicYearId, classId, responsibleId);
       setViewMode('data');
       setShowDataPanel(true);
-      dispatch(loadData(loadPayload(btnId, 1, limit, '', buildExtra(academicYearId, classId))));
+      setActiveEntityKey(btnId);
+      setActiveExtra(extra);
+      dispatch(loadData(loadPayload(btnId, 1, limit, '', extra)));
     },
     [limit, dispatch, buildExtra]
   );
@@ -145,31 +175,31 @@ export default function EntityTab({
     async (row) => {
       try {
         await deleteRow(row, config, (result) => {
-          dispatch(loadData(loadPayload(entityKey, entity.currentPage, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+          dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage, limit, entity.searchQuery, activeExtra)));
           swalSuccess('Wa la guulaystey', result?.message || '');
         });
       } catch (err) {
         swalError('Khalad ayaa dhacay', err.message || '');
       }
     },
-    [config, entityKey, limit, dispatch, academicYearIdForLoad, classIdForLoad, entity.currentPage, entity.searchQuery, buildExtra]
+    [config, activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery, buildExtra]
   );
 
   const goToPage = useCallback(
     (page) => {
-      dispatch(setCurrentPage({ entityKey, value: page }));
-      dispatch(loadData(loadPayload(entityKey, page, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+      dispatch(setCurrentPage({ entityKey: activeEntityKey, value: page }));
+      dispatch(loadData(loadPayload(activeEntityKey, page, limit, entity.searchQuery, activeExtra)));
     },
-    [entityKey, limit, dispatch, academicYearIdForLoad, classIdForLoad, entity.searchQuery, buildExtra]
+    [activeEntityKey, limit, dispatch, activeExtra, entity.searchQuery]
   );
 
   const handlePageSizeChange = useCallback(
     (newSize) => {
-      dispatch(setItemsPerPage({ entityKey, value: newSize }));
-      dispatch(setCurrentPage({ entityKey, value: 1 }));
-      dispatch(loadData(loadPayload(entityKey, 1, newSize, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+      dispatch(setItemsPerPage({ entityKey: activeEntityKey, value: newSize }));
+      dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
+      dispatch(loadData(loadPayload(activeEntityKey, 1, newSize, entity.searchQuery, activeExtra)));
     },
-    [entityKey, dispatch, academicYearIdForLoad, classIdForLoad, entity.searchQuery, buildExtra]
+    [activeEntityKey, dispatch, activeExtra, entity.searchQuery]
   );
 
   const renderActions = useCallback(
@@ -219,18 +249,29 @@ export default function EntityTab({
           />
         </div>
       )}
+      {showResponsibleSelect && (
+        <div className="min-w-[200px]">
+          <Select2
+            name="responsibleSelect"
+            value={selectedResponsibleId}
+            onChange={(e) => setSelectedResponsibleId(e.target.value)}
+            options={responsibleOptions}
+            placeholder="Select Responsible"
+            isClearable={false}
+          />
+        </div>
+      )}
       {loadBtns.map((btn) => {
         const BtnIcon = btn.icon ?? Icon;
+        const isBulkAction = !!btn.isBulkAction;
         const isAddNew = !!btn.modalKey;
         const handleClick = () => {
-          if (isAddNew) {
-            if (bulkForm) {
-              setViewMode('form');
-            } else {
-              onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
-            }
+          if (isBulkAction && bulkForm) {
+            setViewMode('form');
+          } else if (isAddNew) {
+            onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
           } else {
-            onShowData(btn.id, academicYearIdForLoad, classIdForLoad);
+            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, responsibleIdForLoad);
           }
         };
         return (
@@ -269,9 +310,9 @@ export default function EntityTab({
   const emptyDesc = t('entity.loadHint');
 
   const handleSearchSubmit = useCallback(() => {
-    dispatch(setCurrentPage({ entityKey, value: 1 }));
-    dispatch(loadData(loadPayload(entityKey, 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
-  }, [entityKey, limit, academicYearIdForLoad, classIdForLoad, dispatch, entity.searchQuery, buildExtra]);
+    dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
+    dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
+  }, [activeEntityKey, limit, dispatch, entity.searchQuery, activeExtra]);
 
 
   if (bulkForm && viewMode === 'form') {
@@ -283,11 +324,11 @@ export default function EntityTab({
           </div>
           <div className="p-4">
             {bulkForm({
-              context: { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad },
+              context: { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad, res_id: responsibleIdForLoad },
               onSuccess: () => {
                 setViewMode('data');
                 if (showDataPanel) {
-                  dispatch(loadData(loadPayload(entityKey, entity.currentPage || 1, limit, entity.searchQuery, buildExtra(academicYearIdForLoad, classIdForLoad))));
+                  dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage || 1, limit, entity.searchQuery, activeExtra)));
                 }
               },
               onCancel: () => setViewMode('data'),
@@ -304,7 +345,7 @@ export default function EntityTab({
       showDataPanel={showDataPanel}
       searchPlaceholder={t('entity.search')}
       searchValue={entity.searchQuery}
-      onSearchChange={(e) => dispatch(setSearchQuery({ entityKey, value: e.target.value }))}
+      onSearchChange={(e) => dispatch(setSearchQuery({ entityKey: activeEntityKey, value: e.target.value }))}
       onSearchSubmit={handleSearchSubmit}
       headerActions={headerActions}
       emptyTitleClickToLoad={t('entity.noLoaded')}

@@ -77,7 +77,7 @@ export const defaultMenuItems = [
             "hiddenColumns": ["cl_id", "sub_id", "emp_id", "u_br_id", "a_y_id", "academic_name"],
             "loadButtons": [
               { "id": "SubjectClassSetup", "label": "Subject Class Setup", "labelKey": "tabs.subjectClassSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectClassSetup" }
+              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "isBulkAction": true }
             ]
           },
           {
@@ -244,15 +244,15 @@ export const defaultMenuItems = [
             "modalKey": "ResponsibleModal",
             "icon": "Database",
             "queryName": "Responsible",
+            "showResponsibleSelect": true,
             "hiddenColumns": ["state"],
             "loadButtons": [
-              { "id": "Responsible", "label": "Show Responsible", "icon": "Database" },
-              { "id": "All_Responsible", "label": "All Responsible", "icon": "Plus", "modalKey": "Responsible" },
-              { "id": "change_Responsible", "label": "Change Responsible", "icon": "Plus", "modalKey": "Responsible" },
-              { "id": "showprentwithnostudents", "label": "Show parent with no students", "icon": "Plus", "modalKey": "Responsible" },
-              { "id": "Deleteprentwithnostudents", "label": "Delete parent with no students", "icon": "Plus", "modalKey": "Responsible" },
-              { "id": "Add_new_responsible", "label": "Add new responsible", "icon": "Plus", "modalKey": "ResponsibleModal" },
-
+              { "id": "StudentResponsible", "label": "SHOW DATA", "icon": "Database" },
+              { "id": "Responsible", "label": "ALL", "icon": "Database" },
+              { "id": "change_Responsible", "label": "CHANGE", "icon": "Plus", "isBulkAction": true },
+              { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "icon": "Database" },
+              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "icon": "Plus", "modalKey": "Responsible" },
+              { "id": "Add_new_responsible", "label": "ADD NEW", "icon": "Plus", "modalKey": "ResponsibleModal" }
             ]
           },
           {

@@ -167,9 +167,14 @@ function DataTableCard({
 
   return (
     <Card className="overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,60,93,0.15)] border border-slate-200/70 dark:border-slate-700/80 bg-white dark:bg-slate-900/90">
-      {/* ── Toolbar ── */}
-      <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
-        {showDataPanel && (
+      {/* ── Controls bar: selects, dropdowns, action buttons ── */}
+      <div className="relative z-10 flex flex-wrap items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#F1F5F9] to-[#EEF2F7] dark:from-slate-800/70 dark:to-slate-800/50 border-b-2 border-slate-200 dark:border-slate-700">
+        {headerActions}
+      </div>
+
+      {/* ── Table toolbar: page size + search ── */}
+      {showDataPanel && (
+        <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-2.5 bg-white dark:bg-slate-900/95">
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             {onPageSizeChange && (
               <div className="flex items-center gap-2 shrink-0">
@@ -213,9 +218,8 @@ function DataTableCard({
               </div>
             </div>
           </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-auto">{headerActions}</div>
-      </div>
+        </div>
+      )}
 
       {/* ── Body ── */}
       <div className="relative z-0 min-h-0">

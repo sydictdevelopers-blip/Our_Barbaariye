@@ -13,6 +13,17 @@ function getSessionBrId() {
     return '';
   }
 }
+function getSessionUBrId() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const stored = window.localStorage?.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return '';
+    const user = JSON.parse(stored);
+    return user?.u_br_id != null ? String(user.u_br_id) : '';
+  } catch {
+    return '';
+  }
+}
 
 /**
  * loginUser – POST /api/login
@@ -42,6 +53,7 @@ export async function loginUser(username, password) {
  */
 export async function fetchSelectOptions(queryName, limit = 25, search = '', extra = {}) {
   const sessionBrId = getSessionBrId();
+  const sessionUBrId = getSessionUBrId();
   return fetch(`${API_BASE}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -50,6 +62,7 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
       page: 1,
       limit,
       ...(sessionBrId && { br_id: sessionBrId }),
+      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search && { search }),
       ...extra,
     }),
@@ -65,6 +78,7 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
 
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
   const sessionBrId = getSessionBrId();
+  const sessionUBrId = getSessionUBrId();
   const res = await fetch(`${API_BASE}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -73,6 +87,7 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
       page,
       limit,
       ...(sessionBrId && { br_id: sessionBrId }),
+      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search != null && String(search).trim() && { search: String(search).trim() }),
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
       ...extra,

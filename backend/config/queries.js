@@ -5,6 +5,8 @@
  */
 const QUERIES = {
   // ---- Dropdowns (optionsKey in crudConfig) – must return value + label columns for selects ----
+  responsible_options: 'SELECT r.res_id, p.p_name FROM responsible r JOIN people p ON p.p_id = r.p_id ORDER BY p.p_name',
+  all_student_options: `SELECT DISTINCT s.std_id, p.p_name FROM student s JOIN people p ON p.p_id = s.p_id JOIN student_class sc ON sc.std_id = s.std_id WHERE s.state = 'Active' AND sc.state = 'Continue' ORDER BY p.p_name`,
   level_type: 'SELECT l.l_ty_id, l.name AS level_name FROM level_type l ORDER BY l.name',
   levels: (p) => `SELECT lev_id, level FROM levels_show(${Number(p?.br_id) || 0}) ORDER BY level`,
   grades: 'SELECT gr_id, grade_name FROM grade ORDER BY gr_id',
@@ -44,6 +46,8 @@ const QUERIES = {
   LessonActivityResultRow: (p) => `SELECT lar.lar_id, lar.ac_t_id, lar.std_cl_id, lar.marks_obtained, lar.state FROM lesson_activity_result lar WHERE lar.lar_id = ${Number(p?.lar_id)||0}`,
   Students: 'SELECT * FROM students ORDER BY student_id',
   Responsible: 'SELECT * FROM responsible',
+  StudentResponsible: (p) => `SELECT id, student, responsible, phone1, phone2 FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0}) WHERE student IS NOT NULL`,
+  showprentwithnostudents: `SELECT r.res_id, p.p_name AS responsible_name, p.tel AS phone1, r.phone AS phone2 FROM responsible r JOIN people p ON p.p_id = r.p_id WHERE r.res_id NOT IN (SELECT DISTINCT s.res_id FROM student s JOIN student_class sc ON s.std_id = sc.std_id WHERE s.state = 'Active' AND sc.state = 'Continue') ORDER BY p.p_name`,
   studentstate: 'SELECT * FROM student_state ORDER BY 1',
   bus: 'SELECT * FROM bus ORDER BY 1',
   Studentinfo: 'SELECT * FROM students ORDER BY student_id',

@@ -13,6 +13,7 @@ import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUt
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { store } from '../../../store/store';
+import ChangeResponsibleForm from './ChangeResponsibleForm';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
 const iconMap = { Database, Plus };
@@ -67,7 +68,17 @@ export default function StudentofficeTabs() {
             onEdit={openModal}
             showAcademicYearSelect={cfg.showAcademicYearSelect}
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
+            showResponsibleSelect={cfg.showResponsibleSelect}
             hiddenColumns={cfg.hiddenColumns}
+            bulkForm={cfg.entityKey === 'Responsible'
+              ? ({ context, onSuccess, onCancel }) => (
+                  <ChangeResponsibleForm
+                    context={context}
+                    onSuccess={onSuccess}
+                    onCancel={onCancel}
+                  />
+                )
+              : undefined}
           />
         </motion.div>
       );

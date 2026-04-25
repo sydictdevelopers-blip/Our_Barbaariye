@@ -10,7 +10,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 function getConnectionString() {
   const user = process.env.DB_USER || 'postgres';
   const host = process.env.DB_HOST || 'localhost';
-  const database = process.env.DB_NAME || 'postgres';
+  const database = process.env.DB_NAME || 'barbaariye_demo_v10';
   const port = parseInt(process.env.DB_PORT, 10) || 5432;
   const raw = process.env.DB_PASSWORD;
   const password = raw != null && raw !== '' ? encodeURIComponent(String(raw).trim()) : '';

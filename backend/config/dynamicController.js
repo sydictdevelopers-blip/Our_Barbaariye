@@ -26,6 +26,7 @@ const PROCEDURE_PARAM_ORDER = {
   academic_year_sp: ['a_y_id_sp', 'academic_name_sp', 'started_sp', 'ended_sp', 'active_sp', 'u_br_id_sp', 'oper'],
   users_sp: ['usr_id_sp', 'p_id_sp', 'username_sp', 'password_sp', 'br_id_sp', 'state_sp', 'lock_user_sp', 'oper'],
   user_privilege_sp: ['usr_id_sp', 'privalage_sp', 'oper'],
+  student_responsible: ['p_num', 'p_waalid', 'p_operation', 'p_user_id'],
 };
 
 /**
