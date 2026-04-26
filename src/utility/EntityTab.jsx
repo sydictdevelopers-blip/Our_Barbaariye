@@ -272,6 +272,15 @@ export default function EntityTab({
     dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
   }, [activeEntityKey, limit, dispatch, entity.searchQuery, activeExtra]);
 
+  useEffect(() => {
+    if (!showDataPanel) return;
+    const t = setTimeout(() => {
+      dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
+      dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra]);
+
 
   if (bulkForm && viewMode === 'form') {
     return (

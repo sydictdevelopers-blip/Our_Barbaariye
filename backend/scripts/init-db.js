@@ -120,9 +120,13 @@ CREATE TABLE IF NOT EXISTS activity (
   activity_name VARCHAR(255) NOT NULL,
   description TEXT,
   state VARCHAR(50) DEFAULT 'Active',
+  reg_date DATE DEFAULT CURRENT_DATE,
   br_id_sp INT DEFAULT 1,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Add reg_date if table already exists (migration)
+ALTER TABLE activity ADD COLUMN IF NOT EXISTS reg_date DATE DEFAULT CURRENT_DATE;
 
 -- Subject Activity table (links activities to subjects)
 CREATE TABLE IF NOT EXISTS subject_activity (
@@ -145,34 +149,38 @@ CREATE TABLE IF NOT EXISTS student_activity_edit (
 );
 
 -- activity_sp: Insert / Update / Delete activity rows
+DROP FUNCTION IF EXISTS activity_sp(INT, VARCHAR, VARCHAR, VARCHAR, INT, INT, DATE, VARCHAR);
 DROP FUNCTION IF EXISTS activity_sp(INT, VARCHAR, VARCHAR, VARCHAR, INT, INT, VARCHAR);
 CREATE OR REPLACE FUNCTION activity_sp(
-  act_id_sp    INT,
+  act_id_sp        INT,
   activity_name_sp VARCHAR,
   description_sp   VARCHAR,
   state_sp         VARCHAR,
   br_id_sp         INT,
   u_br_id_sp       INT,
+  reg_date_sp      DATE,
   oper             VARCHAR
 ) RETURNS VARCHAR AS $$
 BEGIN
-  IF oper = 'I' THEN
-    INSERT INTO activity (activity_name, description, state, br_id_sp)
+  IF oper = 'insert' THEN
+    INSERT INTO activity (activity_name, description, state, reg_date, br_id_sp)
     VALUES (
       NULLIF(TRIM(activity_name_sp), ''),
       NULLIF(TRIM(description_sp), ''),
       COALESCE(NULLIF(TRIM(state_sp), ''), 'Active'),
+      COALESCE(reg_date_sp, CURRENT_DATE),
       COALESCE(br_id_sp, 1)
     );
     RETURN 'inserted';
-  ELSIF oper = 'U' AND act_id_sp > 0 THEN
+  ELSIF oper = 'update' AND act_id_sp > 0 THEN
     UPDATE activity SET
       activity_name = NULLIF(TRIM(activity_name_sp), ''),
       description   = NULLIF(TRIM(description_sp), ''),
-      state         = COALESCE(NULLIF(TRIM(state_sp), ''), 'Active')
+      state         = COALESCE(NULLIF(TRIM(state_sp), ''), 'Active'),
+      reg_date      = COALESCE(reg_date_sp, CURRENT_DATE)
     WHERE act_id = act_id_sp;
     RETURN 'updated';
-  ELSIF oper = 'D' AND act_id_sp > 0 THEN
+  ELSIF oper = 'delete' AND act_id_sp > 0 THEN
     DELETE FROM activity WHERE act_id = act_id_sp;
     RETURN 'deleted';
   END IF;

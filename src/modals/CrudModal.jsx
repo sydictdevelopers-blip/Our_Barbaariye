@@ -105,6 +105,16 @@ async function submitOperation(config, form, operation) {
   return await crud({ operation, fn: config.fn, params });
 }
 
+function FieldWrapper({ label, error, children }) {
+  return (
+    <div className="space-y-1">
+      {label && <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
+      {children}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
+
 /**
  * CrudModal – Form for Save / Update / Delete
  * config: { fn, toParams, validate, fields, title }
@@ -243,14 +253,6 @@ export default function CrudModal({
 
   const isEdit = mode === 'update';
   const showUpdate = !!config.fn;
-
-  const FieldWrapper = ({ label, error, children }) => (
-    <div className="space-y-1">
-      {label && <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
-      {children}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-    </div>
-  );
 
   const getInputClasses = (fieldName) =>
     `w-full px-4 py-2 rounded-xl border text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f3d5e] focus:border-transparent ${errors[fieldName] ? 'border-red-500 dark:border-red-500' : ''}`;
