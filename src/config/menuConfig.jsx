@@ -251,7 +251,7 @@ export const defaultMenuItems = [
               { "id": "Responsible", "label": "ALL", "icon": "Database" },
               { "id": "change_Responsible", "label": "CHANGE", "icon": "Plus", "isBulkAction": true },
               { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "icon": "Database" },
-              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "icon": "Plus", "modalKey": "Responsible" },
+              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "icon": "Plus", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
               { "id": "Add_new_responsible", "label": "ADD NEW", "icon": "Plus", "modalKey": "ResponsibleModal" }
             ]
           },
@@ -276,10 +276,10 @@ export const defaultMenuItems = [
             "modalKey": "bus",
             "icon": "Database",
             "queryName": "bus",
+            "hiddenColumns": ["emp_id", "username"],
             "loadButtons": [
-              { "id": "addnew_bus", "label": "ADD NEW", "icon": "Database" },
-              { "id": "showdata_bus", "label": "Show data bus", "icon": "Plus", "modalKey": "bus" },
-              
+              { "id": "bus", "label": "Show Bus", "icon": "Database" },
+              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "bus" }
             ]
           },
           {
@@ -289,9 +289,9 @@ export const defaultMenuItems = [
             "modalKey": "update school",
             "icon": "Database",
             "queryName": "update school",
+            "hideDelete": true,
             "loadButtons": [
-               { "id": "showdata_update school", "label": "Show data update school", "icon": "Plus", "modalKey": "update school" },
-              
+              { "id": "update school", "label": "Show Schools", "icon": "Database" }
             ]
           },
           {

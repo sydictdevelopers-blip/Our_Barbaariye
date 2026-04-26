@@ -26,7 +26,12 @@ const PROCEDURE_PARAM_ORDER = {
   academic_year_sp: ['a_y_id_sp', 'academic_name_sp', 'started_sp', 'ended_sp', 'active_sp', 'u_br_id_sp', 'oper'],
   users_sp: ['usr_id_sp', 'p_id_sp', 'username_sp', 'password_sp', 'br_id_sp', 'state_sp', 'lock_user_sp', 'oper'],
   user_privilege_sp: ['usr_id_sp', 'privalage_sp', 'oper'],
+  responsible_sp: ['res_id_sp', 'p_id_sp', 'p_name_sp', 'tel_sp', 'phone_sp', 'sex_sp', 'ad_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  bus_sp: ['bus_id_sp', 'bus_name_sp', 'emp_id_sp', 'targo_sp', 'u_br_id_sp', 'oper'],
+  schools_sp: ['num', 'sname', 'reg_no', 'user_id', 'oper'],
+  student_state_sp: ['ids', 'clas', 'academic', 'reason', 'oper_fee', 'fee_amount', 'account_pr', 'to_class', 'description_sp', 'date_sp', 'user_id'],
   student_responsible: ['p_num', 'p_waalid', 'p_operation', 'p_user_id'],
+  del_responsible_with_no_std_spv: [],
 };
 
 /**

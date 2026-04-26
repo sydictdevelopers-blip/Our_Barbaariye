@@ -1,36 +1,46 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Eye, Pencil, Database, Copy, RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Database, Copy, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
-import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
-import { swalError, swalSuccess } from '../../../utils/swal';
+import { swalError } from '../../../utils/swal';
 
-const INFO_COLUMNS = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'emis_id',      label: 'EMIS' },
-  { key: 'id_card',      label: 'ID Card' },
-  { key: 'sex',          label: 'Sex' },
-  { key: 'tel',          label: 'Phone' },
-  { key: 'dob',          label: 'DOB' },
-  { key: 'mothername',   label: 'Mother' },
-  { key: 'mother_phone', label: 'Mother Phone' },
-  { key: 'state',        label: 'State' },
-];
+const NO_DATA_ROW = [{ id: '__no_data__', student: 'This Information Was Not Found!' }];
 
-const DUP_COLUMNS = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'emis_id',      label: 'EMIS' },
-  { key: 'id_card',      label: 'ID Card' },
-  { key: 'sex',          label: 'Sex' },
-  { key: 'tel',          label: 'Phone' },
-  { key: 'dup_count',    label: 'Duplicates' },
-];
-
-const NO_DATA_ROW = [{ id: '__no_data__', student_name: 'This Information Was Not Found!' }];
+const compactSelectStyle = {
+  control: (base) => ({ ...base, minHeight: '38px', height: '38px', fontSize: '13px', borderRadius: '10px' }),
+  valueContainer: (base) => ({ ...base, padding: '0 10px' }),
+  indicatorsContainer: (base) => ({ ...base, height: '38px' }),
+  input: (base) => ({ ...base, margin: 0, padding: 0 }),
+};
+const compactBtn = 'px-3 py-2 text-sm rounded-lg gap-2';
 
 export default function StudentInfoTab() {
+  const { t } = useTranslation();
+
+  const INFO_COLUMNS = [
+    { key: 'id',            label: 'ID' },
+    { key: 'student',       label: t('studentInfo.student') },
+    { key: 'class',         label: t('studentInfo.class') },
+    { key: 'academic_name', label: t('studentInfo.academicYear') },
+    { key: 'state',         label: t('studentInfo.state') },
+    { key: 'charges',       label: t('studentInfo.charges') },
+    { key: 'attendances',   label: t('studentInfo.attendances') },
+    { key: 'results',       label: t('studentInfo.results') },
+    { key: 'reg_date',      label: t('studentInfo.date') },
+  ];
+
+  const DUP_COLUMNS = [
+    { key: 'student_name', label: t('studentInfo.student') },
+    { key: 'emis_id',      label: 'EMIS' },
+    { key: 'id_card',      label: 'ID Card' },
+    { key: 'sex',          label: 'Sex' },
+    { key: 'tel',          label: 'Phone' },
+    { key: 'dup_count',    label: 'Duplicates' },
+  ];
+
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
 
@@ -43,27 +53,30 @@ export default function StudentInfoTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Lazy loader (server-side: 25 default + search beyond) — replaces the
-  // previous 1M-row eager fetch.
-  const studentLoader = useMemo(() => makeOptionLoader('all_students_options'), []);
+  const loadStudentOptions = useMemo(
+    () => makeOptionLoader('std_admin_all_options', null, { valueKey: 'std_id', labelKey: 'name' }),
+    []
+  );
 
   const handleShowData = async () => {
     if (!selectedStudent) {
-      swalError('Fadlan dooro Student');
+      swalError(t('studentInfo.noStudent'));
       return;
     }
     setLoadingTable(true);
     setViewMode('info');
     try {
       const res = await fetchDataPaginated({
-        queryName: 'Studentinfo',
+        queryName: 'studentClass_info',
         page: 1,
         limit: 100,
         search: '',
         std_id: selectedStudent,
       });
       const rows = res?.data ?? [];
-      setTableData(rows.map((r, i) => ({ id: r.std_id ?? i, ...r })));
+      // Filter out the synthetic 'Not found' row from the SP (it has result populated and id=null)
+      const real = rows.filter((r) => !(r.result && r.id == null));
+      setTableData(real.map((r, i) => ({ ...r, id: r.id ?? `__row_${i}` })));
       setTableLoaded(true);
       setCurrentPage(1);
     } catch (e) {
@@ -94,16 +107,6 @@ export default function StudentInfoTab() {
     }
   };
 
-  const handleView = useCallback((row) => {
-    if (row.id === '__no_data__') return;
-    swalSuccess('View', String(row.student_name ?? ''));
-  }, []);
-
-  const handleEdit = useCallback((row) => {
-    if (row.id === '__no_data__') return;
-    swalSuccess('Edit', String(row.student_name ?? ''));
-  }, []);
-
   const activeColumns = viewMode === 'duplicates' ? DUP_COLUMNS : INFO_COLUMNS;
 
   const filteredRows = useMemo(() => {
@@ -120,20 +123,6 @@ export default function StudentInfoTab() {
     return filteredRows.slice(s, s + pageSize);
   }, [filteredRows, currentPage, pageSize]);
 
-  const renderActions = useCallback((row) => (
-    <div className="flex justify-center gap-1">
-      <ActionButton variant="success" aria-label="View" onClick={() => handleView(row)}>
-        <Eye className="w-4 h-4" />
-      </ActionButton>
-      <ActionButton variant="edit" aria-label="Edit" onClick={() => handleEdit(row)}>
-        <Pencil className="w-4 h-4" />
-      </ActionButton>
-    </div>
-  ), [handleView, handleEdit]);
-
-  const compactSelectStyle = { control: (base) => ({ ...base, minHeight: '38px', height: '38px', fontSize: '13px', borderRadius: '10px' }), valueContainer: (base) => ({ ...base, padding: '0 10px' }), indicatorsContainer: (base) => ({ ...base, height: '38px' }), input: (base) => ({ ...base, margin: 0, padding: 0 }) };
-  const compactBtn = 'px-3 py-2 text-sm rounded-lg gap-2';
-
   const filterToolbar = (
     <div className="rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white dark:bg-slate-900/40 shadow-sm px-3 py-2.5 flex flex-nowrap items-center gap-2.5 overflow-x-auto">
       <div className="w-72 shrink-0">
@@ -141,19 +130,26 @@ export default function StudentInfoTab() {
           name="filterStudent"
           value={selectedStudent}
           selectedLabel={selectedStudentLabel}
-          onChange={(e) => { setSelectedStudent(e.target.value); setSelectedStudentLabel(e.target.label || ''); }}
-          loadOptions={studentLoader}
-          placeholder="Select Student"
+          loadOptions={loadStudentOptions}
+          onChange={(e) => {
+            setSelectedStudent(e.target.value ?? '');
+            setSelectedStudentLabel(e.target.label ?? '');
+          }}
+          placeholder={t('studentInfo.selectStudent')}
           isClearable={false}
           styles={compactSelectStyle}
+          isOptionDisabled={(opt) => opt?.isHint}
+          formatOptionLabel={(opt) =>
+            opt?.isHint ? <span className="text-slate-500 italic">{opt.label}</span> : opt?.label
+          }
         />
       </div>
       <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShowData} disabled={loadingTable} className={`${compactBtn} shrink-0`}>
-        {loadingTable && viewMode === 'info' ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Show Data'}
+        {loadingTable && viewMode === 'info' ? <RefreshCw className="w-4 h-4 animate-spin" /> : t('studentInfo.showData')}
       </Button>
       <span className="h-7 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0" aria-hidden />
       <Button size="sm" variant="primary" leftIcon={<Copy className="w-4 h-4" />} onClick={handleShowDuplicateData} disabled={loadingTable} className={`${compactBtn} shrink-0`}>
-        {loadingTable && viewMode === 'duplicates' ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Show Duplicate Data'}
+        {loadingTable && viewMode === 'duplicates' ? <RefreshCw className="w-4 h-4 animate-spin" /> : t('studentInfo.showDuplicate')}
       </Button>
     </div>
   );
@@ -170,9 +166,8 @@ export default function StudentInfoTab() {
         columns={activeColumns}
         data={pagedRows}
         isLoading={loadingTable}
-        renderActions={renderActions}
-        emptyTitleClickToLoad="Wax xog ah lama soo bandhigin"
-        emptyDescClickToLoad="Dooro Student kadibna riix Show Data, ama riix Show Duplicate Data."
+        emptyTitleClickToLoad={t('studentInfo.noData')}
+        emptyDescClickToLoad={t('studentInfo.noDataDesc')}
         total={totalRows}
         currentPage={currentPage}
         totalPages={Math.max(1, Math.ceil(totalRows / pageSize))}

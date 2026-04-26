@@ -6,6 +6,7 @@ import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
+import StudentStateModal from '../../../modals/StudentStateModal';
 
 const STATE_COLUMNS = [
   { key: 'id',       label: 'ID' },
@@ -59,8 +60,9 @@ export default function StudentStateTab() {
   };
 
   const placeholder = (label) => () => swalSuccess(label, 'Feature horumar ayaa loogu jiraa');
-  const handleAddNew = placeholder('Add New');
   const handleMergeStudent = placeholder('Merge Student');
+  const [stateModalOpen, setStateModalOpen] = useState(false);
+  const handleAddNew = () => setStateModalOpen(true);
 
   const handleView = useCallback((row) => {
     if (row.id === '__no_data__') return;
@@ -137,6 +139,14 @@ export default function StudentStateTab() {
         onNextPage={() => setCurrentPage((p) => Math.min(Math.max(1, Math.ceil(totalRows / pageSize)), p + 1))}
         onPageClick={(p) => setCurrentPage(p)}
         onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+      />
+      <StudentStateModal
+        isOpen={stateModalOpen}
+        onClose={() => setStateModalOpen(false)}
+        onSuccess={() => {
+          setStateModalOpen(false);
+          if (tableLoaded) handleShowData();
+        }}
       />
     </div>
   );
