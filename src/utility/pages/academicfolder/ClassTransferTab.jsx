@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Pencil, Combine, Split, Save, XCircle } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';
-import { fetchSelectOptions } from '../../../services/api';
+import { makeOptionLoader } from '../../../services/api';
 
 const STATE_OPTIONS = [
   { value: 'Active', label: 'Active' },
@@ -15,16 +15,24 @@ const STATE_OPTIONS = [
  * ClassTransferTab — UI shell ee tab Class Transfer.
  * Backend functions waxa diyaarinaayo user-ka.
  */
+/** Hook helper: pair of [id,label] state with a setter that takes a Select2 onChange event. */
+function useSelect(initial = '') {
+  const [val, setVal] = useState({ id: initial, label: '' });
+  const setFromEvent = (e) => setVal({ id: e.target.value, label: e.target.label || '' });
+  const reset = () => setVal({ id: '', label: '' });
+  return [val.id, val.label, setFromEvent, reset];
+}
+
 export default function ClassTransferTab() {
-  /* ── Shared options ── */
-  const [classOptions, setClassOptions] = useState([]);
-  const [batchOptions, setBatchOptions] = useState([]);
-  const [academicOptions, setAcademicOptions] = useState([]);
+  /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
+  const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
+  const batchLoader    = useMemo(() => makeOptionLoader('batch_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
 
   /* ── Top toolbar 3 selects ── */
-  const [filterClass, setFilterClass] = useState('');
-  const [filterBatch, setFilterBatch] = useState('');
-  const [filterAcademic, setFilterAcademic] = useState('');
+  const [filterClass,    filterClassLabel,    setFilterClass]    = useSelect();
+  const [filterBatch,    filterBatchLabel,    setFilterBatch]    = useSelect();
+  const [filterAcademic, filterAcademicLabel, setFilterAcademic] = useSelect();
 
   /* ── Editable table data (after Edit) ── */
   const [tableData, setTableData] = useState([]);
@@ -35,51 +43,14 @@ export default function ClassTransferTab() {
   const [openModal, setOpenModal] = useState(null); // 'combination' | 'division' | null
 
   /* ── Combination form ── */
-  const [combFromId, setCombFromId] = useState('');
-  const [combToId, setCombToId] = useState('');
+  const [combFromId, combFromLabel, setCombFrom, resetCombFrom] = useSelect();
+  const [combToId,   combToLabel,   setCombTo,   resetCombTo]   = useSelect();
 
   /* ── Division form ── */
-  const [divClassId, setDivClassId] = useState('');
+  const [divClassId,   divClassLabel,   setDivClass,   resetDivClass]   = useSelect();
   const [divSex, setDivSex] = useState('');
-  const [divClassToId, setDivClassToId] = useState('');
+  const [divClassToId, divClassToLabel, setDivClassTo, resetDivClassTo] = useSelect();
   const [divStudentCount, setDivStudentCount] = useState(0);
-
-  /* Load options on mount */
-  useEffect(() => {
-    let cancelled = false;
-    const mapPair = (rows, vKey, lKey) =>
-      rows.map((r) => ({ value: String(r[vKey] ?? ''), label: String(r[lKey] ?? r[vKey] ?? '') }));
-
-    fetchSelectOptions('class_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setClassOptions(mapPair(rows, 'cl_id', 'class'));
-      })
-      .catch(() => setClassOptions([]));
-
-    fetchSelectOptions('batch_options', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && Object.keys(rows[0])[0];
-        const labelKey = rows[0] && (Object.keys(rows[0])[1] || valueKey);
-        setBatchOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setBatchOptions([]));
-
-    fetchSelectOptions('academicYeartab', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('id' in rows[0] ? 'id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('name' in rows[0] ? 'name' : Object.keys(rows[0])[1] || valueKey);
-        setAcademicOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setAcademicOptions([]));
-
-    return () => { cancelled = true; };
-  }, []);
 
   /* ── Edit button: load students of the chosen filters ── */
   const handleEdit = async () => {
@@ -107,8 +78,8 @@ export default function ClassTransferTab() {
   /* ── Modal open/close ── */
   const closeModal = () => {
     setOpenModal(null);
-    setCombFromId(''); setCombToId('');
-    setDivClassId(''); setDivSex(''); setDivClassToId(''); setDivStudentCount(0);
+    resetCombFrom(); resetCombTo();
+    resetDivClass(); setDivSex(''); resetDivClassTo(); setDivStudentCount(0);
   };
 
   const handleCombination = async () => {
@@ -150,8 +121,9 @@ export default function ClassTransferTab() {
           <Select2
             name="filterClass"
             value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
-            options={classOptions}
+            selectedLabel={filterClassLabel}
+            onChange={setFilterClass}
+            loadOptions={classLoader}
             placeholder="Select Class"
           />
         </div>
@@ -159,8 +131,9 @@ export default function ClassTransferTab() {
           <Select2
             name="filterBatch"
             value={filterBatch}
-            onChange={(e) => setFilterBatch(e.target.value)}
-            options={batchOptions}
+            selectedLabel={filterBatchLabel}
+            onChange={setFilterBatch}
+            loadOptions={batchLoader}
             placeholder="Select Batch"
           />
         </div>
@@ -168,8 +141,9 @@ export default function ClassTransferTab() {
           <Select2
             name="filterAcademic"
             value={filterAcademic}
-            onChange={(e) => setFilterAcademic(e.target.value)}
-            options={academicOptions}
+            selectedLabel={filterAcademicLabel}
+            onChange={setFilterAcademic}
+            loadOptions={academicLoader}
             placeholder="Select Academic Year"
           />
         </div>
@@ -237,8 +211,9 @@ export default function ClassTransferTab() {
                         <Select2
                           name={`class-${idx}`}
                           value={String(row.cl_id ?? '')}
-                          onChange={(e) => updateRow(idx, 'cl_id', e.target.value)}
-                          options={classOptions}
+                          selectedLabel={row.cl_label ?? ''}
+                          onChange={(e) => { updateRow(idx, 'cl_id', e.target.value); updateRow(idx, 'cl_label', e.target.label || ''); }}
+                          loadOptions={classLoader}
                           placeholder="Select Class"
                         />
                       </td>
@@ -246,8 +221,9 @@ export default function ClassTransferTab() {
                         <Select2
                           name={`batch-${idx}`}
                           value={String(row.batch_id ?? '')}
-                          onChange={(e) => updateRow(idx, 'batch_id', e.target.value)}
-                          options={batchOptions}
+                          selectedLabel={row.batch_label ?? ''}
+                          onChange={(e) => { updateRow(idx, 'batch_id', e.target.value); updateRow(idx, 'batch_label', e.target.label || ''); }}
+                          loadOptions={batchLoader}
                           placeholder="Select Batch"
                         />
                       </td>
@@ -304,15 +280,17 @@ export default function ClassTransferTab() {
           <Select2
             name="combFrom"
             value={combFromId}
-            onChange={(e) => setCombFromId(e.target.value)}
-            options={classOptions}
+            selectedLabel={combFromLabel}
+            onChange={setCombFrom}
+            loadOptions={classLoader}
             placeholder="Select Class From"
           />
           <Select2
             name="combTo"
             value={combToId}
-            onChange={(e) => setCombToId(e.target.value)}
-            options={classOptions}
+            selectedLabel={combToLabel}
+            onChange={setCombTo}
+            loadOptions={classLoader}
             placeholder="Select Class To"
           />
         </div>
@@ -344,8 +322,9 @@ export default function ClassTransferTab() {
             <Select2
               name="divClass"
               value={divClassId}
-              onChange={(e) => setDivClassId(e.target.value)}
-              options={classOptions}
+              selectedLabel={divClassLabel}
+              onChange={setDivClass}
+              loadOptions={classLoader}
               placeholder="Select Class"
             />
             <p className="mt-1.5 text-xs font-medium text-emerald-600">
@@ -366,8 +345,9 @@ export default function ClassTransferTab() {
             <Select2
               name="divClassTo"
               value={divClassToId}
-              onChange={(e) => setDivClassToId(e.target.value)}
-              options={classOptions}
+              selectedLabel={divClassToLabel}
+              onChange={setDivClassTo}
+              loadOptions={classLoader}
               placeholder="Select Class"
             />
           </div>

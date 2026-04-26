@@ -104,12 +104,19 @@ function registerApiRoutes(app) {
       if (search && process.env.NODE_ENV !== 'production') {
         console.log('[api/data] search:', JSON.stringify(search));
       }
-      const sql = getQuery(queryName || 'accounts', body);
-      if (!sql) return res.status(404).json({ error: 'Query not allowed or not found', queryName: queryName || null });
+      const entry = getQuery(queryName || 'accounts', body);
+      if (!entry) return res.status(404).json({ error: 'Query not allowed or not found', queryName: queryName || null });
+      const { sql, prePaginated } = entry;
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`[api/data] queryName=${queryName} sql=${sql}`);
+        console.log(`[api/data] queryName=${queryName} prePaginated=${prePaginated} sql=${sql}`);
       }
-      const { columns, data: rows, total } = await dynamicController.runSelectQueryPaginated(sql, page, limit, search);
+      let columns, rows, total;
+      if (prePaginated) {
+        // SP already applied search/limit/offset/branch — run directly, no wrap.
+        ({ columns, data: rows, total } = await dynamicController.runSelectQueryDirect(sql));
+      } else {
+        ({ columns, data: rows, total } = await dynamicController.runSelectQueryPaginated(sql, page, limit, search));
+      }
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[api/data] queryName=${queryName} total=${total} rows=${rows.length} sample=`, rows.slice(0, 3));
       }
@@ -157,15 +164,15 @@ function registerApiRoutes(app) {
   /** POST /api/stream – { queryName } → streaming JSON array (xogta badan 1M+ rows) */
   app.post('/api/stream', (req, res) => {
     const queryName = (req.body?.queryName || req.body?.query || '').trim();
-    const sql = getQuery(queryName || 'accounts');
-    if (!sql) return res.status(404).json({ error: 'Query not allowed or not found' });
-    dynamicController.handleStreamRequest(req, res, sql);
+    const entry = getQuery(queryName || 'accounts', req.body || {});
+    if (!entry) return res.status(404).json({ error: 'Query not allowed or not found' });
+    dynamicController.handleStreamRequest(req, res, entry.sql);
   });
   app.post('/stream', (req, res) => {
     const queryName = (req.body?.queryName || req.body?.query || '').trim();
-    const sql = getQuery(queryName || 'accounts');
-    if (!sql) return res.status(404).json({ error: 'Query not allowed or not found' });
-    dynamicController.handleStreamRequest(req, res, sql);
+    const entry = getQuery(queryName || 'accounts', req.body || {});
+    if (!entry) return res.status(404).json({ error: 'Query not allowed or not found' });
+    dynamicController.handleStreamRequest(req, res, entry.sql);
   });
 }
 

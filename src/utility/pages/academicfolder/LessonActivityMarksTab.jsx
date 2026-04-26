@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Database, Pencil, Plus, Trash2, X } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
-import { crud, fetchDataPaginated, fetchSelectOptions } from '../../../services/api';
+import { crud, fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalConfirm, swalError, swalSuccess } from '../../../utils/swal';
 
 const ACTIVITY_COLUMNS = [
@@ -18,8 +18,12 @@ const ACTIVITY_COLUMNS = [
 ];
 
 const EMPTY_FORM = {
-  ac_id: '', cl_id: '', a_y_id: '', sub_cl_id: '',
-  marks: '', description: '', deadline: '', e_r_id: '',
+  ac_id: '', ac_label: '',
+  cl_id: '', cl_label: '',
+  a_y_id: '', a_y_label: '',
+  sub_cl_id: '', sub_cl_label: '',
+  e_r_id: '', e_r_label: '',
+  marks: '', description: '', deadline: '',
 };
 
 const INPUT_CLS = 'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -35,16 +39,17 @@ function Field({ label, children }) {
 }
 
 export default function LessonActivityMarksTab() {
-  /* ── toolbar ── */
+  /* ── toolbar (id + label so we can pre-seed Add modal) ── */
   const [filterAcademic, setFilterAcademic] = useState('');
+  const [filterAcademicLabel, setFilterAcademicLabel] = useState('');
   const [filterClass,    setFilterClass]    = useState('');
+  const [filterClassLabel, setFilterClassLabel] = useState('');
 
-  /* ── options ── */
-  const [academicOptions,  setAcademicOptions]  = useState([]);
-  const [classOptions,     setClassOptions]     = useState([]);
-  const [activityOptions,  setActivityOptions]  = useState([]);
-  const [examRegOptions,   setExamRegOptions]   = useState([]);
-  const [modalSubjectOpts, setModalSubjectOpts] = useState([]);
+  /* ── Lazy loaders (server-side: 25 default + search) ── */
+  const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
+  const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
+  const activityLoader = useMemo(() => makeOptionLoader('activity_type_options'), []);
+  const examRegLoader  = useMemo(() => makeOptionLoader('exam_reg_options'), []);
 
   /* ── table ── */
   const [tableData,    setTableData]    = useState([]);
@@ -62,43 +67,11 @@ export default function LessonActivityMarksTab() {
   const [saving,    setSaving]    = useState(false);
   const [form,      setForm]      = useState(EMPTY_FORM);
 
-  /* ── load options on mount ── */
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const [acRes, clRes, actRes, erRes] = await Promise.allSettled([
-        fetchSelectOptions('academic_options',       200, ''),
-        fetchSelectOptions('class_options',          500, ''),
-        fetchSelectOptions('activity_type_options',  200, ''),
-        fetchSelectOptions('exam_reg_options',       200, ''),
-      ]);
-      if (cancelled) return;
-
-      const rows = (r) => r.status === 'fulfilled' ? (r.value?.data ?? r.value?.rows ?? []) : [];
-      const pair = (arr, vk, lk) => arr.map((r) => ({ value: String(r[vk] ?? ''), label: String(r[lk] ?? '') }));
-
-      setAcademicOptions(pair(rows(acRes), 'a_y_id', 'academic_name'));
-      setClassOptions(pair(rows(clRes), 'cl_id', 'class'));
-      setActivityOptions(pair(rows(actRes), 'ac_id', 'activity_type'));
-      setExamRegOptions(pair(rows(erRes), 'ex_reg_id', 'exam'));
-    };
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  /* ── reload subject options when cl_id / a_y_id change in modal ── */
-  useEffect(() => {
-    if (!addOpen || !form.cl_id || !form.a_y_id) { setModalSubjectOpts([]); return; }
-    let cancelled = false;
-    fetchSelectOptions('subject_class_options', 200, '', { cl_id: form.cl_id, a_y_id: form.a_y_id })
-      .then((res) => {
-        if (cancelled) return;
-        const r = res?.data ?? res?.rows ?? [];
-        setModalSubjectOpts(r.map((x) => ({ value: String(x.sub_cl_id ?? ''), label: String(x.subject_name ?? '') })));
-      })
-      .catch(() => setModalSubjectOpts([]));
-    return () => { cancelled = true; };
-  }, [addOpen, form.cl_id, form.a_y_id]);
+  /* ── Subject loader depends on cl_id + a_y_id; recreate when they change. ── */
+  const subjectLoader = useMemo(
+    () => makeOptionLoader('subject_class_options', () => ({ cl_id: form.cl_id, a_y_id: form.a_y_id }), { labelKey: 'subject_name' }),
+    [form.cl_id, form.a_y_id]
+  );
 
   /* ── fetch rows ── */
   const fetchRows = useCallback(async (clId, ayId) => {
@@ -124,7 +97,11 @@ export default function LessonActivityMarksTab() {
   /* ── add ── */
   const handleAddNew = () => {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, cl_id: filterClass, a_y_id: filterAcademic });
+    setForm({
+      ...EMPTY_FORM,
+      cl_id: filterClass, cl_label: filterClassLabel,
+      a_y_id: filterAcademic, a_y_label: filterAcademicLabel,
+    });
     setAddOpen(true);
   };
 
@@ -136,14 +113,14 @@ export default function LessonActivityMarksTab() {
       const r = (res?.data ?? [])[0];
       if (!r) { swalError('Could not load row data'); return; }
       setForm({
-        ac_id:       String(r.ac_id       ?? ''),
-        cl_id:       String(r.cl_id       ?? ''),
-        a_y_id:      String(r.a_y_id      ?? ''),
-        sub_cl_id:   String(r.sub_cl_id   ?? ''),
+        ac_id:       String(r.ac_id       ?? ''),  ac_label:     String(row.activity_name ?? ''),
+        cl_id:       String(r.cl_id       ?? ''),  cl_label:     String(row.class_name    ?? ''),
+        a_y_id:      String(r.a_y_id      ?? ''),  a_y_label:    '', // unknown until user opens dropdown
+        sub_cl_id:   String(r.sub_cl_id   ?? ''),  sub_cl_label: String(row.subject_name  ?? ''),
+        e_r_id:      String(r.e_r_id      ?? ''),  e_r_label:    '', // unknown until user opens dropdown
         marks:       String(r.marks       ?? ''),
         description: String(r.description ?? ''),
         deadline:    String(r.deadline    ?? ''),
-        e_r_id:      String(r.e_r_id      ?? ''),
       });
       setAddOpen(true);  // open only after form is ready
     } catch (e) {
@@ -235,16 +212,31 @@ export default function LessonActivityMarksTab() {
   ), [openEditModal, handleDelete]);
 
   const setField = (k) => (e) => setForm((prev) => ({ ...prev, [k]: e.target.value }));
+  const setSelectField = (k, lk) => (e) => setForm((prev) => ({ ...prev, [k]: e.target.value, [lk]: e.target.label || '' }));
 
   return (
     <div className="space-y-4">
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-end gap-2 px-3 py-3 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200/70 dark:border-slate-700/70">
         <div className="min-w-[180px] flex-1">
-          <Select2 name="filterAcademic" value={filterAcademic} onChange={(e) => setFilterAcademic(e.target.value)} options={academicOptions} placeholder="Select Academic Year" />
+          <Select2
+            name="filterAcademic"
+            value={filterAcademic}
+            selectedLabel={filterAcademicLabel}
+            onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }}
+            loadOptions={academicLoader}
+            placeholder="Select Academic Year"
+          />
         </div>
         <div className="min-w-[180px] flex-1">
-          <Select2 name="filterClass" value={filterClass} onChange={(e) => setFilterClass(e.target.value)} options={classOptions} placeholder="Select Class" />
+          <Select2
+            name="filterClass"
+            value={filterClass}
+            selectedLabel={filterClassLabel}
+            onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }}
+            loadOptions={classLoader}
+            placeholder="Select Class"
+          />
         </div>
         <div className="flex-1" />
         <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShowData} disabled={!filterAcademic || !filterClass || loadingTable}>
@@ -308,34 +300,43 @@ export default function LessonActivityMarksTab() {
 
               {/* Activity */}
               <Field label="Activity *">
-                <Select2 name="ac_id" value={form.ac_id} onChange={setField('ac_id')} options={activityOptions} placeholder="Select Activity" />
+                <Select2 name="ac_id" value={form.ac_id} selectedLabel={form.ac_label}
+                  onChange={setSelectField('ac_id', 'ac_label')} loadOptions={activityLoader} placeholder="Select Activity" />
               </Field>
 
               {/* Exam Reg */}
               <Field label="Exam Registration *">
-                <Select2 name="e_r_id" value={form.e_r_id} onChange={setField('e_r_id')} options={examRegOptions} placeholder="Select Exam Reg" />
+                <Select2 name="e_r_id" value={form.e_r_id} selectedLabel={form.e_r_label}
+                  onChange={setSelectField('e_r_id', 'e_r_label')} loadOptions={examRegLoader} placeholder="Select Exam Reg" />
               </Field>
 
               {/* Class */}
               <Field label="Class *">
-                <Select2 name="cl_id" value={form.cl_id}
-                  onChange={(e) => setForm((prev) => ({ ...prev, cl_id: e.target.value, sub_cl_id: '' }))}
-                  options={classOptions} placeholder="Select Class" />
+                <Select2 name="cl_id" value={form.cl_id} selectedLabel={form.cl_label}
+                  onChange={(e) => setForm((prev) => ({ ...prev, cl_id: e.target.value, cl_label: e.target.label || '', sub_cl_id: '', sub_cl_label: '' }))}
+                  loadOptions={classLoader} placeholder="Select Class" />
               </Field>
 
               {/* Academic Year */}
               <Field label="Academic Year *">
-                <Select2 name="a_y_id" value={form.a_y_id}
-                  onChange={(e) => setForm((prev) => ({ ...prev, a_y_id: e.target.value, sub_cl_id: '' }))}
-                  options={academicOptions} placeholder="Select Academic Year" />
+                <Select2 name="a_y_id" value={form.a_y_id} selectedLabel={form.a_y_label}
+                  onChange={(e) => setForm((prev) => ({ ...prev, a_y_id: e.target.value, a_y_label: e.target.label || '', sub_cl_id: '', sub_cl_label: '' }))}
+                  loadOptions={academicLoader} placeholder="Select Academic Year" />
               </Field>
 
-              {/* Subject — full width */}
+              {/* Subject — full width; loader keyed on cl_id+a_y_id so the dropdown remounts when filters change */}
               <div className="col-span-2">
                 <Field label="Subject *">
-                  <Select2 name="sub_cl_id" value={form.sub_cl_id} onChange={setField('sub_cl_id')}
-                    options={modalSubjectOpts}
-                    placeholder={form.cl_id && form.a_y_id ? 'Select Subject' : 'Select Class & Academic Year first'} />
+                  <Select2
+                    key={`sub-${form.cl_id}-${form.a_y_id}`}
+                    name="sub_cl_id"
+                    value={form.sub_cl_id}
+                    selectedLabel={form.sub_cl_label}
+                    onChange={setSelectField('sub_cl_id', 'sub_cl_label')}
+                    loadOptions={subjectLoader}
+                    isDisabled={!form.cl_id || !form.a_y_id}
+                    placeholder={form.cl_id && form.a_y_id ? 'Select Subject' : 'Select Class & Academic Year first'}
+                  />
                 </Field>
               </div>
 

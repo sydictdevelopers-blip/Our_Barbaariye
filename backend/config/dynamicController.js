@@ -160,6 +160,33 @@ exports.runSelectQuery = async (query) => {
   return result.rows || [];
 };
 
+/**
+ * Run SELECT directly with no wrap (api/data, prePaginated entries) – returns
+ * { columns, data, total }. The SP itself is expected to apply search/limit/
+ * offset and (optionally) emit a `total_count` window column on every row.
+ * If `total_count` is absent, total = rows.length (LIMIT-bounded).
+ */
+exports.runSelectQueryDirect = async (query) => {
+  const q = (query || '').trim().toUpperCase();
+  if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
+  const bad = FORBIDDEN.find((w) => q.includes(w));
+  if (bad) throw new Error(`Forbidden: ${bad}`);
+  const result = await db.query(query);
+  const rows = result.rows || [];
+  const first = rows[0];
+  const hasTotal = first && Object.prototype.hasOwnProperty.call(first, 'total_count');
+  const total = hasTotal ? Number(first.total_count) || 0 : rows.length;
+  // Hide the helper column from the response so the frontend table doesn't render it.
+  const data = hasTotal ? rows.map(({ total_count, ...rest }) => rest) : rows;
+  const columns = data[0]
+    ? Object.keys(data[0]).map((key) => ({
+        key,
+        label: key.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
+      }))
+    : [];
+  return { columns, data, total };
+};
+
 /** Run SELECT with pagination (api/data) – returns { columns, data, total }. Optional search: ILIKE on all columns. */
 exports.runSelectQueryPaginated = async (query, page = 1, limit = 10, search = '') => {
   const q = (query || '').trim().toUpperCase();

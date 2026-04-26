@@ -4,7 +4,7 @@ import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
 import DataTableCard from '../../../components/DataTableCard';
-import { fetchSelectOptions, fetchDataPaginated, crud } from '../../../services/api';
+import { makeOptionLoader, fetchDataPaginated, crud } from '../../../services/api';
 import * as swal from '../../../utils/swal';
 
 const SYLLABUS_COLUMNS = [
@@ -31,16 +31,19 @@ const getSessionUBrId = () => {
  * Backend functions waxa diyaarinaayo user-ka.
  */
 export default function TeacherSyllabusTab() {
-  /* ── Shared options ── */
-  const [classOptions, setClassOptions] = useState([]);
-  const [academicOptions, setAcademicOptions] = useState([]);
-  const [subjectOptions, setSubjectOptions] = useState([]);
-  const [teacherOptions, setTeacherOptions] = useState([]);
+  /* ── Top toolbar 3 selects (id + label) ── */
+  const [filterClass,    setFilterClass]    = useState(''); const [filterClassLabel,    setFilterClassLabel]    = useState('');
+  const [filterAcademic, setFilterAcademic] = useState(''); const [filterAcademicLabel, setFilterAcademicLabel] = useState('');
+  const [filterSubject,  setFilterSubject]  = useState(''); const [filterSubjectLabel,  setFilterSubjectLabel]  = useState('');
 
-  /* ── Top toolbar 3 selects ── */
-  const [filterClass, setFilterClass] = useState('');
-  const [filterAcademic, setFilterAcademic] = useState('');
-  const [filterSubject, setFilterSubject] = useState('');
+  /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
+  const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const teacherLoader  = useMemo(() => makeOptionLoader('employee_options'), []);
+  const filterSubjectLoader = useMemo(
+    () => makeOptionLoader('subject_class_options', () => ({ cl_id: filterClass, a_y_id: filterAcademic }), { labelKey: 'subject_name' }),
+    [filterClass, filterAcademic]
+  );
 
   /* ── Table data ── */
   const [tableData, setTableData] = useState([]);
@@ -54,82 +57,27 @@ export default function TeacherSyllabusTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [modalSubjectOptions, setModalSubjectOptions] = useState([]);
   const [form, setForm] = useState({
-    teacher_id: '',
-    cl_id: '',
-    a_y_id: '',
-    sub_cl_id: '',
+    teacher_id: '', teacher_label: '',
+    cl_id: '',      cl_label: '',
+    a_y_id: '',     a_y_label: '',
+    sub_cl_id: '',  sub_cl_label: '',
     chapter: '',
     topic: '',
     page: '',
     description: '',
   });
 
-  /* Load options on mount */
-  useEffect(() => {
-    let cancelled = false;
-    const mapPair = (rows, vKey, lKey) =>
-      rows.map((r) => ({ value: String(r[vKey] ?? ''), label: String(r[lKey] ?? r[vKey] ?? '') }));
+  /* Modal subject loader keyed on form.cl_id + form.a_y_id. */
+  const modalSubjectLoader = useMemo(
+    () => makeOptionLoader('subject_class_options', () => ({ cl_id: form.cl_id, a_y_id: form.a_y_id }), { labelKey: 'subject_name' }),
+    [form.cl_id, form.a_y_id]
+  );
 
-    fetchSelectOptions('class_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setClassOptions(mapPair(rows, 'cl_id', 'class'));
-      })
-      .catch(() => setClassOptions([]));
-
-    fetchSelectOptions('academicYeartab', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('id' in rows[0] ? 'id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('name' in rows[0] ? 'name' : Object.keys(rows[0])[1] || valueKey);
-        setAcademicOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setAcademicOptions([]));
-
-    fetchSelectOptions('employee_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setTeacherOptions(
-          rows.map((r) => ({
-            value: String(r.emp_id ?? ''),
-            label: String(r.p_name ?? ''),
-          }))
-        );
-      })
-      .catch(() => setTeacherOptions([]));
-
-    return () => { cancelled = true; };
-  }, []);
-
-  /* Subject dropdown depends on class + academic — SP wants sub_cl_id, not sub_id. */
+  /* When class/academic filter changes, clear the (now-stale) subject filter. */
   useEffect(() => {
     setFilterSubject('');
-    if (!filterClass || !filterAcademic) {
-      setSubjectOptions([]);
-      return;
-    }
-    let cancelled = false;
-    fetchSelectOptions('subject_class_options', 500, '', {
-      cl_id: filterClass,
-      a_y_id: filterAcademic,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setSubjectOptions(
-          rows.map((r) => ({
-            value: String(r.sub_cl_id ?? ''),
-            label: String(r.subject_name ?? ''),
-          }))
-        );
-      })
-      .catch(() => setSubjectOptions([]));
-    return () => { cancelled = true; };
+    setFilterSubjectLabel('');
   }, [filterClass, filterAcademic]);
 
   const fetchSyllabusRows = async () => {
@@ -164,10 +112,10 @@ export default function TeacherSyllabusTab() {
     setEditingId(Number(row.id));
     // Seed what we already know from the table row while the full row loads.
     setForm({
-      teacher_id: row.emp_id != null ? String(row.emp_id) : '',
-      cl_id: filterClass || '',
-      a_y_id: filterAcademic || '',
-      sub_cl_id: row.sub_cl_id != null ? String(row.sub_cl_id) : '',
+      teacher_id: row.emp_id != null ? String(row.emp_id) : '', teacher_label: row.teacher_name ?? '',
+      cl_id: filterClass || '',      cl_label: filterClassLabel || '',
+      a_y_id: filterAcademic || '',  a_y_label: filterAcademicLabel || '',
+      sub_cl_id: row.sub_cl_id != null ? String(row.sub_cl_id) : '', sub_cl_label: row.subject ?? '',
       chapter: row.chapter != null ? String(row.chapter) : '',
       topic: row.topic ?? '',
       page: row.page ?? '',
@@ -279,10 +227,10 @@ export default function TeacherSyllabusTab() {
   const openAddModal = () => {
     setEditingId(null);
     setForm({
-      teacher_id: '',
-      cl_id: filterClass || '',
-      a_y_id: filterAcademic || '',
-      sub_cl_id: '',
+      teacher_id: '', teacher_label: '',
+      cl_id: filterClass || '', cl_label: filterClassLabel || '',
+      a_y_id: filterAcademic || '', a_y_label: filterAcademicLabel || '',
+      sub_cl_id: '', sub_cl_label: '',
       chapter: '',
       topic: '',
       page: '',
@@ -297,35 +245,15 @@ export default function TeacherSyllabusTab() {
   const setField = (field, value) => {
     setForm((f) => {
       const next = { ...f, [field]: value };
-      if (field === 'cl_id' || field === 'a_y_id') next.sub_cl_id = '';
+      if (field === 'cl_id' || field === 'a_y_id') { next.sub_cl_id = ''; next.sub_cl_label = ''; }
       return next;
     });
   };
-
-  /* Load modal subject options when class + academic chosen. */
-  useEffect(() => {
-    if (!addOpen || !form.cl_id || !form.a_y_id) {
-      setModalSubjectOptions([]);
-      return;
-    }
-    let cancelled = false;
-    fetchSelectOptions('subject_class_options', 500, '', {
-      cl_id: form.cl_id,
-      a_y_id: form.a_y_id,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setModalSubjectOptions(
-          rows.map((r) => ({
-            value: String(r.sub_cl_id ?? ''),
-            label: String(r.subject_name ?? ''),
-          }))
-        );
-      })
-      .catch(() => setModalSubjectOptions([]));
-    return () => { cancelled = true; };
-  }, [addOpen, form.cl_id, form.a_y_id]);
+  const setSelectField = (k, lk) => (e) => setForm((f) => {
+    const next = { ...f, [k]: e.target.value, [lk]: e.target.label || '' };
+    if (k === 'cl_id' || k === 'a_y_id') { next.sub_cl_id = ''; next.sub_cl_label = ''; }
+    return next;
+  });
 
   const handleSave = async () => {
     if (!form.teacher_id || !form.cl_id || !form.a_y_id || !form.sub_cl_id) return;
@@ -367,8 +295,9 @@ export default function TeacherSyllabusTab() {
           <Select2
             name="filterClass"
             value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
-            options={classOptions}
+            selectedLabel={filterClassLabel}
+            onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }}
+            loadOptions={classLoader}
             placeholder="Select Class"
           />
         </div>
@@ -376,18 +305,22 @@ export default function TeacherSyllabusTab() {
           <Select2
             name="filterAcademic"
             value={filterAcademic}
-            onChange={(e) => setFilterAcademic(e.target.value)}
-            options={academicOptions}
+            selectedLabel={filterAcademicLabel}
+            onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }}
+            loadOptions={academicLoader}
             placeholder="Select AcademicYear"
           />
         </div>
         <div className="min-w-[160px] flex-1">
           <Select2
+            key={`fs-${filterClass}-${filterAcademic}`}
             name="filterSubject"
             value={filterSubject}
-            onChange={(e) => setFilterSubject(e.target.value)}
-            options={subjectOptions}
-            placeholder="Select Subject"
+            selectedLabel={filterSubjectLabel}
+            onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }}
+            loadOptions={filterSubjectLoader}
+            isDisabled={!filterClass || !filterAcademic}
+            placeholder={filterClass && filterAcademic ? 'Select Subject' : 'Pick Class + Year first'}
           />
         </div>
 
@@ -463,8 +396,9 @@ export default function TeacherSyllabusTab() {
             <Select2
               name="teacher"
               value={form.teacher_id}
-              onChange={(e) => setField('teacher_id', e.target.value)}
-              options={teacherOptions}
+              selectedLabel={form.teacher_label}
+              onChange={setSelectField('teacher_id', 'teacher_label')}
+              loadOptions={teacherLoader}
               placeholder="Select Teacher"
             />
           </div>
@@ -475,8 +409,9 @@ export default function TeacherSyllabusTab() {
             <Select2
               name="cl_id"
               value={form.cl_id}
-              onChange={(e) => setField('cl_id', e.target.value)}
-              options={classOptions}
+              selectedLabel={form.cl_label}
+              onChange={setSelectField('cl_id', 'cl_label')}
+              loadOptions={classLoader}
               placeholder="Select Class"
             />
           </div>
@@ -487,8 +422,9 @@ export default function TeacherSyllabusTab() {
             <Select2
               name="a_y_id"
               value={form.a_y_id}
-              onChange={(e) => setField('a_y_id', e.target.value)}
-              options={academicOptions}
+              selectedLabel={form.a_y_label}
+              onChange={setSelectField('a_y_id', 'a_y_label')}
+              loadOptions={academicLoader}
               placeholder="Select Academic Year"
             />
           </div>
@@ -497,10 +433,13 @@ export default function TeacherSyllabusTab() {
               Subject <span className="text-rose-500">*</span>
             </label>
             <Select2
+              key={`msub-${form.cl_id}-${form.a_y_id}`}
               name="sub_cl_id"
               value={form.sub_cl_id}
-              onChange={(e) => setField('sub_cl_id', e.target.value)}
-              options={modalSubjectOptions}
+              selectedLabel={form.sub_cl_label}
+              onChange={setSelectField('sub_cl_id', 'sub_cl_label')}
+              loadOptions={modalSubjectLoader}
+              isDisabled={!form.cl_id || !form.a_y_id}
               placeholder={form.cl_id && form.a_y_id ? 'Select Subject' : 'Pick Class + Year first'}
             />
           </div>

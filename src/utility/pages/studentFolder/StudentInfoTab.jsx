@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Eye, Pencil, Database, Copy, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
-import { fetchDataPaginated, fetchSelectOptions } from '../../../services/api';
+import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
 
 const INFO_COLUMNS = [
@@ -31,8 +31,8 @@ const DUP_COLUMNS = [
 const NO_DATA_ROW = [{ id: '__no_data__', student_name: 'This Information Was Not Found!' }];
 
 export default function StudentInfoTab() {
-  const [studentOptions, setStudentOptions] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
 
   const [tableData, setTableData] = useState([]);
   const [tableLoaded, setTableLoaded] = useState(false);
@@ -43,17 +43,9 @@ export default function StudentInfoTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchSelectOptions('all_students_options', 1000, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setStudentOptions(rows.map((r) => ({ value: String(r.std_id ?? ''), label: String(r.p_name ?? '') })));
-      })
-      .catch(() => setStudentOptions([]));
-    return () => { cancelled = true; };
-  }, []);
+  // Lazy loader (server-side: 25 default + search beyond) — replaces the
+  // previous 1M-row eager fetch.
+  const studentLoader = useMemo(() => makeOptionLoader('all_students_options'), []);
 
   const handleShowData = async () => {
     if (!selectedStudent) {
@@ -148,8 +140,9 @@ export default function StudentInfoTab() {
         <Select2
           name="filterStudent"
           value={selectedStudent}
-          onChange={(e) => setSelectedStudent(e.target.value)}
-          options={studentOptions}
+          selectedLabel={selectedStudentLabel}
+          onChange={(e) => { setSelectedStudent(e.target.value); setSelectedStudentLabel(e.target.label || ''); }}
+          loadOptions={studentLoader}
           placeholder="Select Student"
           isClearable={false}
           styles={compactSelectStyle}

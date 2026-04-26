@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError } from '../utils/swal';
@@ -9,7 +9,7 @@ import Select2 from '../components/ui/Select2';
 import DataTableCard from '../components/DataTableCard';
 import Card from '../components/ui/Card';
 import { CRUD_CONFIG } from '../config/crudConfig';
-import { fetchSelectOptions } from '../services/api';
+import { makeOptionLoader } from '../services/api';
 import {
   loadData,
   setSearchQuery,
@@ -67,7 +67,7 @@ export default function EntityTab({
   const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
   const [activeExtra, setActiveExtra] = useState({});
   const [selectedResponsibleId, setSelectedResponsibleId] = useState('');
-  const [responsibleOptions, setResponsibleOptions] = useState([]);
+  const [selectedResponsibleLabel, setSelectedResponsibleLabel] = useState('');
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
@@ -85,65 +85,20 @@ export default function EntityTab({
   const [showDataPanel, setShowDataPanel] = useState(false);
   const [viewMode, setViewMode] = useState('data'); // 'data' | 'form'
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
-  const [academicYearOptions, setAcademicYearOptions] = useState([]);
+  const [selectedAcademicYearLabel, setSelectedAcademicYearLabel] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [classOptions, setClassOptions] = useState([]);
+  const [selectedClassLabel, setSelectedClassLabel] = useState('');
 
   // Automatic: haddii academicYearOptionsQuery la gudbin waayo, default waa academicYeartab
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
   const clsOptionsQuery = classOptionsQuery ?? 'class_options';
   const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
 
-  useEffect(() => {
-    if (!showAcademicYearSelect) return;
-    let cancelled = false;
-    fetchSelectOptions(optionsQuery, 100, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('id' in rows[0] ? 'id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('name' in rows[0] ? 'name' : Object.keys(rows[0])[1] || valueKey);
-        const opts = rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? r[valueKey] ?? '') }));
-        setAcademicYearOptions(opts);
-        if (opts.length > 0 && !selectedAcademicYearId) setSelectedAcademicYearId(opts[0].value);
-      })
-      .catch(() => setAcademicYearOptions([]));
-    return () => { cancelled = true; };
-  }, [showAcademicYearSelect, optionsQuery]);
-
-  useEffect(() => {
-    if (!showClassSelect) return;
-    let cancelled = false;
-    fetchSelectOptions(clsOptionsQuery, 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const opts = rows.map((r) => ({
-          value: String(r.cl_id ?? r.id ?? Object.values(r)[0] ?? ''),
-          label: String(r.class ?? r.class_name ?? r.name ?? Object.values(r)[1] ?? ''),
-        }));
-        setClassOptions(opts);
-      })
-      .catch(() => setClassOptions([]));
-    return () => { cancelled = true; };
-  }, [showClassSelect, clsOptionsQuery]);
-
-  useEffect(() => {
-    if (!showResponsibleSelect) return;
-    let cancelled = false;
-    fetchSelectOptions(resOptionsQuery, 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const opts = rows.map((r) => ({
-          value: String(r.res_id ?? Object.values(r)[0] ?? ''),
-          label: String(r.p_name ?? Object.values(r)[1] ?? ''),
-        }));
-        setResponsibleOptions(opts);
-      })
-      .catch(() => setResponsibleOptions([]));
-    return () => { cancelled = true; };
-  }, [showResponsibleSelect, resOptionsQuery]);
+  // Lazy loaders — dropdown opens / user types → server fetches first 25 (search beyond that).
+  // No fetches happen on tab mount; the user picks the year/class/responsible from the dropdown.
+  const acadLoader = useMemo(() => makeOptionLoader(optionsQuery), [optionsQuery]);
+  const classLoader = useMemo(() => makeOptionLoader(clsOptionsQuery), [clsOptionsQuery]);
+  const respLoader = useMemo(() => makeOptionLoader(resOptionsQuery), [resOptionsQuery]);
 
   const academicYearIdForLoad = showAcademicYearSelect ? selectedAcademicYearId : undefined;
   const classIdForLoad = showClassSelect ? selectedClassId : undefined;
@@ -230,8 +185,9 @@ export default function EntityTab({
           <Select2
             name="academicYear"
             value={selectedAcademicYearId}
-            onChange={(e) => setSelectedAcademicYearId(e.target.value)}
-            options={academicYearOptions}
+            selectedLabel={selectedAcademicYearLabel}
+            onChange={(e) => { setSelectedAcademicYearId(e.target.value); setSelectedAcademicYearLabel(e.target.label || ''); }}
+            loadOptions={acadLoader}
             placeholder={t('entity.selectAcademic')}
             isClearable={false}
           />
@@ -242,8 +198,9 @@ export default function EntityTab({
           <Select2
             name="classSelect"
             value={selectedClassId}
-            onChange={(e) => setSelectedClassId(e.target.value)}
-            options={classOptions}
+            selectedLabel={selectedClassLabel}
+            onChange={(e) => { setSelectedClassId(e.target.value); setSelectedClassLabel(e.target.label || ''); }}
+            loadOptions={classLoader}
             placeholder="Select Class"
             isClearable={false}
           />
@@ -254,8 +211,9 @@ export default function EntityTab({
           <Select2
             name="responsibleSelect"
             value={selectedResponsibleId}
-            onChange={(e) => setSelectedResponsibleId(e.target.value)}
-            options={responsibleOptions}
+            selectedLabel={selectedResponsibleLabel}
+            onChange={(e) => { setSelectedResponsibleId(e.target.value); setSelectedResponsibleLabel(e.target.label || ''); }}
+            loadOptions={respLoader}
             placeholder="Select Responsible"
             isClearable={false}
           />
@@ -357,8 +315,8 @@ export default function EntityTab({
       error={entity.error}
       errorHint="Backend: npm start. DB: npm run init-db"
       emptyIcon={Icon}
-      emptyTitle={t('entity.noLoaded')}
-      emptyDescription={emptyDesc}
+      emptyTitle={t('entity.notFound')}
+      emptyDescription=""
       hasActions
       renderActions={renderActions}
       total={totalRows}

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Eye, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
-import { crud, fetchDataPaginated, fetchSelectOptions } from '../../../services/api';
+import { crud, fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalConfirm, swalError, swalSuccess } from '../../../utils/swal';
 
 const RESULT_COLUMNS = [
@@ -17,32 +17,41 @@ const RESULT_COLUMNS = [
   { key: 'state',          label: 'State' },
 ];
 
-const EMPTY_FORM = { ac_t_id: '', std_cl_id: '', marks_obtained: '', state: 'Active' };
+const EMPTY_FORM = { ac_t_id: '', ac_t_label: '', std_cl_id: '', std_cl_label: '', marks_obtained: '', state: 'Active' };
 
 const INPUT_CLS = 'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
 
 export default function LessonActivityResultsTab() {
-  /* ── filter state ── */
-  const [filterAcademic,     setFilterAcademic]     = useState('');
-  const [filterClass,        setFilterClass]        = useState('');
-  const [filterBatch,        setFilterBatch]        = useState('');
-  const [filterSubject,      setFilterSubject]      = useState('');
-  const [filterActivityType, setFilterActivityType] = useState('');
-  const [filterExam,         setFilterExam]         = useState('');
+  /* ── filter state (id + label) ── */
+  const [filterAcademic,     setFilterAcademic]     = useState(''); const [filterAcademicLabel,     setFilterAcademicLabel]     = useState('');
+  const [filterClass,        setFilterClass]        = useState(''); const [filterClassLabel,        setFilterClassLabel]        = useState('');
+  const [filterBatch,        setFilterBatch]        = useState(''); const [filterBatchLabel,        setFilterBatchLabel]        = useState('');
+  const [filterSubject,      setFilterSubject]      = useState(''); const [filterSubjectLabel,      setFilterSubjectLabel]      = useState('');
+  const [filterActivityType, setFilterActivityType] = useState(''); const [filterActivityTypeLabel, setFilterActivityTypeLabel] = useState('');
+  const [filterExam,         setFilterExam]         = useState(''); const [filterExamLabel,         setFilterExamLabel]         = useState('');
   const [filterDate,         setFilterDate]         = useState(new Date().toISOString().slice(0, 10));
 
-  /* ── filter options ── */
-  const [academicOptions,     setAcademicOptions]     = useState([]);
-  const [classOptions,        setClassOptions]        = useState([]);
-  const [batchOptions,        setBatchOptions]        = useState([]);
-  const [subjectOptions,      setSubjectOptions]      = useState([]);
-  const [activityTypeOptions, setActivityTypeOptions] = useState([]);
-  const [examOptions,         setExamOptions]         = useState([]);
-
-  /* ── modal options ── */
-  const [studentOptions,  setStudentOptions]  = useState([]);
-  const [activityOptions, setActivityOptions] = useState([]);
+  /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
+  const academicLoader     = useMemo(() => makeOptionLoader('academic_options'), []);
+  const classLoader        = useMemo(() => makeOptionLoader('class_options'), []);
+  const batchLoader        = useMemo(() => makeOptionLoader('batch_options'), []);
+  const activityTypeLoader = useMemo(() => makeOptionLoader('activity_type_options'), []);
+  const examLoader         = useMemo(() => makeOptionLoader('exam_reg_options'), []);
+  // Subject loader keyed on class + academic year — recreate when those change.
+  const subjectLoader = useMemo(
+    () => makeOptionLoader('subject_class_options', () => ({ cl_id: filterClass, a_y_id: filterAcademic }), { labelKey: 'subject_name' }),
+    [filterClass, filterAcademic]
+  );
+  // Modal-only loaders keyed on the filter context.
+  const studentClassLoader = useMemo(
+    () => makeOptionLoader('student_class_options', () => ({ a_y_id: filterAcademic, cl_id: filterClass, b_id: filterBatch || 0 })),
+    [filterAcademic, filterClass, filterBatch]
+  );
+  const activityLoader = useMemo(
+    () => makeOptionLoader('lesson_activity_options', () => ({ cl_id: filterClass, a_y_id: filterAcademic })),
+    [filterClass, filterAcademic]
+  );
 
   /* ── table ── */
   const [tableData,    setTableData]    = useState([]);
@@ -60,55 +69,6 @@ export default function LessonActivityResultsTab() {
   const [editingId, setEditingId] = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [form,      setForm]      = useState(EMPTY_FORM);
-
-  /* ── load static options on mount ── */
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const [acRes, clRes, bRes, atRes, exRes] = await Promise.allSettled([
-        fetchSelectOptions('academic_options',    200, ''),
-        fetchSelectOptions('class_options',       500, ''),
-        fetchSelectOptions('batch_options',       200, ''),
-        fetchSelectOptions('activity_type_options', 200, ''),
-        fetchSelectOptions('exam_reg_options',     200, ''),
-      ]);
-      if (cancelled) return;
-      const rows = (r) => r.status === 'fulfilled' ? (r.value?.data ?? r.value?.rows ?? []) : [];
-      const pair = (arr, vk, lk) => arr.map((r) => ({ value: String(r[vk] ?? ''), label: String(r[lk] ?? '') }));
-      setAcademicOptions(pair(rows(acRes), 'a_y_id', 'academic_name'));
-      setClassOptions(pair(rows(clRes), 'cl_id', 'class'));
-      setBatchOptions(pair(rows(bRes), 'b_id', 'batch_name'));
-      setActivityTypeOptions(pair(rows(atRes), 'ac_id', 'activity_type'));
-      setExamOptions(pair(rows(exRes), 'ex_reg_id', 'exam'));
-    };
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  /* ── reload subject options when class / academic change ── */
-  useEffect(() => {
-    if (!filterClass || !filterAcademic) { setSubjectOptions([]); return; }
-    fetchSelectOptions('subject_class_options', 200, '', { cl_id: filterClass, a_y_id: filterAcademic })
-      .then((res) => {
-        const r = res?.data ?? res?.rows ?? [];
-        setSubjectOptions(r.map((x) => ({ value: String(x.sub_cl_id ?? ''), label: String(x.subject_name ?? '') })));
-      })
-      .catch(() => setSubjectOptions([]));
-  }, [filterClass, filterAcademic]);
-
-  /* ── reload modal options when modal opens ── */
-  useEffect(() => {
-    if (!addOpen || !filterClass || !filterAcademic) return;
-    Promise.allSettled([
-      fetchSelectOptions('student_class_options', 500, '', { a_y_id: filterAcademic, cl_id: filterClass, b_id: filterBatch || 0 }),
-      fetchSelectOptions('lesson_activity_options', 200, '', { cl_id: filterClass, a_y_id: filterAcademic }),
-    ]).then(([stRes, acRes]) => {
-      const rows = (r) => r.status === 'fulfilled' ? (r.value?.data ?? r.value?.rows ?? []) : [];
-      const pair = (arr, vk, lk) => arr.map((r) => ({ value: String(r[vk] ?? ''), label: String(r[lk] ?? '') }));
-      setStudentOptions(pair(rows(stRes), 'std_cl_id', 'p_name'));
-      setActivityOptions(pair(rows(acRes), 'ac_t_id', 'activity_label'));
-    });
-  }, [addOpen, filterAcademic, filterClass, filterBatch]);
 
   /* ── fetch rows ── */
   const fetchRows = useCallback(async () => {
@@ -259,14 +219,15 @@ export default function LessonActivityResultsTab() {
   ), [openEditModal, handleDelete]);
 
   const setField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+  const setSelectField = (k, lk) => (e) => setForm((p) => ({ ...p, [k]: e.target.value, [lk]: e.target.label || '' }));
 
   const filterFields = [
-    { label: 'Academic Year', node: <Select2 name="fa" value={filterAcademic} onChange={(e) => setFilterAcademic(e.target.value)} options={academicOptions} placeholder="Select Year" /> },
-    { label: 'Class',         node: <Select2 name="fc" value={filterClass}    onChange={(e) => setFilterClass(e.target.value)}    options={classOptions}    placeholder="Select Class" /> },
-    { label: 'Batch',         node: <Select2 name="fb" value={filterBatch}    onChange={(e) => setFilterBatch(e.target.value)}    options={batchOptions}    placeholder="Select Batch" /> },
-    { label: 'Subject',       node: <Select2 name="fs" value={filterSubject}  onChange={(e) => setFilterSubject(e.target.value)}  options={subjectOptions}  placeholder="Select Subject" /> },
-    { label: 'Activity Type', node: <Select2 name="ft" value={filterActivityType} onChange={(e) => setFilterActivityType(e.target.value)} options={activityTypeOptions} placeholder="Select Type" /> },
-    { label: 'Exam',          node: <Select2 name="fe" value={filterExam}     onChange={(e) => setFilterExam(e.target.value)}     options={examOptions}     placeholder="Select Exam" /> },
+    { label: 'Academic Year', node: <Select2 name="fa" value={filterAcademic} selectedLabel={filterAcademicLabel} onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }} loadOptions={academicLoader} placeholder="Select Year" /> },
+    { label: 'Class',         node: <Select2 name="fc" value={filterClass}    selectedLabel={filterClassLabel}    onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }} loadOptions={classLoader}    placeholder="Select Class" /> },
+    { label: 'Batch',         node: <Select2 name="fb" value={filterBatch}    selectedLabel={filterBatchLabel}    onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }} loadOptions={batchLoader}    placeholder="Select Batch" /> },
+    { label: 'Subject',       node: <Select2 key={`fs-${filterClass}-${filterAcademic}`} name="fs" value={filterSubject}  selectedLabel={filterSubjectLabel} onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }} loadOptions={subjectLoader} isDisabled={!filterClass || !filterAcademic} placeholder={filterClass && filterAcademic ? 'Select Subject' : 'Select Class & Year first'} /> },
+    { label: 'Activity Type', node: <Select2 name="ft" value={filterActivityType} selectedLabel={filterActivityTypeLabel} onChange={(e) => { setFilterActivityType(e.target.value); setFilterActivityTypeLabel(e.target.label || ''); }} loadOptions={activityTypeLoader} placeholder="Select Type" /> },
+    { label: 'Exam',          node: <Select2 name="fe" value={filterExam}     selectedLabel={filterExamLabel}     onChange={(e) => { setFilterExam(e.target.value); setFilterExamLabel(e.target.label || ''); }} loadOptions={examLoader} placeholder="Select Exam" /> },
     { label: 'Date',          node: <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full px-3 py-[7px] rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" /> },
   ];
 
@@ -345,12 +306,28 @@ export default function LessonActivityResultsTab() {
               {/* Activity */}
               <div className="col-span-2">
                 <label className={LABEL_CLS}>Lesson Activity *</label>
-                <Select2 name="ac_t_id" value={form.ac_t_id} onChange={setField('ac_t_id')} options={activityOptions} placeholder="Select Activity" />
+                <Select2
+                  key={`act-${filterClass}-${filterAcademic}`}
+                  name="ac_t_id"
+                  value={form.ac_t_id}
+                  selectedLabel={form.ac_t_label}
+                  onChange={setSelectField('ac_t_id', 'ac_t_label')}
+                  loadOptions={activityLoader}
+                  placeholder="Select Activity"
+                />
               </div>
               {/* Student */}
               <div className="col-span-2">
                 <label className={LABEL_CLS}>Student *</label>
-                <Select2 name="std_cl_id" value={form.std_cl_id} onChange={setField('std_cl_id')} options={studentOptions} placeholder="Select Student" />
+                <Select2
+                  key={`stu-${filterAcademic}-${filterClass}-${filterBatch}`}
+                  name="std_cl_id"
+                  value={form.std_cl_id}
+                  selectedLabel={form.std_cl_label}
+                  onChange={setSelectField('std_cl_id', 'std_cl_label')}
+                  loadOptions={studentClassLoader}
+                  placeholder="Select Student"
+                />
               </div>
               {/* Marks */}
               <div>

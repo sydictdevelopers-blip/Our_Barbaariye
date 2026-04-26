@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import Select2 from '../components/ui/Select2';
 import Button from '../components/ui/Button';
-import { crud, fetchSelectOptions } from '../services/api';
+import { crud, makeOptionLoader } from '../services/api';
 import * as swal from '../utils/swal';
 
 const AUTH_STORAGE_KEY = 'brabaariye_user';
@@ -18,37 +18,26 @@ function getSessionUBrId() {
   }
 }
 
-const emptyRow = () => ({ emp_id: '', sub_id: '', no_of_period: '' });
+const emptyRow = () => ({ emp_id: '', emp_label: '', sub_id: '', sub_label: '', no_of_period: '' });
 
 export default function SubjectClassBulkModal({ isOpen, onClose, onSuccess, context = {} }) {
   const [rows, setRows] = useState([emptyRow(), emptyRow(), emptyRow()]);
-  const [employeeOptions, setEmployeeOptions] = useState([]);
-  const [subjectOptions, setSubjectOptions] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Lazy loaders — server-side: 25 default + search beyond.
+  const employeeLoader = useMemo(() => makeOptionLoader('employee_options'), []);
+  const subjectLoader  = useMemo(() => makeOptionLoader('subject_options'), []);
 
   useEffect(() => {
     if (!isOpen) return;
     setRows([emptyRow(), emptyRow(), emptyRow()]);
-    fetchSelectOptions('employee_options', 200, '')
-      .then((res) => {
-        const data = res?.data ?? [];
-        setEmployeeOptions(
-          data.map((r) => ({ value: String(r.emp_id ?? ''), label: String(r.p_name ?? '') }))
-        );
-      })
-      .catch(() => setEmployeeOptions([]));
-    fetchSelectOptions('subject_options', 200, '')
-      .then((res) => {
-        const data = res?.data ?? [];
-        setSubjectOptions(
-          data.map((r) => ({ value: String(r.sub_id ?? ''), label: String(r.name ?? '') }))
-        );
-      })
-      .catch(() => setSubjectOptions([]));
   }, [isOpen]);
 
   const setField = (index, field, value) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  };
+  const setFields = (index, patch) => {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   };
 
   const addRow = () => setRows((prev) => [...prev, emptyRow()]);
@@ -151,8 +140,9 @@ export default function SubjectClassBulkModal({ isOpen, onClose, onSuccess, cont
                   <Select2
                     name={`emp_${i}`}
                     value={row.emp_id}
-                    onChange={(e) => setField(i, 'emp_id', e.target.value)}
-                    options={employeeOptions}
+                    selectedLabel={row.emp_label}
+                    onChange={(e) => setFields(i, { emp_id: e.target.value, emp_label: e.target.label || '' })}
+                    loadOptions={employeeLoader}
                     placeholder="Select Teacher"
                     isClearable={false}
                   />
@@ -161,8 +151,9 @@ export default function SubjectClassBulkModal({ isOpen, onClose, onSuccess, cont
                   <Select2
                     name={`sub_${i}`}
                     value={row.sub_id}
-                    onChange={(e) => setField(i, 'sub_id', e.target.value)}
-                    options={subjectOptions}
+                    selectedLabel={row.sub_label}
+                    onChange={(e) => setFields(i, { sub_id: e.target.value, sub_label: e.target.label || '' })}
+                    loadOptions={subjectLoader}
                     placeholder="Select subject"
                     isClearable={false}
                   />

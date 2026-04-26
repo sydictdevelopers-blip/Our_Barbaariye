@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Eye, Pencil, Plus, Database, Image, Users, Mail, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
-import { fetchDataPaginated, fetchSelectOptions } from '../../../services/api';
+import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
 
 const RESULT_COLUMNS = [
@@ -24,13 +24,12 @@ const RESULT_COLUMNS = [
 const NO_DATA_ROW = [{ id: '__no_data__', student_name: 'This Information Was Not Found!' }];
 
 export default function StudentsTab() {
-  const [classOptions, setClassOptions] = useState([]);
-  const [batchOptions, setBatchOptions] = useState([]);
-  const [academicOptions, setAcademicOptions] = useState([]);
-
   const [filterClass, setFilterClass] = useState('');
+  const [filterClassLabel, setFilterClassLabel] = useState('');
   const [filterBatch, setFilterBatch] = useState('');
+  const [filterBatchLabel, setFilterBatchLabel] = useState('');
   const [filterAcademic, setFilterAcademic] = useState('');
+  const [filterAcademicLabel, setFilterAcademicLabel] = useState('');
 
   const [tableData, setTableData] = useState([]);
   const [tableLoaded, setTableLoaded] = useState(false);
@@ -40,25 +39,10 @@ export default function StudentsTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  useEffect(() => {
-    let cancelled = false;
-    const pair = (rows, vKey, lKey) =>
-      rows.map((r) => ({ value: String(r[vKey] ?? ''), label: String(r[lKey] ?? r[vKey] ?? '') }));
-
-    Promise.allSettled([
-      fetchSelectOptions('class_options', 500, ''),
-      fetchSelectOptions('batch_options', 200, ''),
-      fetchSelectOptions('academic_options', 200, ''),
-    ]).then(([clRes, bRes, acRes]) => {
-      if (cancelled) return;
-      const rows = (r) => (r.status === 'fulfilled' ? (r.value?.data ?? r.value?.rows ?? []) : []);
-      setClassOptions(pair(rows(clRes), 'cl_id', 'class'));
-      setBatchOptions(pair(rows(bRes), 'b_id', 'batch_name'));
-      setAcademicOptions(pair(rows(acRes), 'a_y_id', 'academic_name'));
-    });
-
-    return () => { cancelled = true; };
-  }, []);
+  // Lazy loaders (server-side: 25 default + search beyond).
+  const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
+  const batchLoader    = useMemo(() => makeOptionLoader('batch_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
 
   const fetchRows = useCallback(async () => {
     const res = await fetchDataPaginated({
@@ -147,8 +131,9 @@ export default function StudentsTab() {
         <Select2
           name="filterClass"
           value={filterClass}
-          onChange={(e) => setFilterClass(e.target.value)}
-          options={classOptions}
+          selectedLabel={filterClassLabel}
+          onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }}
+          loadOptions={classLoader}
           placeholder="Class"
           isClearable={false}
           styles={compactSelectStyle}
@@ -158,8 +143,9 @@ export default function StudentsTab() {
         <Select2
           name="filterBatch"
           value={filterBatch}
-          onChange={(e) => setFilterBatch(e.target.value)}
-          options={batchOptions}
+          selectedLabel={filterBatchLabel}
+          onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }}
+          loadOptions={batchLoader}
           placeholder="Batch"
           isClearable={false}
           styles={compactSelectStyle}
@@ -169,8 +155,9 @@ export default function StudentsTab() {
         <Select2
           name="filterAcademic"
           value={filterAcademic}
-          onChange={(e) => setFilterAcademic(e.target.value)}
-          options={academicOptions}
+          selectedLabel={filterAcademicLabel}
+          onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }}
+          loadOptions={academicLoader}
           placeholder="Academic Year"
           isClearable={false}
           styles={compactSelectStyle}

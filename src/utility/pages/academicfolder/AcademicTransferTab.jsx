@@ -1,24 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowDown, ArrowRightLeft, Send, XCircle, GraduationCap, UserMinus } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
-import { fetchSelectOptions } from '../../../services/api';
+import { makeOptionLoader } from '../../../services/api';
 
 /**
  * AcademicTransferTab — UI shell ee tab Academic Transfer.
  * 4 buttons → 4 modals. Backend functions waxa diyaarinaayo user-ka.
  */
+/** Hook helper: pair of [id,label] state with a setter that takes a Select2 onChange event. */
+function useSelect(initial = '') {
+  const [val, setVal] = useState({ id: initial, label: '' });
+  const setFromEvent = (e) => setVal({ id: e.target.value, label: e.target.label || '' });
+  const reset = () => setVal({ id: '', label: '' });
+  return [val.id, val.label, setFromEvent, reset];
+}
+
 export default function AcademicTransferTab() {
-  /* ── Shared option lists ── */
-  const [classOptions, setClassOptions] = useState([]);
-  const [academicOptions, setAcademicOptions] = useState([]);
-  const [studentOptions, setStudentOptions] = useState([]);
   const [transferOptions] = useState([
     { value: 'all', label: 'All Students' },
     { value: 'passed', label: 'Passed Only' },
     { value: 'failed', label: 'Failed Only' },
   ]);
+
+  /* ── Lazy loaders (server-side: 25 default + search) ── */
+  const classLoader   = useMemo(() => makeOptionLoader('class_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const studentLoader = useMemo(() => makeOptionLoader('student_options'), []);
 
   /* ── Banner: warning when no new academic year ── */
   // TODO: u xidh state-ka backend-ka. Hada hard-coded.
@@ -28,69 +37,32 @@ export default function AcademicTransferTab() {
   const [openModal, setOpenModal] = useState(null); // 'studentDowngrade' | 'academicDowngrade' | 'studentTransfer' | 'academicTransfer' | null
 
   /* ── Student Downgrade form ── */
-  const [sdStudentId, setSdStudentId] = useState('');
-  const [sdClassId, setSdClassId] = useState('');
-  const [sdAcademicId, setSdAcademicId] = useState('');
+  const [sdStudentId, sdStudentLabel, setSdStudent, resetSdStudent] = useSelect();
+  const [sdClassId,   sdClassLabel,   setSdClass,   resetSdClass]   = useSelect();
+  const [sdAcademicId, sdAcademicLabel, setSdAcademic, resetSdAcademic] = useSelect();
 
   /* ── Academic Downgrade form ── */
-  const [adClassFrom, setAdClassFrom] = useState('');
-  const [adAcademicFrom, setAdAcademicFrom] = useState('');
-  const [adClassTo, setAdClassTo] = useState('');
-  const [adAcademicTo, setAdAcademicTo] = useState('');
+  const [adClassFrom,    adClassFromLabel,    setAdClassFrom,    resetAdClassFrom]    = useSelect();
+  const [adAcademicFrom, adAcademicFromLabel, setAdAcademicFrom, resetAdAcademicFrom] = useSelect();
+  const [adClassTo,      adClassToLabel,      setAdClassTo,      resetAdClassTo]      = useSelect();
+  const [adAcademicTo,   adAcademicToLabel,   setAdAcademicTo,   resetAdAcademicTo]   = useSelect();
 
   /* ── Student Transfer form ── */
-  const [stStudentId, setStStudentId] = useState('');
-  const [stAcademicFrom, setStAcademicFrom] = useState('');
+  const [stStudentId,    stStudentLabel,    setStStudent,    resetStStudent]    = useSelect();
+  const [stAcademicFrom, stAcademicFromLabel, setStAcademicFrom, resetStAcademicFrom] = useSelect();
 
   /* ── Academic Transfer form ── */
-  const [atClassFrom, setAtClassFrom] = useState('');
-  const [atClassTo, setAtClassTo] = useState('');
-  const [atTransferOption, setAtTransferOption] = useState('');
-
-  /* Load options on mount */
-  useEffect(() => {
-    let cancelled = false;
-    const mapPair = (rows, vKey, lKey) =>
-      rows.map((r) => ({ value: String(r[vKey] ?? ''), label: String(r[lKey] ?? r[vKey] ?? '') }));
-
-    fetchSelectOptions('class_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setClassOptions(mapPair(rows, 'cl_id', 'class'));
-      })
-      .catch(() => setClassOptions([]));
-
-    fetchSelectOptions('academicYeartab', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('id' in rows[0] ? 'id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('name' in rows[0] ? 'name' : Object.keys(rows[0])[1] || valueKey);
-        setAcademicOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setAcademicOptions([]));
-
-    fetchSelectOptions('student_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('std_id' in rows[0] ? 'std_id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('std_name' in rows[0] ? 'std_name' : Object.keys(rows[0])[1] || valueKey);
-        setStudentOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setStudentOptions([]));
-
-    return () => { cancelled = true; };
-  }, []);
+  const [atClassFrom,      atClassFromLabel,      setAtClassFrom,      resetAtClassFrom]      = useSelect();
+  const [atClassTo,        atClassToLabel,        setAtClassTo,        resetAtClassTo]        = useSelect();
+  const [atTransferOption, atTransferOptionLabel, setAtTransferOption, resetAtTransferOption] = useSelect();
 
   /* ── Modal close + reset ── */
   const closeModal = () => {
     setOpenModal(null);
-    setSdStudentId(''); setSdClassId(''); setSdAcademicId('');
-    setAdClassFrom(''); setAdAcademicFrom(''); setAdClassTo(''); setAdAcademicTo('');
-    setStStudentId(''); setStAcademicFrom('');
-    setAtClassFrom(''); setAtClassTo(''); setAtTransferOption('');
+    resetSdStudent(); resetSdClass(); resetSdAcademic();
+    resetAdClassFrom(); resetAdAcademicFrom(); resetAdClassTo(); resetAdAcademicTo();
+    resetStStudent(); resetStAcademicFrom();
+    resetAtClassFrom(); resetAtClassTo(); resetAtTransferOption();
   };
 
   /* ── Action handlers (placeholders — backend la xidhaayo) ── */
@@ -184,22 +156,25 @@ export default function AcademicTransferTab() {
         <Select2
           name="sdStudent"
           value={sdStudentId}
-          onChange={(e) => setSdStudentId(e.target.value)}
-          options={studentOptions}
+          selectedLabel={sdStudentLabel}
+          onChange={setSdStudent}
+          loadOptions={studentLoader}
           placeholder="Select Student"
         />
         <Select2
           name="sdClass"
           value={sdClassId}
-          onChange={(e) => setSdClassId(e.target.value)}
-          options={classOptions}
+          selectedLabel={sdClassLabel}
+          onChange={setSdClass}
+          loadOptions={classLoader}
           placeholder="Select Class"
         />
         <Select2
           name="sdAcademic"
           value={sdAcademicId}
-          onChange={(e) => setSdAcademicId(e.target.value)}
-          options={academicOptions}
+          selectedLabel={sdAcademicLabel}
+          onChange={setSdAcademic}
+          loadOptions={academicLoader}
           placeholder="Select Academic"
         />
       </Modal>
@@ -229,29 +204,33 @@ export default function AcademicTransferTab() {
           <Select2
             name="adClassFrom"
             value={adClassFrom}
-            onChange={(e) => setAdClassFrom(e.target.value)}
-            options={classOptions}
+            selectedLabel={adClassFromLabel}
+            onChange={setAdClassFrom}
+            loadOptions={classLoader}
             placeholder="Select Class"
           />
           <Select2
             name="adAcademicFrom"
             value={adAcademicFrom}
-            onChange={(e) => setAdAcademicFrom(e.target.value)}
-            options={academicOptions}
+            selectedLabel={adAcademicFromLabel}
+            onChange={setAdAcademicFrom}
+            loadOptions={academicLoader}
             placeholder="Select academic From"
           />
           <Select2
             name="adClassTo"
             value={adClassTo}
-            onChange={(e) => setAdClassTo(e.target.value)}
-            options={classOptions}
+            selectedLabel={adClassToLabel}
+            onChange={setAdClassTo}
+            loadOptions={classLoader}
             placeholder="Select Class To"
           />
           <Select2
             name="adAcademicTo"
             value={adAcademicTo}
-            onChange={(e) => setAdAcademicTo(e.target.value)}
-            options={academicOptions}
+            selectedLabel={adAcademicToLabel}
+            onChange={setAdAcademicTo}
+            loadOptions={academicLoader}
             placeholder="Select Academic To"
           />
         </div>
@@ -282,15 +261,17 @@ export default function AcademicTransferTab() {
           <Select2
             name="stStudent"
             value={stStudentId}
-            onChange={(e) => setStStudentId(e.target.value)}
-            options={studentOptions}
+            selectedLabel={stStudentLabel}
+            onChange={setStStudent}
+            loadOptions={studentLoader}
             placeholder="Select Student"
           />
           <Select2
             name="stAcademicFrom"
             value={stAcademicFrom}
-            onChange={(e) => setStAcademicFrom(e.target.value)}
-            options={academicOptions}
+            selectedLabel={stAcademicFromLabel}
+            onChange={setStAcademicFrom}
+            loadOptions={academicLoader}
             placeholder="Select academic From"
           />
         </div>
@@ -321,22 +302,25 @@ export default function AcademicTransferTab() {
           <Select2
             name="atClassFrom"
             value={atClassFrom}
-            onChange={(e) => setAtClassFrom(e.target.value)}
-            options={classOptions}
+            selectedLabel={atClassFromLabel}
+            onChange={setAtClassFrom}
+            loadOptions={classLoader}
             placeholder="Select Class From"
           />
           <Select2
             name="atClassTo"
             value={atClassTo}
-            onChange={(e) => setAtClassTo(e.target.value)}
-            options={classOptions}
+            selectedLabel={atClassToLabel}
+            onChange={setAtClassTo}
+            loadOptions={classLoader}
             placeholder="Select Class To"
           />
           <div className="sm:col-span-2">
             <Select2
               name="atTransferOption"
               value={atTransferOption}
-              onChange={(e) => setAtTransferOption(e.target.value)}
+              selectedLabel={atTransferOptionLabel}
+              onChange={setAtTransferOption}
               options={transferOptions}
               placeholder="Select Transfer option"
             />

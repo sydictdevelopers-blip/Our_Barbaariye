@@ -20,8 +20,23 @@ function detectKeys(columns, row) {
 const HINT_LABEL = '💡 Waxaa jira wax ka badan 25 xog – geli erey raadinta si aad u hesho';
 const selectCache = {};
 
+/** Read the user's currently selected branch from the auth blob — used to
+ *  scope the dropdown cache so switching branches does not surface stale rows. */
+function getSessionBrId() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const stored = window.localStorage?.getItem('brabaariye_user');
+    if (!stored) return '';
+    return JSON.parse(stored)?.br_id ?? '';
+  } catch {
+    return '';
+  }
+}
+
 function cacheKeyFor(optionsKey, extra) {
   const entries = Object.entries(extra || {}).filter(([, v]) => v !== '' && v != null);
+  const brId = getSessionBrId();
+  if (brId !== '') entries.push(['__br', brId]);
   if (!entries.length) return optionsKey;
   const sig = entries.sort().map(([k, v]) => `${k}=${v}`).join(',');
   return `${optionsKey}::${sig}`;
@@ -39,7 +54,11 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
     const rows = res?.data || [];
     const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
     const { valueKey, labelKey } = detectKeys(cols, rows[0]);
-    const items = rows.map((r) => ({ value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') }));
+    const items = rows.map((r) => {
+      const item = { value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') };
+      if (r.state != null) item.state = String(r.state);
+      return item;
+    });
     cacheEntry.items = items;
     cacheEntry.cached = true;
     const opts = [...items];
@@ -64,7 +83,11 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
   const rows = res?.data || [];
   const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
   const { valueKey, labelKey } = detectKeys(cols, rows[0]);
-  const newItems = rows.map((r) => ({ value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') }));
+  const newItems = rows.map((r) => {
+    const item = { value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') };
+    if (r.state != null) item.state = String(r.state);
+    return item;
+  });
   if (newItems.length > 0) {
     const existingIds = new Set(cacheEntry.items.map((x) => x.value));
     newItems.forEach((item) => {

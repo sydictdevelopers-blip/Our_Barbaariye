@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Eye, CheckCheck, ArrowRightLeft, XCircle, Send } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';
-import { fetchSelectOptions } from '../../../services/api';
+import { makeOptionLoader } from '../../../services/api';
+
+/** Hook helper: pair of [id,label] state with a setter that takes a Select2 onChange event. */
+function useSelect(initial = '') {
+  const [val, setVal] = useState({ id: initial, label: '' });
+  const setFromEvent = (e) => setVal({ id: e.target.value, label: e.target.label || '' });
+  const reset = () => setVal({ id: '', label: '' });
+  return [val.id, val.label, setFromEvent, reset];
+}
 
 /**
  * BranchTransferTab — UI shell-ka Branch Transfer.
@@ -12,15 +20,16 @@ import { fetchSelectOptions } from '../../../services/api';
  */
 export default function BranchTransferTab() {
   /* ── 4 main filter selects ── */
-  const [classFromId, setClassFromId] = useState('');
-  const [batchId, setBatchId] = useState('');
-  const [branchToId, setBranchToId] = useState('');
-  const [classToId, setClassToId] = useState('');
+  const [classFromId, classFromLabel, setClassFrom] = useSelect();
+  const [batchId,     batchLabel,     setBatch]     = useSelect();
+  const [branchToId,  branchToLabel,  setBranchTo]  = useSelect();
+  const [classToId,   classToLabel,   setClassTo]   = useSelect();
 
-  /* ── Options ── */
-  const [classOptions, setClassOptions] = useState([]);
-  const [batchOptions, setBatchOptions] = useState([]);
-  const [branchOptions, setBranchOptions] = useState([]);
+  /* ── Lazy loaders (server-side: 25 default + search) ── */
+  const classLoader   = useMemo(() => makeOptionLoader('class_options'), []);
+  const batchLoader   = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const branchLoader  = useMemo(() => makeOptionLoader('branch_options'), []);
+  const studentLoader = useMemo(() => makeOptionLoader('student_options'), []);
 
   /* ── Students table data (TODO: backend) ── */
   const [students, setStudents] = useState([]);
@@ -28,45 +37,9 @@ export default function BranchTransferTab() {
 
   /* ── Branch Transfer modal ── */
   const [transferOpen, setTransferOpen] = useState(false);
-  const [studentOptions, setStudentOptions] = useState([]);
-  const [tStudentId, setTStudentId] = useState('');
-  const [tBranchId, setTBranchId] = useState('');
-  const [tClassId, setTClassId] = useState('');
-
-  /* Load options on mount */
-  useEffect(() => {
-    let cancelled = false;
-    const mapPair = (rows, vKey, lKey) =>
-      rows.map((r) => ({ value: String(r[vKey] ?? ''), label: String(r[lKey] ?? r[vKey] ?? '') }));
-
-    fetchSelectOptions('class_options', 500, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setClassOptions(mapPair(rows, 'cl_id', 'class'));
-      })
-      .catch(() => setClassOptions([]));
-
-    fetchSelectOptions('academicYeartab', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        const valueKey = rows[0] && ('id' in rows[0] ? 'id' : Object.keys(rows[0])[0]);
-        const labelKey = rows[0] && ('name' in rows[0] ? 'name' : Object.keys(rows[0])[1] || valueKey);
-        setBatchOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-      })
-      .catch(() => setBatchOptions([]));
-
-    fetchSelectOptions('branch_options', 200, '')
-      .then((res) => {
-        if (cancelled) return;
-        const rows = res?.data ?? res?.rows ?? [];
-        setBranchOptions(mapPair(rows, 'br_id', 'br_name'));
-      })
-      .catch(() => setBranchOptions([]));
-
-    return () => { cancelled = true; };
-  }, []);
+  const [tStudentId, tStudentLabel, setTStudent, resetTStudent] = useSelect();
+  const [tBranchId,  tBranchLabel,  setTBranch,  resetTBranch]  = useSelect();
+  const [tClassId,   tClassLabel,   setTClass,   resetTClass]   = useSelect();
 
   /* ── Action handlers (placeholders — backend la xidhaayo) ── */
   const handleShow = async () => {
@@ -84,21 +57,12 @@ export default function BranchTransferTab() {
     // TODO: accept_transfered_students_sp
   };
 
-  const openTransferModal = async () => {
+  const openTransferModal = () => {
+    resetTStudent();
+    resetTBranch();
+    resetTClass();
     setTransferOpen(true);
-    setTStudentId('');
-    setTBranchId('');
-    setTClassId('');
-    // Fetch student options for the modal (TODO: confirm query name)
-    try {
-      const res = await fetchSelectOptions('student_options', 500, '');
-      const rows = res?.data ?? res?.rows ?? [];
-      const valueKey = rows[0] && ('std_id' in rows[0] ? 'std_id' : Object.keys(rows[0])[0]);
-      const labelKey = rows[0] && ('std_name' in rows[0] ? 'std_name' : Object.keys(rows[0])[1] || valueKey);
-      setStudentOptions(rows.map((r) => ({ value: String(r[valueKey] ?? ''), label: String(r[labelKey] ?? '') })));
-    } catch {
-      setStudentOptions([]);
-    }
+    // Modal Select2s are lazy — no pre-fetch needed.
   };
 
   const closeTransferModal = () => setTransferOpen(false);
@@ -116,8 +80,9 @@ export default function BranchTransferTab() {
           <Select2
             name="classFrom"
             value={classFromId}
-            onChange={(e) => setClassFromId(e.target.value)}
-            options={classOptions}
+            selectedLabel={classFromLabel}
+            onChange={setClassFrom}
+            loadOptions={classLoader}
             placeholder="Select Class"
           />
         </div>
@@ -125,8 +90,9 @@ export default function BranchTransferTab() {
           <Select2
             name="batch"
             value={batchId}
-            onChange={(e) => setBatchId(e.target.value)}
-            options={batchOptions}
+            selectedLabel={batchLabel}
+            onChange={setBatch}
+            loadOptions={batchLoader}
             placeholder="Select Batch"
           />
         </div>
@@ -134,8 +100,9 @@ export default function BranchTransferTab() {
           <Select2
             name="branchTo"
             value={branchToId}
-            onChange={(e) => setBranchToId(e.target.value)}
-            options={branchOptions}
+            selectedLabel={branchToLabel}
+            onChange={setBranchTo}
+            loadOptions={branchLoader}
             placeholder="Select Branch"
           />
         </div>
@@ -143,8 +110,9 @@ export default function BranchTransferTab() {
           <Select2
             name="classTo"
             value={classToId}
-            onChange={(e) => setClassToId(e.target.value)}
-            options={classOptions}
+            selectedLabel={classToLabel}
+            onChange={setClassTo}
+            loadOptions={classLoader}
             placeholder="Select Class To"
           />
         </div>
@@ -238,8 +206,9 @@ export default function BranchTransferTab() {
             <Select2
               name="tStudent"
               value={tStudentId}
-              onChange={(e) => setTStudentId(e.target.value)}
-              options={studentOptions}
+              selectedLabel={tStudentLabel}
+              onChange={setTStudent}
+              loadOptions={studentLoader}
               placeholder="Select Student"
             />
           </div>
@@ -248,8 +217,9 @@ export default function BranchTransferTab() {
             <Select2
               name="tBranch"
               value={tBranchId}
-              onChange={(e) => setTBranchId(e.target.value)}
-              options={branchOptions}
+              selectedLabel={tBranchLabel}
+              onChange={setTBranch}
+              loadOptions={branchLoader}
               placeholder="Select Branch"
             />
           </div>
@@ -258,8 +228,9 @@ export default function BranchTransferTab() {
             <Select2
               name="tClass"
               value={tClassId}
-              onChange={(e) => setTClassId(e.target.value)}
-              options={classOptions}
+              selectedLabel={tClassLabel}
+              onChange={setTClass}
+              loadOptions={classLoader}
               placeholder="Select Class"
             />
           </div>

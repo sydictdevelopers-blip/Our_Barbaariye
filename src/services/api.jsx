@@ -100,6 +100,42 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
   return res.json();
 }
 
+/**
+ * makeOptionLoader – returns an AsyncSelect `loadOptions` function for `Select2`.
+ * Lazy: fetches `limit` rows from backend each time the dropdown opens / user types.
+ * The first column of the result is treated as `value`, the second as `label`,
+ * unless `valueKey` / `labelKey` are passed in opts.
+ *
+ * Usage:
+ *   <Select2
+ *     value={x} selectedLabel={xLabel}
+ *     onChange={(e) => { setX(e.target.value); setXLabel(e.target.label); }}
+ *     loadOptions={makeOptionLoader('responsible_options', () => ({ br_id: brId }))}
+ *   />
+ */
+export function makeOptionLoader(optionsKey, getExtra, opts = {}) {
+  const limit = opts.limit ?? 25;
+  return async (inputValue) => {
+    const search = String(inputValue ?? '').trim();
+    const extra = (typeof getExtra === 'function' ? getExtra() : getExtra) || {};
+    const res = await fetchSelectOptions(optionsKey, limit, search, extra).catch(() => ({}));
+    const rows = res?.data || [];
+    if (!rows.length) return [];
+    const cols = res?.columns || Object.keys(rows[0]).map((k) => ({ key: k }));
+    const valueKey = opts.valueKey || cols[0]?.key;
+    const labelKey = opts.labelKey || cols[1]?.key || valueKey;
+    return rows.map((r) => {
+      const item = {
+        value: String(r[valueKey] ?? ''),
+        label: String(r[labelKey] ?? r[valueKey] ?? ''),
+      };
+      // Auto-passthrough of `state` column so Select2 can render an Active/Inactive badge.
+      if (r.state != null) item.state = String(r.state);
+      return item;
+    });
+  };
+}
+
 export async function fetchUserBranches(usr_id) {
   try {
     const res = await fetch(`${API_BASE}/user-branches`, {

@@ -1,5 +1,28 @@
+import { useState, useCallback, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import Select from 'react-select';
 import AsyncSelect from 'react-select/async';
+
+/**
+ * Renders an option label with an Active/Inactive badge when the option carries
+ * a `state` field. Used inside the dropdown menu only — the selected value
+ * shows just the label so the input stays compact.
+ */
+function renderOptionWithState(opt, meta) {
+  if (meta?.context !== 'menu' || !opt?.state) return opt?.label ?? '';
+  const isActive = String(opt.state).toLowerCase() === 'active';
+  const badgeClass = isActive
+    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+    : 'bg-slate-100 text-slate-500 border border-slate-200';
+  return (
+    <div className="flex items-center justify-between gap-2 w-full">
+      <span className="truncate">{opt.label}</span>
+      <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClass}`}>
+        {isActive ? 'Active' : opt.state}
+      </span>
+    </div>
+  );
+}
 
 const select2Styles = {
   control: (base, state) => ({
@@ -87,6 +110,29 @@ export default function Select2({
     : baseStyles;
   const selectedOpt = options?.find((o) => String(o.value) === String(value));
   const displayValue = selectedOpt ?? (value != null && value !== '' ? { value, label: selectedLabel ?? String(value) } : null);
+  // Lazy: don't fetch dropdown data on mount. Only when the user opens the
+  // menu — avoids a wave of background requests when a tab loads.
+  const [defaultOpts, setDefaultOpts] = useState(false);
+  // When the session branch changes, every cached "default 25" becomes stale
+  // (the SP filters by the new branch). Reset our cache and force AsyncSelect
+  // to remount so its own `cacheOptions` is dropped too.
+  const sessionBrId = useSelector((s) => s?.ui?.user?.br_id ?? '');
+  useEffect(() => {
+    setDefaultOpts(false);
+  }, [sessionBrId]);
+
+  const handleMenuOpen = useCallback(async () => {
+    onMenuOpen?.();
+    if (defaultOpts !== false) return; // already loaded once
+    if (!loadOptions) return;
+    try {
+      const opts = await loadOptions('');
+      setDefaultOpts(Array.isArray(opts) ? opts : []);
+    } catch {
+      setDefaultOpts([]);
+    }
+  }, [defaultOpts, loadOptions, onMenuOpen]);
+
   const common = {
     ...props,
     value: displayValue,
@@ -112,12 +158,18 @@ export default function Select2({
     return (
       <div className={className}>
         <AsyncSelect
+          // Remount when the session branch changes — drops react-select's
+          // internal cacheOptions cache so the next open hits the backend
+          // with the new branch context.
+          key={`brh-${sessionBrId}`}
           {...common}
           loadOptions={loadOptions}
-          defaultOptions
+          defaultOptions={defaultOpts}
+          onMenuOpen={handleMenuOpen}
           cacheOptions
           getOptionLabel={(opt) => (opt?.label != null ? String(opt.label) : opt?.value != null ? String(opt.value) : '')}
           getOptionValue={(opt) => opt?.value}
+          formatOptionLabel={renderOptionWithState}
         />
       </div>
     );

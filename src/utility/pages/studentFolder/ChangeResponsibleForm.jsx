@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { fetchSelectOptions } from '../../../services/api';
+import { useState, useMemo } from 'react';
+import { makeOptionLoader } from '../../../services/api';
 import Select2 from '../../../components/ui/Select2';
 import { swalSuccess, swalError } from '../../../utils/swal';
 
@@ -17,31 +17,19 @@ function getSessionUBrId() {
 
 export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) {
   const { res_id } = context ?? {};
-  const [rows, setRows] = useState([{ id: Date.now(), std_id: '' }]);
-  const [studentOptions, setStudentOptions] = useState([]);
+  const [rows, setRows] = useState([{ id: Date.now(), std_id: '', std_label: '' }]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchSelectOptions('all_student_options', 500, '')
-      .then((res) => {
-        const data = res?.data ?? res?.rows ?? [];
-        setStudentOptions(
-          data.map((r) => ({
-            value: String(r.std_id ?? Object.values(r)[0] ?? ''),
-            label: String(r.p_name ?? Object.values(r)[1] ?? ''),
-          }))
-        );
-      })
-      .catch(() => setStudentOptions([]));
-  }, []);
+  // Lazy loader (server-side: 25 default + search beyond).
+  const studentLoader = useMemo(() => makeOptionLoader('all_student_options'), []);
 
-  const addRow = () => setRows((prev) => [...prev, { id: Date.now(), std_id: '' }]);
+  const addRow = () => setRows((prev) => [...prev, { id: Date.now(), std_id: '', std_label: '' }]);
 
   const removeRow = (id) =>
     setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
 
-  const setStd = (id, val) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, std_id: val } : r)));
+  const setStd = (id, val, label) =>
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, std_id: val, std_label: label } : r)));
 
   const handleUpdate = async () => {
     if (!res_id) {
@@ -107,8 +95,9 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
                 <Select2
                   name={`student_${row.id}`}
                   value={row.std_id}
-                  onChange={(e) => setStd(row.id, e.target.value)}
-                  options={studentOptions}
+                  selectedLabel={row.std_label}
+                  onChange={(e) => setStd(row.id, e.target.value, e.target.label || '')}
+                  loadOptions={studentLoader}
                   placeholder="select Student"
                 />
               </td>
