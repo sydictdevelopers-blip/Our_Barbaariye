@@ -97,9 +97,9 @@ const QUERIES = {
   // ---- Activity Management ----
   // subject_activity.subject_id is a FK to subjects.sub_id (not subjects.subject_id —
   // subjects has no such column). The label `subject_name` is `subjects.name`.
-  Activity: (p) => `SELECT * FROM activity_show(${Number(p?.br_id) || 0})`,
-  SubjectActivity: 'SELECT sa.sub_act_id, sa.act_id, a.activity_name, sa.subject_id, s.name AS subject_name, sa.max_marks, sa.state FROM subject_activity sa JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY sa.sub_act_id',
-  StudentActivityEdit: 'SELECT sae.sta_id, sae.student_id, st.student_name, sae.sub_act_id, CONCAT(a.activity_name, \' - \', s.name) AS subject_activity, sae.marks_obtained, sae.state FROM student_activity_edit sae JOIN students st ON st.student_id = sae.student_id JOIN subject_activity sa ON sa.sub_act_id = sae.sub_act_id JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY sae.sta_id',
+  Performance: `SELECT * FROM performance_show()`,
+  StudentPerformance: (p) => `SELECT * FROM student_performance_show(${Number(p?.br_id) || 0}, ${Number(p?.std_cl_id) || 0})`,
+  StudentPerformanceEdit: 'SELECT sae.sta_id, sae.student_id, st.student_name, sae.sub_act_id, CONCAT(a.activity_name, \' - \', s.name) AS subject_activity, sae.marks_obtained, sae.state FROM student_activity_edit sae JOIN students st ON st.student_id = sae.student_id JOIN subject_activity sa ON sa.sub_act_id = sae.sub_act_id JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY sae.sta_id',
 
   // ---- User management ----
   // Function-style entry — runtime params ayaa lagu soo gudbiyaa (br_id)
@@ -124,6 +124,9 @@ const QUERIES = {
   activity_type_options: 'SELECT ac_id, type AS activity_type FROM activity_type ORDER BY type',
   activity_options: 'SELECT act_id, activity_name FROM activity ORDER BY activity_name',
   subject_activity_options: 'SELECT sa.sub_act_id, CONCAT(a.activity_name, \' - \', s.name) AS sub_act_name FROM subject_activity sa JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY 2',
+  performance_options: 'SELECT per_id, performance_name FROM performance ORDER BY performance_name',
+  rate_options: 'SELECT rate_id, rate FROM rate ORDER BY rate',
+  student_performance_select: (p) => `SELECT * FROM vw_std_performance_all(${Number(p?.br_id) || 0})`,
 
   // Subject dropdown for the SubjectActivity form. `subjects.sub_id` is aliased
   // to `subject_id` because the form's rowKey is `subject_id`.

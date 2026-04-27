@@ -52,6 +52,9 @@ export default function EntityTab({
   classOptionsQuery,
   showResponsibleSelect = false,
   responsibleOptionsQuery,
+  showStudentSelect = false,
+  studentOptionsQuery,
+  hideEdit = false,
   hiddenColumns,
   extraRowActions,
   extraHeaderActions,
@@ -68,6 +71,8 @@ export default function EntityTab({
   const [activeExtra, setActiveExtra] = useState({});
   const [selectedResponsibleId, setSelectedResponsibleId] = useState('');
   const [selectedResponsibleLabel, setSelectedResponsibleLabel] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
@@ -93,30 +98,34 @@ export default function EntityTab({
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
   const clsOptionsQuery = classOptionsQuery ?? 'class_options';
   const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
+  const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_select';
 
   // Lazy loaders — dropdown opens / user types → server fetches first 25 (search beyond that).
   // No fetches happen on tab mount; the user picks the year/class/responsible from the dropdown.
   const acadLoader = useMemo(() => makeOptionLoader(optionsQuery), [optionsQuery]);
   const classLoader = useMemo(() => makeOptionLoader(clsOptionsQuery), [clsOptionsQuery]);
   const respLoader = useMemo(() => makeOptionLoader(resOptionsQuery), [resOptionsQuery]);
+  const studentLoader = useMemo(() => makeOptionLoader(stuOptionsQuery), [stuOptionsQuery]);
 
   const academicYearIdForLoad = showAcademicYearSelect ? selectedAcademicYearId : undefined;
   const classIdForLoad = showClassSelect ? selectedClassId : undefined;
   const responsibleIdForLoad = showResponsibleSelect ? selectedResponsibleId : undefined;
+  const studentIdForLoad = showStudentSelect ? selectedStudentId : undefined;
 
   const buildExtra = useCallback(
-    (academicYearId, classId, responsibleId) => ({
+    (academicYearId, classId, responsibleId, studentId) => ({
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
       ...(classId != null && String(classId).trim() && { cl_id: String(classId).trim() }),
       ...(responsibleId != null && String(responsibleId).trim() && { res_id: String(responsibleId).trim() }),
+      ...(studentId != null && String(studentId).trim() && { std_cl_id: String(studentId).trim() }),
       ...extraLoadParams,
     }),
     [extraLoadParams]
   );
 
   const onShowData = useCallback(
-    (btnId, academicYearId, classId, responsibleId) => {
-      const extra = buildExtra(academicYearId, classId, responsibleId);
+    (btnId, academicYearId, classId, responsibleId, studentId) => {
+      const extra = buildExtra(academicYearId, classId, responsibleId, studentId);
       setViewMode('data');
       setShowDataPanel(true);
       setActiveEntityKey(btnId);
@@ -161,9 +170,11 @@ export default function EntityTab({
     (row) => (
       <div className="flex justify-center gap-1">
         {extraRowActions && extraRowActions(row)}
-        <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad })}>
-          <Pencil className="w-4 h-4" />
-        </ActionButton>
+        {!hideEdit && (
+          <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad })}>
+            <Pencil className="w-4 h-4" />
+          </ActionButton>
+        )}
         <ActionButton
           variant="delete"
           aria-label="Delete"
@@ -175,7 +186,7 @@ export default function EntityTab({
         </ActionButton>
       </div>
     ),
-    [modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, academicYearIdForLoad]
+    [modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, academicYearIdForLoad, hideEdit]
   );
 
   const headerActions = (
@@ -219,6 +230,19 @@ export default function EntityTab({
           />
         </div>
       )}
+      {showStudentSelect && (
+        <div className="min-w-[220px]">
+          <Select2
+            name="studentSelect"
+            value={selectedStudentId}
+            selectedLabel={selectedStudentLabel}
+            onChange={(e) => { setSelectedStudentId(e.target.value); setSelectedStudentLabel(e.target.label || ''); }}
+            loadOptions={studentLoader}
+            placeholder={t('entity.selectStudent', 'Dooro Arday')}
+            isClearable
+          />
+        </div>
+      )}
       {loadBtns.map((btn) => {
         const BtnIcon = btn.icon ?? Icon;
         const isBulkAction = !!btn.isBulkAction;
@@ -229,7 +253,11 @@ export default function EntityTab({
           } else if (isAddNew) {
             onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
           } else {
-            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, responsibleIdForLoad);
+            if (showStudentSelect && (!selectedStudentId || String(selectedStudentId).trim() === '')) {
+              swalError(t('entity.selectStudent', 'Dooro Arday'), '');
+              return;
+            }
+            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, responsibleIdForLoad, studentIdForLoad);
           }
         };
         return (

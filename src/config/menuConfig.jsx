@@ -325,39 +325,42 @@ export const defaultMenuItems = [
         path: '/ActivityManagement',
         tabs: [
           {
-            "id": "Activity",
-            "label": "Activity",
-            "entityKey": "Activity",
-            "modalKey": "Activity",
+            "id": "Performance",
+            "label": "Performance",
+            "entityKey": "Performance",
+            "modalKey": "Performance",
             "icon": "Database",
-            "queryName": "Activity",
+            "queryName": "Performance",
             "loadButtons": [
-              { "id": "Activity", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "Activity" }
+              { "id": "Performance", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "Performance" }
             ]
           },
           {
-            "id": "SubjectActivity",
-            "label": "Subject Activity",
-            "entityKey": "SubjectActivity",
-            "modalKey": "SubjectActivity",
+            "id": "StudentPerformance",
+            "label": "Student Performance",
+            "entityKey": "StudentPerformance",
+            "modalKey": "StudentPerformance",
             "icon": "Database",
-            "queryName": "SubjectActivity",
+            "queryName": "StudentPerformance",
+            "showStudentSelect": true,
+            "studentOptionsQuery": "student_performance_select",
+            "hideEdit": true,
             "loadButtons": [
-              { "id": "SubjectActivity", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "SubjectActivity" }
+              { "id": "StudentPerformance", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentPerformance" }
             ]
           },
           {
-            "id": "StudentActivityEdit",
-            "label": "Student Activity Edit",
-            "entityKey": "StudentActivityEdit",
-            "modalKey": "StudentActivityEdit",
+            "id": "StudentPerformanceEdit",
+            "label": "Student Performance Edit",
+            "entityKey": "StudentPerformanceEdit",
+            "modalKey": "StudentPerformanceEdit",
             "icon": "Database",
-            "queryName": "StudentActivityEdit",
+            "queryName": "StudentPerformanceEdit",
             "loadButtons": [
-              { "id": "StudentActivityEdit", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentActivityEdit" }
+              { "id": "StudentPerformanceEdit", "label": "Show Data", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentPerformanceEdit" }
             ]
           }
         ],

@@ -142,7 +142,18 @@ export default function CrudModal({
   const helpKey = moduleKey || config.moduleKey || '';
 
   useEffect(() => {
-    if (isOpen) setForm(initialForm && typeof initialForm === 'object' ? { ...initialForm } : {});
+    if (isOpen) {
+      const init = initialForm && typeof initialForm === 'object' ? { ...initialForm } : {};
+      // Apply field defaults for any slot still empty — covers insert mode (date→today,
+      // hidden→session vals, etc.) without overwriting existing values on update.
+      config?.fields?.forEach((f) => {
+        if (init[f.name] == null || init[f.name] === '') {
+          const dflt = typeof f.default === 'function' ? f.default() : f.default;
+          if (dflt != null && dflt !== '') init[f.name] = dflt;
+        }
+      });
+      setForm(init);
+    }
     if (!isOpen) {
       setFetchedLabels({});
       selectedLabelRef.current = {};
