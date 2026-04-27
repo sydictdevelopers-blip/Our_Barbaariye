@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
@@ -7,22 +8,22 @@ import DataTableCard from '../../../components/DataTableCard';
 import { crud, fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalConfirm, swalError, swalSuccess } from '../../../utils/swal';
 
-const RESULT_COLUMNS = [
-  { key: 'student_name',   label: 'Student' },
-  { key: 'batch_name',     label: 'Batch' },
-  { key: 'activity_type',  label: 'Activity' },
-  { key: 'subject_name',   label: 'Subject' },
-  { key: 'max_marks',      label: 'Max Marks' },
-  { key: 'marks_obtained', label: 'Obtained' },
-  { key: 'state',          label: 'State' },
-];
-
 const EMPTY_FORM = { ac_t_id: '', ac_t_label: '', std_cl_id: '', std_cl_label: '', marks_obtained: '', state: 'Active' };
 
 const INPUT_CLS = 'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
 
 export default function LessonActivityResultsTab() {
+  const { t } = useTranslation();
+  const RESULT_COLUMNS = useMemo(() => ([
+    { key: 'student_name',   label: t('lessonActivityResults.cols.student') },
+    { key: 'batch_name',     label: t('lessonActivityResults.cols.batch') },
+    { key: 'activity_type',  label: t('lessonActivityResults.cols.activity') },
+    { key: 'subject_name',   label: t('lessonActivityResults.cols.subject') },
+    { key: 'max_marks',      label: t('lessonActivityResults.cols.maxMarks') },
+    { key: 'marks_obtained', label: t('lessonActivityResults.cols.obtained') },
+    { key: 'state',          label: t('lessonActivityResults.cols.state') },
+  ]), [t]);
   /* ── filter state (id + label) ── */
   const [filterAcademic,     setFilterAcademic]     = useState(''); const [filterAcademicLabel,     setFilterAcademicLabel]     = useState('');
   const [filterClass,        setFilterClass]        = useState(''); const [filterClassLabel,        setFilterClassLabel]        = useState('');
@@ -82,7 +83,7 @@ export default function LessonActivityResultsTab() {
   }, [filterAcademic, filterClass, filterBatch, filterSubject, filterActivityType, filterExam]);
 
   const handleShow = async () => {
-    if (!filterAcademic || !filterClass) { swalError('Academic Year and Class are required'); return; }
+    if (!filterAcademic || !filterClass) { swalError(t('lessonActivityResults.errFiltersRequired')); return; }
     setLoadingTable(true);
     try {
       const rows = await fetchRows();
@@ -90,7 +91,7 @@ export default function LessonActivityResultsTab() {
       setTableLoaded(true);
       setCurrentPage(1);
     } catch (e) {
-      swalError(e?.message || 'Error loading data');
+      swalError(e?.message || t('lessonActivityResults.errLoad'));
     } finally {
       setLoadingTable(false);
     }
@@ -98,8 +99,8 @@ export default function LessonActivityResultsTab() {
 
   /* ── Update Exam Activity (bulk populate) ── */
   const handleUpdateExam = async () => {
-    if (!filterAcademic || !filterClass) { swalError('Academic Year and Class are required'); return; }
-    const ok = await swalConfirm({ title: 'Auto-populate result records for all students?', confirmText: 'Yes, update' });
+    if (!filterAcademic || !filterClass) { swalError(t('lessonActivityResults.errFiltersRequired')); return; }
+    const ok = await swalConfirm({ title: t('lessonActivityResults.msgConfirmBulk'), confirmText: t('lessonActivityResults.msgConfirmYes') });
     if (!ok) return;
     setBulkLoading(true);
     try {
@@ -113,12 +114,12 @@ export default function LessonActivityResultsTab() {
           ex_reg_id_sp: Number(filterExam)     || 0,
         },
       });
-      swalSuccess('Records updated');
+      swalSuccess(t('lessonActivityResults.msgRecordsUpdated'));
       const rows = await fetchRows();
       setTableData(rows);
       setTableLoaded(true);
     } catch (e) {
-      swalError(e?.message || 'Update failed');
+      swalError(e?.message || t('responsibleForm.updateFailed'));
     } finally {
       setBulkLoading(false);
     }
@@ -137,7 +138,7 @@ export default function LessonActivityResultsTab() {
     try {
       const res = await fetchDataPaginated({ queryName: 'LessonActivityResultRow', page: 1, limit: 1, search: '', lar_id: row.lar_id });
       const r = (res?.data ?? [])[0];
-      if (!r) { swalError('Could not load row'); return; }
+      if (!r) { swalError(t('lessonActivityResults.errLoadRow')); return; }
       setForm({
         ac_t_id:       String(r.ac_t_id        ?? ''),
         std_cl_id:     String(r.std_cl_id      ?? ''),
@@ -146,14 +147,14 @@ export default function LessonActivityResultsTab() {
       });
       setAddOpen(true);
     } catch (e) {
-      swalError(e?.message || 'Could not load row');
+      swalError(e?.message || t('lessonActivityResults.errLoadRow'));
     }
-  }, []);
+  }, [t]);
 
   /* ── Delete ── */
   const handleDelete = useCallback(async (row) => {
-    if (!row.lar_id || row.lar_id === 0) { swalError('No saved result to delete for this student'); return; }
-    const ok = await swalConfirm({ title: 'Delete this result?' });
+    if (!row.lar_id || row.lar_id === 0) { swalError(t('lessonActivityResults.errDeleteNoRow')); return; }
+    const ok = await swalConfirm({ title: t('lessonActivityResults.confirmDelete') });
     if (!ok) return;
     try {
       await crud({
@@ -163,15 +164,15 @@ export default function LessonActivityResultsTab() {
       });
       setTableData((prev) => prev.map((r) => r.lar_id === row.lar_id
         ? { ...r, lar_id: 0, marks_obtained: 0, state: 'Pending' } : r));
-      swalSuccess('Deleted');
+      swalSuccess(t('lessonActivityResults.msgDeleted'));
     } catch (e) {
-      swalError(e?.message || 'Delete failed');
+      swalError(e?.message || t('lessonActivityResults.errDelete'));
     }
-  }, []);
+  }, [t]);
 
   /* ── Save ── */
   const handleSave = async () => {
-    if (!form.ac_t_id || !form.std_cl_id) { swalError('Activity and Student are required'); return; }
+    if (!form.ac_t_id || !form.std_cl_id) { swalError(t('lessonActivityResults.errFieldsRequired')); return; }
     setSaving(true);
     try {
       const isEdit = editingId != null && editingId !== 0;
@@ -186,13 +187,13 @@ export default function LessonActivityResultsTab() {
           state_sp:     form.state                   || 'Active',
         },
       });
-      swalSuccess(isEdit ? 'Updated' : 'Added');
+      swalSuccess(isEdit ? t('lessonActivityResults.msgUpdated') : t('lessonActivityResults.msgAdded'));
       setAddOpen(false);
       const rows = await fetchRows();
       setTableData(rows);
       setTableLoaded(true);
     } catch (e) {
-      swalError(e?.message || 'Save failed');
+      swalError(e?.message || t('lessonActivityResults.errSave'));
     } finally {
       setSaving(false);
     }
@@ -222,13 +223,13 @@ export default function LessonActivityResultsTab() {
   const setSelectField = (k, lk) => (e) => setForm((p) => ({ ...p, [k]: e.target.value, [lk]: e.target.label || '' }));
 
   const filterFields = [
-    { label: 'Academic Year', node: <Select2 name="fa" value={filterAcademic} selectedLabel={filterAcademicLabel} onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }} loadOptions={academicLoader} placeholder="Select Year" /> },
-    { label: 'Class',         node: <Select2 name="fc" value={filterClass}    selectedLabel={filterClassLabel}    onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }} loadOptions={classLoader}    placeholder="Select Class" /> },
-    { label: 'Batch',         node: <Select2 name="fb" value={filterBatch}    selectedLabel={filterBatchLabel}    onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }} loadOptions={batchLoader}    placeholder="Select Batch" /> },
-    { label: 'Subject',       node: <Select2 key={`fs-${filterClass}-${filterAcademic}`} name="fs" value={filterSubject}  selectedLabel={filterSubjectLabel} onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }} loadOptions={subjectLoader} isDisabled={!filterClass || !filterAcademic} placeholder={filterClass && filterAcademic ? 'Select Subject' : 'Select Class & Year first'} /> },
-    { label: 'Activity Type', node: <Select2 name="ft" value={filterActivityType} selectedLabel={filterActivityTypeLabel} onChange={(e) => { setFilterActivityType(e.target.value); setFilterActivityTypeLabel(e.target.label || ''); }} loadOptions={activityTypeLoader} placeholder="Select Type" /> },
-    { label: 'Exam',          node: <Select2 name="fe" value={filterExam}     selectedLabel={filterExamLabel}     onChange={(e) => { setFilterExam(e.target.value); setFilterExamLabel(e.target.label || ''); }} loadOptions={examLoader} placeholder="Select Exam" /> },
-    { label: 'Date',          node: <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full px-3 py-[7px] rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" /> },
+    { label: t('lessonActivityResults.filters.academicYear'), node: <Select2 name="fa" value={filterAcademic} selectedLabel={filterAcademicLabel} onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }} loadOptions={academicLoader} placeholder={t('select.year')} /> },
+    { label: t('lessonActivityResults.filters.class'),        node: <Select2 name="fc" value={filterClass}    selectedLabel={filterClassLabel}    onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }} loadOptions={classLoader}    placeholder={t('select.class')} /> },
+    { label: t('lessonActivityResults.filters.batch'),        node: <Select2 name="fb" value={filterBatch}    selectedLabel={filterBatchLabel}    onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }} loadOptions={batchLoader}    placeholder={t('select.batch')} /> },
+    { label: t('lessonActivityResults.filters.subject'),      node: <Select2 key={`fs-${filterClass}-${filterAcademic}`} name="fs" value={filterSubject}  selectedLabel={filterSubjectLabel} onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }} loadOptions={subjectLoader} isDisabled={!filterClass || !filterAcademic} placeholder={filterClass && filterAcademic ? t('select.subject') : t('select.pickClassYearFirst')} /> },
+    { label: t('lessonActivityResults.filters.activityType'), node: <Select2 name="ft" value={filterActivityType} selectedLabel={filterActivityTypeLabel} onChange={(e) => { setFilterActivityType(e.target.value); setFilterActivityTypeLabel(e.target.label || ''); }} loadOptions={activityTypeLoader} placeholder={t('select.type')} /> },
+    { label: t('lessonActivityResults.filters.exam'),         node: <Select2 name="fe" value={filterExam}     selectedLabel={filterExamLabel}     onChange={(e) => { setFilterExam(e.target.value); setFilterExamLabel(e.target.label || ''); }} loadOptions={examLoader} placeholder={t('select.exam')} /> },
+    { label: t('lessonActivityResults.filters.date'),         node: <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full px-3 py-[7px] rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" /> },
   ];
 
   return (
@@ -236,7 +237,7 @@ export default function LessonActivityResultsTab() {
       {/* ── Filters card ── */}
       <div className="bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 shadow-sm overflow-hidden">
         <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900/40 border-b border-slate-200/70 dark:border-slate-700/70">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Filters</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('lessonActivityResults.filtersTitle')}</h3>
         </div>
         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3.5">
           {filterFields.map(({ label, node }) => (
@@ -248,13 +249,13 @@ export default function LessonActivityResultsTab() {
         </div>
         <div className="px-5 py-3 bg-slate-50/70 dark:bg-slate-800/50 border-t border-slate-200/70 dark:border-slate-700/70 flex flex-wrap justify-end gap-2">
           <Button size="sm" variant="primary" leftIcon={<Eye className="w-4 h-4" />} onClick={handleShow} disabled={!filterAcademic || !filterClass || loadingTable}>
-            {loadingTable ? 'Loading…' : 'Show'}
+            {loadingTable ? t('action.loading') : t('action.show')}
           </Button>
           <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddNew}>
-            Add New
+            {t('students.addNew')}
           </Button>
           <Button size="sm" variant="primary" leftIcon={<RefreshCw className={`w-4 h-4 ${bulkLoading ? 'animate-spin' : ''}`} />} onClick={handleUpdateExam} disabled={bulkLoading}>
-            {bulkLoading ? 'Updating…' : 'Update Exam Activity'}
+            {bulkLoading ? t('action.updating') : t('lessonActivityResults.updateExamActivity')}
           </Button>
         </div>
       </div>
@@ -262,19 +263,19 @@ export default function LessonActivityResultsTab() {
       {/* ── Empty states ── */}
       {!tableLoaded && (
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-900/40 py-12">
-          <EmptyState title="Wax xog ah lama soo bandhigin" description="Dooro Academic Year iyo Class, kadibna riix Show." />
+          <EmptyState title={t('empty.notLoaded')} description={t('empty.noStudents')} />
         </div>
       )}
       {tableLoaded && tableData.length === 0 && (
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-900/40 py-12">
-          <EmptyState title="Wax xog ah ma jiraan" description="Riix 'Update Exam Activity' si loogu sameeyo diiwaannada students-ka." />
+          <EmptyState title={t('empty.noData')} description={t('empty.updateExamHint')} />
         </div>
       )}
 
       {/* ── DataTable ── */}
       {tableLoaded && tableData.length > 0 && (
         <DataTableCard
-          title="Lesson Activity Results"
+          title={t('lessonActivityResults.title')}
           columns={RESULT_COLUMNS}
           data={pagedRows}
           total={totalRows}
@@ -298,14 +299,14 @@ export default function LessonActivityResultsTab() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-                {editingId ? 'Edit Result' : 'Add Result'}
+                {editingId ? t('lessonActivityResults.editResult') : t('lessonActivityResults.addResult')}
               </h3>
               <button onClick={() => setAddOpen(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="px-6 py-5 grid grid-cols-2 gap-x-4 gap-y-4">
               {/* Activity */}
               <div className="col-span-2">
-                <label className={LABEL_CLS}>Lesson Activity *</label>
+                <label className={LABEL_CLS}>{t('lessonActivityResults.fields.lessonActivity')}</label>
                 <Select2
                   key={`act-${filterClass}-${filterAcademic}`}
                   name="ac_t_id"
@@ -313,12 +314,12 @@ export default function LessonActivityResultsTab() {
                   selectedLabel={form.ac_t_label}
                   onChange={setSelectField('ac_t_id', 'ac_t_label')}
                   loadOptions={activityLoader}
-                  placeholder="Select Activity"
+                  placeholder={t('select.activity')}
                 />
               </div>
               {/* Student */}
               <div className="col-span-2">
-                <label className={LABEL_CLS}>Student *</label>
+                <label className={LABEL_CLS}>{t('lessonActivityResults.fields.student')}</label>
                 <Select2
                   key={`stu-${filterAcademic}-${filterClass}-${filterBatch}`}
                   name="std_cl_id"
@@ -326,28 +327,28 @@ export default function LessonActivityResultsTab() {
                   selectedLabel={form.std_cl_label}
                   onChange={setSelectField('std_cl_id', 'std_cl_label')}
                   loadOptions={studentClassLoader}
-                  placeholder="Select Student"
+                  placeholder={t('select.student')}
                 />
               </div>
               {/* Marks */}
               <div>
-                <label className={LABEL_CLS}>Marks Obtained</label>
+                <label className={LABEL_CLS}>{t('lessonActivityResults.fields.marksObtained')}</label>
                 <input type="number" value={form.marks_obtained} onChange={setField('marks_obtained')} className={INPUT_CLS} placeholder="0" />
               </div>
               {/* State */}
               <div>
-                <label className={LABEL_CLS}>State</label>
+                <label className={LABEL_CLS}>{t('lessonActivityResults.fields.state')}</label>
                 <select value={form.state} onChange={setField('state')} className={INPUT_CLS}>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Pending">Pending</option>
+                  <option value="Active">{t('studentState.active')}</option>
+                  <option value="Inactive">{t('studentState.inactive')}</option>
+                  <option value="Pending">{t('lessonActivityResults.options.pending')}</option>
                 </select>
               </div>
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
-              <Button size="sm" variant="secondary" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button size="sm" variant="secondary" onClick={() => setAddOpen(false)}>{t('common.cancel')}</Button>
               <Button size="sm" variant="primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : editingId ? 'Update' : 'Add'}
+                {saving ? t('action.saving') : editingId ? t('action.update') : t('common.add')}
               </Button>
             </div>
           </div>

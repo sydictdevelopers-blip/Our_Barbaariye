@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
@@ -15,6 +16,7 @@ import { setActiveTab } from '../../../slices/uiSlice';
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
 
 export default function AccountsPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const dispatch = useDispatch();
   const [modal, setModal] = useState({ entityKey: null, editRow: null });
@@ -58,7 +60,7 @@ export default function AccountsPage() {
     }
     return (
       <motion.div key={activeTab} {...motionProps} className="p-8 text-center text-slate-500">
-        wa ikana wlalayaal
+        {t('placeholder.comingSoon')}
       </motion.div>
     );
   };

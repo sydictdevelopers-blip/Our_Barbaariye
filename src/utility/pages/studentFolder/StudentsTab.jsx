@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, Plus, Database, Image, Users, Mail, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
@@ -7,23 +8,28 @@ import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
 
-const RESULT_COLUMNS = [
-  { key: 'student_name',  label: 'Student' },
-  { key: 'emis_id',       label: 'EMIS' },
-  { key: 'id_card',       label: 'ID Card' },
-  { key: 'sex',           label: 'Sex' },
-  { key: 'tel',           label: 'Phone' },
-  { key: 'class_name',    label: 'Class' },
-  { key: 'batch_name',    label: 'Batch' },
-  { key: 'mothername',    label: 'Mother' },
-  { key: 'mother_phone',  label: 'Mother Phone' },
-  { key: 'reg_date',      label: 'Reg Date' },
-  { key: 'state',         label: 'State' },
-];
-
-const NO_DATA_ROW = [{ id: '__no_data__', student_name: 'This Information Was Not Found!' }];
-
 export default function StudentsTab() {
+  const { t } = useTranslation();
+  const RESULT_COLUMNS = useMemo(() => ([
+    { key: 'std_id',           label: t('students.cols.id') },
+    { key: 'id_card',          label: t('students.cols.idCard') },
+    { key: 'student_name',     label: t('students.cols.student') },
+    { key: 'phone',            label: t('students.cols.phone') },
+    { key: 'sex',              label: t('students.cols.sex') },
+    { key: 'district',         label: t('students.cols.district') },
+    { key: 'responsible_name', label: t('students.cols.responsible') },
+    { key: 'type',             label: t('students.cols.type') },
+    { key: 'm_phone',          label: t('students.cols.mPhone') },
+    { key: 'relation',         label: t('students.cols.relation') },
+    { key: 'discount',         label: t('students.cols.discount') },
+    { key: 'reg_date',         label: t('students.cols.regDate') },
+    { key: 'username',         label: t('students.cols.user') },
+  ]), [t]);
+
+  const NO_DATA_ROW = useMemo(
+    () => [{ id: '__no_data__', student_name: t('students.notFound') }],
+    [t]
+  );
   const [filterClass, setFilterClass] = useState('');
   const [filterClassLabel, setFilterClassLabel] = useState('');
   const [filterBatch, setFilterBatch] = useState('');
@@ -41,7 +47,11 @@ export default function StudentsTab() {
 
   // Lazy loaders (server-side: 25 default + search beyond).
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
-  const batchLoader    = useMemo(() => makeOptionLoader('batch_options'), []);
+  // Batch loader is class-aware: when filterClass set, returns only batches present in that class for active academic year.
+  const batchLoader    = useMemo(
+    () => makeOptionLoader('batch_options', () => ({ cl_id: filterClass })),
+    [filterClass]
+  );
   const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
 
   const fetchRows = useCallback(async () => {
@@ -59,44 +69,44 @@ export default function StudentsTab() {
 
   const handleShowData = async () => {
     if (!filterClass || !filterBatch || !filterAcademic) {
-      swalError('Class, Batch iyo Academic Year waa lagama maarmaan');
+      swalError(t('students.errFiltersRequired'));
       return;
     }
     setLoadingTable(true);
     try {
       const rows = await fetchRows();
       const mapped = rows.map((r, i) => ({
-        id: r.std_cl_id ?? r.std_id ?? i,
+        id: r.std_id ?? i,
         ...r,
       }));
       setTableData(mapped);
       setTableLoaded(true);
       setCurrentPage(1);
     } catch (e) {
-      swalError(e?.message || 'Khalad ayaa dhacay');
+      swalError(e?.message || t('swal.titles.error'));
     } finally {
       setLoadingTable(false);
     }
   };
 
-  const placeholder = (label) => () => swalSuccess(label, 'Feature horumar ayaa loogu jiraa');
+  const placeholder = (label) => () => swalSuccess(label, t('students.featureInProgress'));
 
-  const handleStudentClassUpdate = placeholder('Student Class Update');
-  const handleAddNew = placeholder('Add New');
-  const handleAddImage = placeholder('Add Image');
-  const handleEditAllResponsibles = placeholder('Edit All Responsibles');
-  const handleEditAllEmis = placeholder('Edit All EMIS');
-  const handleImportExcel = placeholder('Import Excel');
+  const handleStudentClassUpdate = placeholder(t('students.classUpdateLabel'));
+  const handleAddNew = placeholder(t('students.addNew'));
+  const handleAddImage = placeholder(t('students.addImage'));
+  const handleEditAllResponsibles = placeholder(t('students.editAllResponsibles'));
+  const handleEditAllEmis = placeholder(t('students.editAllEmis'));
+  const handleImportExcel = placeholder(t('students.importExcelLabel'));
 
   const handleView = useCallback((row) => {
     if (row.id === '__no_data__') return;
-    swalSuccess('View', String(row.student_name ?? ''));
-  }, []);
+    swalSuccess(t('action.view'), String(row.student_name ?? ''));
+  }, [t]);
 
   const handleEdit = useCallback((row) => {
     if (row.id === '__no_data__') return;
-    swalSuccess('Edit', String(row.student_name ?? ''));
-  }, []);
+    swalSuccess(t('action.edit'), String(row.student_name ?? ''));
+  }, [t]);
 
   const filteredRows = useMemo(() => {
     const list = tableLoaded && tableData.length === 0 ? NO_DATA_ROW : tableData;
@@ -104,7 +114,7 @@ export default function StudentsTab() {
     if (!q) return list;
     const keys = RESULT_COLUMNS.map((c) => c.key);
     return list.filter((r) => keys.some((k) => String(r[k] ?? '').toLowerCase().includes(q)));
-  }, [tableData, tableLoaded, searchQuery]);
+  }, [tableData, tableLoaded, searchQuery, NO_DATA_ROW, RESULT_COLUMNS]);
 
   const totalRows = filteredRows.length;
   const pagedRows = useMemo(() => {
@@ -132,21 +142,29 @@ export default function StudentsTab() {
           name="filterClass"
           value={filterClass}
           selectedLabel={filterClassLabel}
-          onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }}
+          onChange={(e) => {
+            setFilterClass(e.target.value);
+            setFilterClassLabel(e.target.label || '');
+            // Class beddelay → tirtir batch (in la sii dooro batch sax ah ee class-ka cusub).
+            setFilterBatch('');
+            setFilterBatchLabel('');
+          }}
           loadOptions={classLoader}
-          placeholder="Class"
+          placeholder={t('students.cols.class')}
           isClearable={false}
           styles={compactSelectStyle}
         />
       </div>
       <div className="w-36 shrink-0">
         <Select2
+          key={`fb-${filterClass}`}
           name="filterBatch"
           value={filterBatch}
           selectedLabel={filterBatchLabel}
           onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }}
           loadOptions={batchLoader}
-          placeholder="Batch"
+          isDisabled={!filterClass}
+          placeholder={t('students.cols.batch')}
           isClearable={false}
           styles={compactSelectStyle}
         />
@@ -158,35 +176,35 @@ export default function StudentsTab() {
           selectedLabel={filterAcademicLabel}
           onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }}
           loadOptions={academicLoader}
-          placeholder="Academic Year"
+          placeholder={t('lessonActivityResults.filters.academicYear')}
           isClearable={false}
           styles={compactSelectStyle}
         />
       </div>
 
       <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShowData} disabled={loadingTable} className={`${compactBtn} shrink-0`}>
-        {loadingTable ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Show'}
+        {loadingTable ? <RefreshCw className="w-4 h-4 animate-spin" /> : t('action.show')}
       </Button>
 
       <span className="h-7 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0" aria-hidden />
 
       <Button size="sm" variant="primary" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={handleStudentClassUpdate} className={`${compactBtn} shrink-0`}>
-        Class Update
+        {t('students.classUpdate')}
       </Button>
       <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddNew} className={`${compactBtn} shrink-0`}>
-        Add New
+        {t('students.addNew')}
       </Button>
       <Button size="sm" variant="primary" leftIcon={<Image className="w-4 h-4" />} onClick={handleAddImage} className={`${compactBtn} shrink-0`}>
-        Image
+        {t('students.image')}
       </Button>
       <Button size="sm" variant="primary" leftIcon={<Users className="w-4 h-4" />} onClick={handleEditAllResponsibles} className={`${compactBtn} shrink-0`}>
-        Responsibles
+        {t('students.responsibles')}
       </Button>
       <Button size="sm" variant="primary" leftIcon={<Mail className="w-4 h-4" />} onClick={handleEditAllEmis} className={`${compactBtn} shrink-0`}>
-        EMIS
+        {t('students.emis')}
       </Button>
       <Button size="sm" variant="primary" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={handleImportExcel} className={`${compactBtn} shrink-0`}>
-        Import Excel
+        {t('students.importExcel')}
       </Button>
     </div>
   );
@@ -196,7 +214,7 @@ export default function StudentsTab() {
       {filterToolbar}
       <DataTableCard
         showDataPanel={tableLoaded}
-        searchPlaceholder="Search:"
+        searchPlaceholder={t('common.search')}
         searchValue={searchQuery}
         onSearchChange={(e) => { setSearchQuery(e?.target?.value ?? ''); setCurrentPage(1); }}
         onSearchSubmit={() => {}}
@@ -204,8 +222,8 @@ export default function StudentsTab() {
         data={pagedRows}
         isLoading={loadingTable}
         renderActions={renderActions}
-        emptyTitleClickToLoad="Wax xog ah lama soo bandhigin"
-        emptyDescClickToLoad="Dooro Class iyo Academic Year, kadibna riix SHOW DATA."
+        emptyTitleClickToLoad={t('empty.notLoaded')}
+        emptyDescClickToLoad={t('empty.showDataHint')}
         total={totalRows}
         currentPage={currentPage}
         totalPages={Math.max(1, Math.ceil(totalRows / pageSize))}

@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Pencil, Combine, Split, Save, XCircle } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';
 import { makeOptionLoader } from '../../../services/api';
-
-const STATE_OPTIONS = [
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
-];
 
 /**
  * ClassTransferTab — UI shell ee tab Class Transfer.
@@ -24,6 +20,11 @@ function useSelect(initial = '') {
 }
 
 export default function ClassTransferTab() {
+  const { t } = useTranslation();
+  const STATE_OPTIONS = useMemo(() => ([
+    { value: 'Active', label: t('studentState.active') },
+    { value: 'Inactive', label: t('studentState.inactive') },
+  ]), [t]);
   /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
   const batchLoader    = useMemo(() => makeOptionLoader('batch_options'), []);
@@ -108,10 +109,9 @@ export default function ClassTransferTab() {
       <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900">
         <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
         <p className="text-sm leading-relaxed">
-          <span className="font-semibold">DIGNIIN:</span> Class Transfer waxaa loogu talagalay oo kaliya fasallada isku mid-ka ah,
-          Tusaale ahaan: Class 1A → Class 1B ama Class 1B → Class 1C.{' '}
-          <span className="font-semibold">FG:</span> Haddii aad wareejinayso fasal course ah fadlan tag qeybta{' '}
-          <span className="font-semibold text-blue-700">Academic Transfer.</span>
+          <span className="font-semibold">{t('classTransfer.warning')}</span> {t('classTransfer.warningText')}{' '}
+          <span className="font-semibold">{t('classTransfer.fg')}</span> {t('classTransfer.fgText')}{' '}
+          <span className="font-semibold text-blue-700">{t('classTransfer.academicTransferLink')}</span>
         </p>
       </div>
 
@@ -124,7 +124,7 @@ export default function ClassTransferTab() {
             selectedLabel={filterClassLabel}
             onChange={setFilterClass}
             loadOptions={classLoader}
-            placeholder="Select Class"
+            placeholder={t('select.class')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -134,7 +134,7 @@ export default function ClassTransferTab() {
             selectedLabel={filterBatchLabel}
             onChange={setFilterBatch}
             loadOptions={batchLoader}
-            placeholder="Select Batch"
+            placeholder={t('select.batch')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -144,7 +144,7 @@ export default function ClassTransferTab() {
             selectedLabel={filterAcademicLabel}
             onChange={setFilterAcademic}
             loadOptions={academicLoader}
-            placeholder="Select Academic Year"
+            placeholder={t('select.academicYear')}
           />
         </div>
 
@@ -155,7 +155,7 @@ export default function ClassTransferTab() {
           onClick={handleEdit}
           disabled={!filterClass || !filterBatch || !filterAcademic || loadingTable}
         >
-          Edit
+          {t('common.edit')}
         </Button>
         <Button
           size="sm"
@@ -163,7 +163,7 @@ export default function ClassTransferTab() {
           leftIcon={<Combine className="w-4 h-4" />}
           onClick={() => setOpenModal('combination')}
         >
-          Class Combination
+          {t('classTransfer.classCombination')}
         </Button>
         <Button
           size="sm"
@@ -171,7 +171,7 @@ export default function ClassTransferTab() {
           leftIcon={<Split className="w-4 h-4" />}
           onClick={() => setOpenModal('division')}
         >
-          Class Division
+          {t('classTransfer.classDivision')}
         </Button>
       </div>
 
@@ -181,8 +181,8 @@ export default function ClassTransferTab() {
           {tableData.length === 0 ? (
             <div className="py-10">
               <EmptyState
-                title="Wax xog ah ma jiraan"
-                description="Filter-yada kuwa kale isku day ama hubi inay students jiraan."
+                title={t('empty.noData')}
+                description={t('empty.noDataFilters')}
               />
             </div>
           ) : (
@@ -190,10 +190,10 @@ export default function ClassTransferTab() {
               <table className="w-full text-sm">
                 <thead className="bg-[#0B3C5D] text-white">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold">Magaca</th>
-                    <th className="px-4 py-3 text-left font-semibold">Class</th>
-                    <th className="px-4 py-3 text-left font-semibold">Batch</th>
-                    <th className="px-4 py-3 text-left font-semibold">State</th>
+                    <th className="px-4 py-3 text-left font-semibold">{t('classTransfer.cols.name')}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{t('classTransfer.cols.class')}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{t('classTransfer.cols.batch')}</th>
+                    <th className="px-4 py-3 text-left font-semibold">{t('classTransfer.cols.state')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -214,7 +214,7 @@ export default function ClassTransferTab() {
                           selectedLabel={row.cl_label ?? ''}
                           onChange={(e) => { updateRow(idx, 'cl_id', e.target.value); updateRow(idx, 'cl_label', e.target.label || ''); }}
                           loadOptions={classLoader}
-                          placeholder="Select Class"
+                          placeholder={t('select.class')}
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -224,7 +224,7 @@ export default function ClassTransferTab() {
                           selectedLabel={row.batch_label ?? ''}
                           onChange={(e) => { updateRow(idx, 'batch_id', e.target.value); updateRow(idx, 'batch_label', e.target.label || ''); }}
                           loadOptions={batchLoader}
-                          placeholder="Select Batch"
+                          placeholder={t('select.batch')}
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -233,7 +233,7 @@ export default function ClassTransferTab() {
                           value={String(row.state ?? '')}
                           onChange={(e) => updateRow(idx, 'state', e.target.value)}
                           options={STATE_OPTIONS}
-                          placeholder="Select State"
+                          placeholder={t('select.state')}
                         />
                       </td>
                     </tr>
@@ -247,7 +247,7 @@ export default function ClassTransferTab() {
                   onClick={handleUpdateData}
                   className="w-full justify-center"
                 >
-                  Update Data*
+                  {t('classTransfer.updateData')}
                 </Button>
               </div>
             </>
@@ -259,19 +259,19 @@ export default function ClassTransferTab() {
       <Modal
         isOpen={openModal === 'combination'}
         onClose={closeModal}
-        title="Class Combination Form"
+        title={t('classTransfer.classCombinationForm')}
         size="md"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Combine className="w-4 h-4" />}
               onClick={handleCombination}
               disabled={!combFromId || !combToId}
             >
-              Combination
+              {t('classTransfer.combination')}
             </Button>
           </>
         }
@@ -283,7 +283,7 @@ export default function ClassTransferTab() {
             selectedLabel={combFromLabel}
             onChange={setCombFrom}
             loadOptions={classLoader}
-            placeholder="Select Class From"
+            placeholder={t('select.classFrom')}
           />
           <Select2
             name="combTo"
@@ -291,7 +291,7 @@ export default function ClassTransferTab() {
             selectedLabel={combToLabel}
             onChange={setCombTo}
             loadOptions={classLoader}
-            placeholder="Select Class To"
+            placeholder={t('select.classTo')}
           />
         </div>
       </Modal>
@@ -300,19 +300,19 @@ export default function ClassTransferTab() {
       <Modal
         isOpen={openModal === 'division'}
         onClose={closeModal}
-        title="Class Division Form"
+        title={t('classTransfer.classDivisionForm')}
         size="md"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Split className="w-4 h-4" />}
               onClick={handleDivision}
               disabled={!divClassId || !divSex || !divClassToId}
             >
-              Combination
+              {t('classTransfer.combination')}
             </Button>
           </>
         }
@@ -325,10 +325,10 @@ export default function ClassTransferTab() {
               selectedLabel={divClassLabel}
               onChange={setDivClass}
               loadOptions={classLoader}
-              placeholder="Select Class"
+              placeholder={t('select.class')}
             />
             <p className="mt-1.5 text-xs font-medium text-emerald-600">
-              No of Students: <span className="font-semibold">{divStudentCount}</span>
+              {t('classTransfer.noOfStudents')} <span className="font-semibold">{divStudentCount}</span>
             </p>
           </div>
           <Select2
@@ -336,10 +336,10 @@ export default function ClassTransferTab() {
             value={divSex}
             onChange={(e) => setDivSex(e.target.value)}
             options={[
-              { value: 'Male', label: 'Male' },
-              { value: 'Female', label: 'Female' },
+              { value: 'Male', label: t('classTransfer.male') },
+              { value: 'Female', label: t('classTransfer.female') },
             ]}
-            placeholder="Select Sex"
+            placeholder={t('select.sex')}
           />
           <div className="sm:col-start-2">
             <Select2
@@ -348,7 +348,7 @@ export default function ClassTransferTab() {
               selectedLabel={divClassToLabel}
               onChange={setDivClassTo}
               loadOptions={classLoader}
-              placeholder="Select Class"
+              placeholder={t('select.class')}
             />
           </div>
         </div>
