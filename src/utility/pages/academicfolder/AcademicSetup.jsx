@@ -142,6 +142,9 @@ export default function AccountsPage() {
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
             showClassSelect={cfg.showClassSelect}
             classOptionsQuery={cfg.classOptionsQuery}
+            showStudentSelect={cfg.showStudentSelect}
+            studentOptionsQuery={cfg.studentOptionsQuery}
+            hideEdit={cfg.hideEdit}
             hiddenColumns={cfg.hiddenColumns}
             bulkForm={cfg.entityKey === 'SubjectClassSetup'
               ? ({ context, onSuccess }) => (

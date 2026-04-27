@@ -1,0 +1,8 @@
+{
+  "watch": ["config", "scripts", ".env", ".env.local", ".env.remote-192"],
+  "ext": "js,json,env",
+  "ignore": ["node_modules", "uploads"],
+  "delay": 500,
+  "verbose": true,
+  "exec": "node config/server.js"
+}

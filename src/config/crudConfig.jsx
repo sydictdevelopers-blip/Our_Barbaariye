@@ -351,8 +351,8 @@ const ENTITIES = [
     ],
   },
   {
-    key: 'Activity',
-    title: 'Activity',
+    key: 'Performance',
+    title: 'Performance',
     fn: 'performance_sp',
     idKey: 'per_id',
     omitPId: true,
@@ -360,21 +360,6 @@ const ENTITIES = [
     idParam: 'per_id_sp',
     fields: [
       { name: 'performance_name_sp', label: 'Activity Name', type: 'text', required: true, rowKey: 'performance_name', param: 'performance_name_sp' },
-    ],
-  },
-  {
-    key: 'SubjectActivity',
-    title: 'Subject Activity',
-    fn: 'subject_activity_sp',
-    idKey: 'sub_act_id',
-    omitPId: true,
-    omitPUsrId: true,
-    idParam: 'sub_act_id_sp',
-    fields: [
-      { name: 'act_id_sp', label: 'Activity', type: 'select', required: true, optionsKey: 'activity_options', rowKey: 'act_id', param: 'act_id_sp', default: '' },
-      { name: 'subject_id_sp', label: 'Subject', type: 'select', required: true, optionsKey: 'subjects', rowKey: 'subject_id', param: 'subject_id_sp', default: '' },
-      { name: 'max_marks_sp', label: 'Max Marks', type: 'number', rowKey: 'max_marks', param: 'max_marks_sp', default: 100, props: { min: 0, step: 0.01 } },
-      { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
     ],
   },
   {
@@ -386,16 +371,17 @@ const ENTITIES = [
     omitPUsrId: true,
     idParam: 'st_per_id_sp',
     fields: [
-      { name: 'std_cl_id_sp', label: 'Student', type: 'select', required: true, optionsKey: 'student_class_all_options', rowKey: 'std_cl_id', value: 'std_cl_id', nameKey: 'student_name', param: 'std_cl_id_sp', default: '' },
+      { name: 'std_cl_id_sp', label: 'Student', type: 'select', required: true, optionsKey: 'student_performance_select', rowKey: 'std_cl_id', value: 'std_cl_id', nameKey: 'student_name', param: 'std_cl_id_sp', default: '' },
       { name: 'per_id_sp', label: 'Performance', type: 'select', required: true, optionsKey: 'performance_options', rowKey: 'per_id', value: 'per_id', nameKey: 'performance_name', param: 'per_id_sp', default: '' },
       { name: 'rate_id_sp', label: 'Rate', type: 'select', required: true, optionsKey: 'rate_options', rowKey: 'rate_id', value: 'rate_id', nameKey: 'rate', param: 'rate_id_sp', default: '' },
       { name: 'reason_sp', label: 'Reason', type: 'textarea', rows: 3, rowKey: 'reason', param: 'reason_sp' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+      { name: 'reg_date', label: 'Reg Date', type: 'date', rowKey: 'reg_date', omitFromParams: true, default: () => new Date().toISOString().slice(0, 10) },
     ],
   },
   {
-    key: 'StudentActivityEdit',
-    title: 'Student Activity Edit',
+    key: 'StudentPerformanceEdit',
+    title: 'Student Performance Edit',
     fn: 'student_activity_edit_sp',
     idKey: 'sta_id',
     omitPId: true,
