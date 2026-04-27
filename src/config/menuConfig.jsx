@@ -276,7 +276,7 @@ export const defaultMenuItems = [
             "modalKey": "bus",
             "icon": "Database",
             "queryName": "bus",
-            "hiddenColumns": ["emp_id", "username"],
+            "hiddenColumns": ["emp_id", "u_br_id"],
             "loadButtons": [
               { "id": "bus", "label": "Show Bus", "icon": "Database" },
               { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "bus" }

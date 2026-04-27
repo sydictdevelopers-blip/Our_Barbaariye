@@ -49,7 +49,7 @@ const QUERIES = {
   levels: (p) => `SELECT lev_id, level FROM levels_show(${Number(p?.br_id) || 0}) ORDER BY level`,
   grades: 'SELECT gr_id, grade_name FROM grade ORDER BY gr_id',
   class_options: (p) => ({
-    sql: `SELECT * FROM class_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
+    sql: `SELECT * FROM vw_all_classes('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,
   }),
   employee_options: (p) => ({
@@ -81,7 +81,7 @@ const QUERIES = {
   LessonActivityMark: 'SELECT * FROM lesson_activity_mark ORDER BY 1',
   LessonActivityResults: (p) => `SELECT * FROM show_lesson_activity_results_sp(${Number(p?.a_y_id)||0}, ${Number(p?.cl_id)||0}, ${Number(p?.b_id)||0}, ${Number(p?.sub_cl_id)||0}, ${Number(p?.ac_id)||0}, ${Number(p?.ex_reg_id)||0})`,
   LessonActivityResultRow: (p) => `SELECT lar.lar_id, lar.ac_t_id, lar.std_cl_id, lar.marks_obtained, lar.state FROM lesson_activity_result lar WHERE lar.lar_id = ${Number(p?.lar_id)||0}`,
-  Students: (p) => `SELECT * FROM fn_class_students(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
+  Students: (p) => `SELECT * FROM vw_student(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}, ${Number(p?.b_id) || 0}, 'show')`,
   Responsible: (p) => `SELECT * FROM responsible_show(${Number(p?.br_id) || 0})`,
   StudentResponsible: (p) => `SELECT id, student, responsible, phone1, phone2 FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0}) WHERE student IS NOT NULL`,
   showprentwithnostudents: 'SELECT * FROM responsible_with_no_student_show()',
@@ -92,7 +92,7 @@ const QUERIES = {
     prePaginated: true,
   }),
   StudentinfoDuplicates: 'SELECT * FROM studentinfo_duplicates_show()',
-  'update school': 'SELECT * FROM school ORDER BY 1',
+  'update school': 'SELECT id, school_name, school_reg_no FROM view_schools() WHERE id IS NOT NULL',
 
   // ---- Activity Management ----
   // subject_activity.subject_id is a FK to subjects.sub_id (not subjects.subject_id —
@@ -105,7 +105,9 @@ const QUERIES = {
   // Function-style entry — runtime params ayaa lagu soo gudbiyaa (br_id)
   Users: (p) => `SELECT * FROM users_show(${Number(p?.br_id) || 0})`,
   branch_options: 'SELECT br_id, br_name FROM branch ORDER BY br_name',
-  batch_options: 'SELECT b_id, batch_name FROM batch ORDER BY batch_name',
+  batch_options: (p) => (Number(p?.cl_id) > 0
+    ? `SELECT * FROM vw_batch_by_class(${Number(p?.cl_id)})`
+    : 'SELECT b_id, batch_name FROM batch ORDER BY batch_name'),
   student_class_options: (p) => `SELECT * FROM student_class_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0})`,
   lesson_activity_options: (p) => `SELECT * FROM lesson_activity_options_show(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   exam_reg_options: 'SELECT * FROM exam_reg_options_show()',

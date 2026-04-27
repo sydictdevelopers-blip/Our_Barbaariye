@@ -191,7 +191,7 @@ const ENTITIES = [
     gridCols: 2,
     fields: [
       { name: 'p_id_sp', type: 'hidden', param: 'p_id_sp', rowKey: 'p_id', default: 0 },
-      { name: 'p_name_sp', label: 'Name', type: 'text', required: true, rowKey: 'p_name', param: 'p_name_sp' },
+      { name: 'p_name_sp', label: 'Name', type: 'text', required: true, rowKey: 'responsible_name', param: 'p_name_sp' },
       { name: 'tel_sp', label: 'Tel', type: 'text', rowKey: 'tel', param: 'tel_sp' },
       { name: 'phone_sp', label: 'Phone', type: 'text', rowKey: 'phone', param: 'phone_sp' },
       { name: 'sex_sp', label: 'Sex', type: 'select', rowKey: 'sex', param: 'sex_sp',
@@ -221,7 +221,7 @@ const ENTITIES = [
     key: 'bus',
     title: 'Bus',
     fn: 'bus_sp',
-    idKey: 'id',
+    idKey: 'bus_id',
     omitPId: true,
     omitPUsrId: true,
     idParam: 'bus_id_sp',
@@ -229,8 +229,8 @@ const ENTITIES = [
     fields: [
       { name: 'bus_name_sp', label: 'Bus Name', type: 'text', required: true, rowKey: 'bus_name', param: 'bus_name_sp' },
       { name: 'emp_id_sp', label: 'Driver', type: 'select', required: true, optionsKey: 'employee_options',
-        rowKey: 'emp_id', value: 'emp_id', nameKey: 'driver_name', param: 'emp_id_sp', placeholder: 'Select Driver', default: '' },
-      { name: 'targo_sp', label: 'Plot No', type: 'text', required: true, rowKey: 'plot_no', param: 'targo_sp' },
+        rowKey: 'emp_id', value: 'emp_id', nameKey: 'employee_name', param: 'emp_id_sp', placeholder: 'Select Driver', default: '' },
+      { name: 'targo_sp', label: 'Plot No', type: 'text', required: true, rowKey: 'targo', param: 'targo_sp' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
   },
