@@ -36,7 +36,7 @@ export default function StudentStateModal({ isOpen, onClose, onSuccess }) {
     cl_name: '',
     a_y_id: '',
     academic_name: '',
-    state: 'Active',
+    state: '',
     option: 'None',
     amount: 0,
     account_pr: '',
@@ -245,6 +245,7 @@ export default function StudentStateModal({ isOpen, onClose, onSuccess }) {
             value={form.state}
             onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))}
             options={stateOptions}
+            placeholder={t('studentState.selectState')}
             isClearable={false}
             isSearchable={false}
           />
