@@ -188,6 +188,8 @@ export default function AccountsPage() {
             levelOptionsQuery={cfg.levelOptionsQuery}
             showExamSelect={cfg.showExamSelect}
             examOptionsQuery={cfg.examOptionsQuery}
+            showSubjectSelect={cfg.showSubjectSelect}
+            subjectOptionsQuery={cfg.subjectOptionsQuery}
             showStudentSelect={cfg.showStudentSelect}
             studentOptionsQuery={cfg.studentOptionsQuery}
             hideEdit={cfg.hideEdit}

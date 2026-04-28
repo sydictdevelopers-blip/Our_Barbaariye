@@ -161,15 +161,21 @@ exports.handleDynamicRequest = async (req, res) => {
 };
 
 /** Xogta SELECT: amniga. Word-boundary regex si magacyada function-ka oo
- *  ku jira `update_*` aan loo qaldin keyword DML. */
+ *  ku jira `update_*` aan loo qaldin keyword DML. String literals waa la
+ *  saaraa ka hor hubinta si SP params sida 'update'/'insert' aan u qalad
+ *  ahaan u soo bandhigin keyword DML. */
 const FORBIDDEN_RE = /\b(DELETE|DROP|UPDATE|TRUNCATE|INSERT|ALTER|CREATE)\b/;
+const stripQuoted = (s) => s.replace(/'(?:[^']|'')*'/g, "''");
+function assertSafeSelect(query) {
+  const q = (query || '').trim().toUpperCase();
+  if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
+  const bad = stripQuoted(q).match(FORBIDDEN_RE);
+  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
+}
 
 /** Run SELECT query (api/showdata) */
 exports.runSelectQuery = async (query) => {
-  const q = (query || '').trim().toUpperCase();
-  if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = q.match(FORBIDDEN_RE);
-  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
+  assertSafeSelect(query);
   const result = await db.query(query);
   return result.rows || [];
 };
@@ -181,10 +187,7 @@ exports.runSelectQuery = async (query) => {
  * If `total_count` is absent, total = rows.length (LIMIT-bounded).
  */
 exports.runSelectQueryDirect = async (query) => {
-  const q = (query || '').trim().toUpperCase();
-  if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = q.match(FORBIDDEN_RE);
-  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
+  assertSafeSelect(query);
   const result = await db.query(query);
   const rows = result.rows || [];
   const first = rows[0];
@@ -203,10 +206,7 @@ exports.runSelectQueryDirect = async (query) => {
 
 /** Run SELECT with pagination (api/data) – returns { columns, data, total }. Optional search: ILIKE on all columns. */
 exports.runSelectQueryPaginated = async (query, page = 1, limit = 10, search = '') => {
-  const q = (query || '').trim().toUpperCase();
-  if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = q.match(FORBIDDEN_RE);
-  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
+  assertSafeSelect(query);
   const searchTerm = (search ?? '').toString().trim();
   const hasSearch = searchTerm.length > 0;
   const offset = (page - 1) * limit;
