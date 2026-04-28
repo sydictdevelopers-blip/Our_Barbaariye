@@ -97,6 +97,7 @@ export default function StudentofficeTabs() {
             showResponsibleSelect={cfg.showResponsibleSelect}
             hiddenColumns={cfg.hiddenColumns}
             hideDelete={cfg.hideDelete}
+            hideAddNew={cfg.hideAddNew}
             bulkForm={cfg.entityKey === 'Responsible'
               ? ({ context, onSuccess, onCancel }) => (
                   <ChangeResponsibleForm

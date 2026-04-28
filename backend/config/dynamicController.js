@@ -32,6 +32,14 @@ const PROCEDURE_PARAM_ORDER = {
   student_state_sp: ['ids', 'clas', 'academic', 'reason', 'oper_fee', 'fee_amount', 'account_pr', 'to_class', 'description_sp', 'date_sp', 'user_id'],
   student_responsible: ['p_num', 'p_waalid', 'p_operation', 'p_user_id'],
   del_responsible_with_no_std_spv: [],
+  exam_sp: ['ex_id_sp', 'exam_sp_v', 'ordering_sp', 'u_br_id_sp', 'oper'],
+  exam_reg_sp: ['ex_reg_id_sp', 'a_y_id_sp', 'ex_id_sp', 'exam_type_sp', 'marks_sp', 'start_date_sp', 'end_date_sp', 'deadline_sp', 'br_id_sp', 'exam_status_sp', 'attendance_marks_sp', 'u_br_id_sp', 'oper'],
+  assign_class_exam_sp: ['a_c_ex_sp', 'er_id_sp', 'cl_id_sp', 'b_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  exam_schedule_sp: ['ex_s_id_sp', 'day_id_sp', 'per_id_sp', 'sub_cl_id_sp', 'sh_id_sp', 'cl_id_sp', 'ex_r_id_sp', 'start_time_sp', 'end_time_sp', 'exam_date_sp', 'u_br_id_sp', 'oper'],
+  exam_siting_sp: ['ex_set_id_sp', 'a_y_id_sp', 'percentage_fail_pass_sp', 'attendance_marks_sp', 'activity_marks_sp', 'u_br_id_sp', 'oper'],
+  student_marge_sp: ['std_frm', 'std_to'],
+  update_all_responsibles_one_class_sp: ['p_res_id', 'p_full_name', 'p_phone_one', 'p_phone_two', 'p_u_br_id'],
+  update_emis_student_id_sp: ['p_std_id', 'p_id_card', 'p_u_br_id'],
 };
 
 /**
@@ -74,8 +82,8 @@ exports.handleDynamicRequest = async (req, res) => {
 
         const order = PROCEDURE_PARAM_ORDER[procedureName];
 
-        if (order && order.length) {
-            // Explicit param order defined → use it exactly
+        if (Array.isArray(order)) {
+            // Explicit param order defined (even an empty array means "zero params") → use it exactly
             params = order.map((key) => (bodyParams[key] !== undefined && bodyParams[key] !== null ? bodyParams[key] : ''));
         } else {
             // No explicit order → pass bodyParams values in received key order
@@ -152,15 +160,16 @@ exports.handleDynamicRequest = async (req, res) => {
     }
 };
 
-/** Xogta SELECT: amniga. */
-const FORBIDDEN = ['DELETE', 'DROP', 'UPDATE', 'TRUNCATE', 'INSERT', 'ALTER', 'CREATE'];
+/** Xogta SELECT: amniga. Word-boundary regex si magacyada function-ka oo
+ *  ku jira `update_*` aan loo qaldin keyword DML. */
+const FORBIDDEN_RE = /\b(DELETE|DROP|UPDATE|TRUNCATE|INSERT|ALTER|CREATE)\b/;
 
 /** Run SELECT query (api/showdata) */
 exports.runSelectQuery = async (query) => {
   const q = (query || '').trim().toUpperCase();
   if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = FORBIDDEN.find((w) => q.includes(w));
-  if (bad) throw new Error(`Forbidden: ${bad}`);
+  const bad = q.match(FORBIDDEN_RE);
+  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
   const result = await db.query(query);
   return result.rows || [];
 };
@@ -174,8 +183,8 @@ exports.runSelectQuery = async (query) => {
 exports.runSelectQueryDirect = async (query) => {
   const q = (query || '').trim().toUpperCase();
   if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = FORBIDDEN.find((w) => q.includes(w));
-  if (bad) throw new Error(`Forbidden: ${bad}`);
+  const bad = q.match(FORBIDDEN_RE);
+  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
   const result = await db.query(query);
   const rows = result.rows || [];
   const first = rows[0];
@@ -196,8 +205,8 @@ exports.runSelectQueryDirect = async (query) => {
 exports.runSelectQueryPaginated = async (query, page = 1, limit = 10, search = '') => {
   const q = (query || '').trim().toUpperCase();
   if (!q.startsWith('SELECT')) throw new Error('Only SELECT allowed');
-  const bad = FORBIDDEN.find((w) => q.includes(w));
-  if (bad) throw new Error(`Forbidden: ${bad}`);
+  const bad = q.match(FORBIDDEN_RE);
+  if (bad) throw new Error(`Forbidden: ${bad[1]}`);
   const searchTerm = (search ?? '').toString().trim();
   const hasSearch = searchTerm.length > 0;
   const offset = (page - 1) * limit;

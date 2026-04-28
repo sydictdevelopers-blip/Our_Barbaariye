@@ -246,9 +246,9 @@ function DataTableCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="overflow-x-auto relative"
+              className="relative"
             >
-              <table className="w-full text-sm min-w-[600px] border-collapse font-[ui-sans-serif,system-ui,'Segoe_UI','Inter',sans-serif]">
+              <table className="w-full text-sm border-collapse table-fixed font-[ui-sans-serif,system-ui,'Segoe_UI','Inter',sans-serif]">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
@@ -260,8 +260,8 @@ function DataTableCard({
                           <th
                             key={header.id}
                             className={`
-                              px-4 py-3 font-semibold text-[0.72rem] uppercase tracking-[0.08em]
-                              text-white/95 whitespace-nowrap align-middle
+                              px-3 py-3 font-semibold text-[0.72rem] uppercase tracking-[0.08em]
+                              text-white/95 align-middle break-words
                               bg-gradient-to-b from-[#0B3C5D] to-[#072b44]
                               border-r border-white/10 last:border-r-0
                               ${align === 'center' ? 'text-center' : 'text-left'}
@@ -349,7 +349,7 @@ function DataTableCard({
                               <td
                                 key={cell.id}
                                 className={`
-                                  px-4 py-1.5 align-middle text-[0.875rem] whitespace-nowrap
+                                  px-3 py-1.5 align-middle text-[0.875rem] break-words
                                   border-r border-slate-100 dark:border-slate-700/60 last:border-r-0
                                   ${align === 'center' ? 'text-center' : 'text-left'}
                                   ${isFirst ? 'sticky left-0 z-[1] font-semibold text-[#0B3C5D] dark:text-teal-300 tabular-nums' : 'font-normal'}

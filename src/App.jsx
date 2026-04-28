@@ -88,6 +88,9 @@ function AppContent() {
                   <Route path="/CreateExam" element={<AcademicSetup />} />
                   <Route path="/ExamService" element={<AcademicSetup />} />
                   <Route path="/ExamSetting" element={<AcademicSetup />} />
+                  <Route path="/ExamSetup" element={<AcademicSetup />} />
+                  <Route path="/CreateExam" element={<AcademicSetup />} />
+                  <Route path="/ExamService" element={<AcademicSetup />} />
                   <Route path="/ManageResult" element={<AcademicSetup />} />
                   <Route path="/AppUsers" element={<AcademicSetup />} />
                   <Route path="/user-privilege" element={<UserPrivilegePage />} />
