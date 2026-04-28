@@ -1,0 +1,132 @@
+/**
+ * studentImageController.js
+ *
+ * Habraac upload sawirka ardayda (S3) iyo cusboonaysiinta `student.image`.
+ * Endpoint-ka: POST /api/student-image/upload  (multipart: std_id, file)
+ *
+ * S3 settings (kuxi `.env`):
+ *   S3_BUCKET, S3_REGION, S3_ACCESS_KEY, S3_SECRET_KEY, S3_PUBLIC_BASE
+ *
+ * Performance: kaliya in-memory (multer.memoryStorage) → toos S3 → ma jiro
+ * disk write oo nidaamka soo culeysiya.
+ *
+ * Replace flow: marka student-ku hore u leeyahay sawir S3 ah, kii hore
+ * waxaa la tirtirayaa S3 kahor in la kor u shubo kii cusub — si aanan u
+ * keydin sawirro la diiday.
+ */
+const multer = require('multer');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const db = require('./db');
+
+const S3_FOLDER = 'Barbaare_v10_demo';
+
+const s3 = new S3Client({
+  region: process.env.S3_REGION,
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_SECRET_KEY,
+  },
+});
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  },
+});
+
+/** Sanitize filename: keep base + extension, strip path/special chars. */
+function sanitizeFilename(name) {
+  const base = String(name || 'image').split(/[\\/]/).pop();
+  return base.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 100) || 'image';
+}
+
+/** Build S3 key in format: Barbaare_v10_demo/{stdId}_{filename} */
+function buildKey(stdId, originalName) {
+  return `${S3_FOLDER}/${stdId}_${sanitizeFilename(originalName)}`;
+}
+
+/**
+ * If `imageUrl` points to an object in our own S3 bucket, return its Key
+ * so we can delete it. Otherwise return null (e.g. external URL or empty).
+ */
+function s3KeyFromUrl(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') return null;
+  const bucket = process.env.S3_BUCKET;
+  const region = process.env.S3_REGION;
+  const publicBase = process.env.S3_PUBLIC_BASE
+    || `https://${bucket}.s3.${region}.amazonaws.com`;
+  // Two URL forms AWS publishes:
+  //   virtual-hosted: https://{bucket}.s3.{region}.amazonaws.com/{key}
+  //   path-style:     https://s3.{region}.amazonaws.com/{bucket}/{key}
+  const candidates = [
+    publicBase.replace(/\/$/, '') + '/',
+    `https://${bucket}.s3.${region}.amazonaws.com/`,
+    `https://s3.${region}.amazonaws.com/${bucket}/`,
+  ];
+  for (const prefix of candidates) {
+    if (imageUrl.startsWith(prefix)) {
+      return decodeURIComponent(imageUrl.slice(prefix.length));
+    }
+  }
+  return null;
+}
+
+async function deleteOldImage(stdId) {
+  const r = await db.query('SELECT image FROM student WHERE std_id = $1', [stdId]);
+  const oldUrl = r.rows[0]?.image;
+  const oldKey = s3KeyFromUrl(oldUrl);
+  if (!oldKey) return;
+  try {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET, Key: oldKey }));
+  } catch (err) {
+    // Tirtirka oo fashilma ma joojiyo upload-ka cusub — kaliya log-ku qor.
+    console.warn('[student-image] failed to delete old object', oldKey, err.message);
+  }
+}
+
+async function handleUpload(req, res) {
+  try {
+    const stdId = Number(req.body?.std_id);
+    if (!stdId || stdId <= 0) {
+      return res.status(400).json({ error: 'std_id is required' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Tirtir kii hore haddii uu jiro S3-da bucket-keenna
+    await deleteOldImage(stdId);
+
+    const Bucket = process.env.S3_BUCKET;
+    const Key = buildKey(stdId, req.file.originalname);
+
+    await s3.send(new PutObjectCommand({
+      Bucket,
+      Key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    }));
+
+    const base = process.env.S3_PUBLIC_BASE
+      || `https://${Bucket}.s3.${process.env.S3_REGION}.amazonaws.com`;
+    const publicUrl = `${base.replace(/\/$/, '')}/${Key}`;
+
+    await db.query('UPDATE student SET image = $1 WHERE std_id = $2', [publicUrl, stdId]);
+
+    res.json({ ok: true, std_id: stdId, image: publicUrl });
+  } catch (err) {
+    console.error('[student-image/upload]', err.message);
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
+}
+
+function register(app) {
+  app.post('/api/student-image/upload', upload.single('file'), handleUpload);
+}
+
+module.exports = { register };

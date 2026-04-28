@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { makeOptionLoader } from '../../../services/api';
 import Select2 from '../../../components/ui/Select2';
 import { swalSuccess, swalError } from '../../../utils/swal';
@@ -16,6 +17,7 @@ function getSessionUBrId() {
 }
 
 export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) {
+  const { t } = useTranslation();
   const { res_id } = context ?? {};
   const [rows, setRows] = useState([{ id: Date.now(), std_id: '', std_label: '' }]);
   const [loading, setLoading] = useState(false);
@@ -33,12 +35,12 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
 
   const handleUpdate = async () => {
     if (!res_id) {
-      swalError('Dooro Responsible', 'Hubi inaad dooratid responsible ka dropdown-ka kor');
+      swalError(t('responsibleForm.errSelectResponsible'), t('responsibleForm.errSelectResponsibleDesc'));
       return;
     }
     const selected = rows.filter((r) => r.std_id);
     if (!selected.length) {
-      swalError('Dooro Ardayda', 'Hubi inaad dooratid student xaasid ah');
+      swalError(t('responsibleForm.errSelectStudents'), t('responsibleForm.errSelectStudentsDesc'));
       return;
     }
 
@@ -59,13 +61,13 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
           }),
         });
         const text = await resp.text();
-        if (!resp.ok) throw new Error(text || 'Update failed');
+        if (!resp.ok) throw new Error(text || t('responsibleForm.updateFailed'));
         lastMsg = text;
       }
-      swalSuccess('', lastMsg || 'Updated');
+      swalSuccess('', lastMsg || t('responsibleForm.updated'));
       onSuccess?.();
     } catch (err) {
-      swalError('Khalad', err.message);
+      swalError(t('responsibleForm.errTitle'), err.message);
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-[#0B3C5D] text-white">
-            <th className="text-left px-4 py-2.5 font-semibold">Student</th>
+            <th className="text-left px-4 py-2.5 font-semibold">{t('responsibleForm.student')}</th>
             <th className="w-12 px-2 py-2">
               <button
                 type="button"
@@ -98,7 +100,7 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
                   selectedLabel={row.std_label}
                   onChange={(e) => setStd(row.id, e.target.value, e.target.label || '')}
                   loadOptions={studentLoader}
-                  placeholder="select Student"
+                  placeholder={t('responsibleForm.selectStudent')}
                 />
               </td>
               <td className="px-2 py-2">
@@ -122,7 +124,7 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
           disabled={loading}
           className="px-10 py-2.5 bg-[#0B3C5D] hover:bg-[#0a2a3d] text-white text-sm font-semibold rounded-md disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? 'Updating...' : 'UPDATE STUDENTS'}
+          {loading ? t('action.updating') : t('responsibleForm.updateStudents')}
         </button>
       </div>
     </div>

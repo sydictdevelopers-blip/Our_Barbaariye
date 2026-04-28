@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -168,6 +169,7 @@ function PermissionTreePanel({
   activeModuleId,
   setActiveModuleId,
 }) {
+  const { t } = useTranslation();
   const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
   return (
     <>
@@ -179,16 +181,16 @@ function PermissionTreePanel({
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search permission..."
+            placeholder={t('userPrivilege.searchPermission')}
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
           />
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
           <Button size="sm" variant="primary" leftIcon={<CheckSquare2 className="w-4 h-4" />} onClick={onSelectAll}>
-            Select All
+            {t('action.selectAll')}
           </Button>
           <Button size="sm" variant="secondary" leftIcon={<Eraser className="w-4 h-4" />} onClick={onClearAll}>
-            Clear
+            {t('action.clear')}
           </Button>
         </div>
       </div>
@@ -220,7 +222,7 @@ function PermissionTreePanel({
       <div className="mt-4 rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-5">
         {(() => {
           const activeModule = filteredTree.find((m) => m.id === activeModuleId) || filteredTree[0] || null;
-          if (!activeModule) return <p className="text-sm text-slate-500">No permissions available.</p>;
+          if (!activeModule) return <p className="text-sm text-slate-500">{t('userPrivilege.noPermissions')}</p>;
           return (
             <div className="flex flex-wrap gap-6">
               {activeModule.children.map((menu) => (
@@ -277,6 +279,7 @@ function PermissionTreePanel({
 /* ─────────────────────── Main Page ─────────────────────── */
 
 export default function UserPrivilegePage() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.ui.user);
   const tree = useMemo(() => buildPermissionTree(defaultMenuItems), []);
@@ -391,7 +394,7 @@ export default function UserPrivilegePage() {
           privalage_sp: JSON.stringify(payload),
         },
       });
-      await swalSuccess('Wa la guulaystey', result?.message || '');
+      await swalSuccess(t('swal.titles.success'), result?.message || '');
       closePrivModal();
       const entity = store.getState().data.entities?.Users ?? {};
       dispatch(loadData({
@@ -402,7 +405,7 @@ export default function UserPrivilegePage() {
         br_id: String(currentUser?.br_id ?? 0),
       }));
     } catch (err) {
-      swalError('Khalad', err?.message || 'Save failed');
+      swalError(t('swal.titles.error'), err?.message || t('userPrivilege.saveFailed'));
     } finally {
       setSavingPriv(false);
     }
@@ -441,13 +444,13 @@ export default function UserPrivilegePage() {
       leftIcon={<ShieldCheck className="w-4 h-4" />}
       onClick={openPrivModal}
     >
-      User Privileges
+      {t('userPrivilege.userPrivileges')}
     </Button>
   );
 
   const topTabs = [
-    { id: 'users', label: 'Users', icon: UsersIcon },
-    { id: 'privileges', label: 'Privileges', icon: ShieldCheck },
+    { id: 'users', label: t('userPrivilege.tabs.users'), icon: UsersIcon },
+    { id: 'privileges', label: t('userPrivilege.tabs.privileges'), icon: ShieldCheck },
   ];
 
   return (
@@ -474,8 +477,8 @@ export default function UserPrivilegePage() {
                   icon={UsersIcon}
                   hiddenColumns={['p_id', 'br_id', 'password', 'privalage']}
                   loadButtons={[
-                    { id: 'Users', label: 'Show Users', icon: Database },
-                    { id: 'addNew', label: 'Add new', icon: Plus, modalKey: 'Users' },
+                    { id: 'Users', label: t('userPrivilege.showUsers'), icon: Database },
+                    { id: 'addNew', label: t('userPrivilege.addNew'), icon: Plus, modalKey: 'Users' },
                   ]}
                   dispatch={dispatch}
                   onEdit={openUserModal}
@@ -508,7 +511,7 @@ export default function UserPrivilegePage() {
 
                 <div className="mt-4 flex justify-end">
                   <Button variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={handleTabSave}>
-                    Save Privileges
+                    {t('userPrivilege.savePrivileges')}
                   </Button>
                 </div>
               </motion.div>
@@ -540,14 +543,14 @@ export default function UserPrivilegePage() {
       <Modal
         isOpen={privModal.isOpen}
         onClose={closePrivModal}
-        title={privModal.user ? `User Privilege Form — ${privModal.user.username}` : 'User Privilege Form'}
+        title={privModal.user ? t('userPrivilege.formTitleWith', { user: privModal.user.username }) : t('userPrivilege.formTitle')}
         size="xl"
         className="max-w-5xl"
         bodyClassName="space-y-4 bg-gradient-to-b from-slate-50 via-white to-slate-50"
         footer={
           <>
             <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closePrivModal}>
-              Close
+              {t('common.close')}
             </Button>
             <Button
               variant="primary"
@@ -555,19 +558,19 @@ export default function UserPrivilegePage() {
               onClick={handleSavePriv}
               disabled={savingPriv || !privModal.user}
             >
-              {savingPriv ? '...' : 'Save'}
+              {savingPriv ? t('action.updating') : t('common.save')}
             </Button>
           </>
         }
       >
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">Select User</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.user')}</label>
           <Select2
             name="privUser"
             value={privModal.user ? String(privModal.user.usr_id) : ''}
             onChange={handleModalUserChange}
             options={userOptions}
-            placeholder={loadingUsers ? 'Loading users...' : 'Select User'}
+            placeholder={loadingUsers ? t('select.loadingUsers') : t('select.user')}
             isDisabled={loadingUsers}
           />
         </div>

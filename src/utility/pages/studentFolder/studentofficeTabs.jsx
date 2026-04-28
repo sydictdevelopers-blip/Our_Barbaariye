@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Database, Plus } from 'lucide-react';
 import Card from '../../../components/ui/Card';
@@ -33,6 +34,7 @@ function mapTab(tab) {
 }
 
 export default function StudentofficeTabs() {
+  const { t } = useTranslation();
   const location = useLocation();
   const dispatch = useDispatch();
   const [modal, setModal] = useState({ entityKey: null, editRow: null });
@@ -95,6 +97,7 @@ export default function StudentofficeTabs() {
             showResponsibleSelect={cfg.showResponsibleSelect}
             hiddenColumns={cfg.hiddenColumns}
             hideDelete={cfg.hideDelete}
+            hideAddNew={cfg.hideAddNew}
             bulkForm={cfg.entityKey === 'Responsible'
               ? ({ context, onSuccess, onCancel }) => (
                   <ChangeResponsibleForm
@@ -110,7 +113,7 @@ export default function StudentofficeTabs() {
     }
     return (
       <motion.div key={activeTab} {...motionProps} className="p-8 text-center text-slate-500">
-        wa ikana wlalayaal
+        {t('placeholder.comingSoon')}
       </motion.div>
     );
   };

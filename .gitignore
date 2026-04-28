@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Accidental nested backend dir from PowerShell Push-Location
+backend/backend/
+
 # Environment variables
 .env
 .env.local

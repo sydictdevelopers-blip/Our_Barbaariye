@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowDown, ArrowRightLeft, Send, XCircle, GraduationCap, UserMinus } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
@@ -18,11 +19,12 @@ function useSelect(initial = '') {
 }
 
 export default function AcademicTransferTab() {
-  const [transferOptions] = useState([
-    { value: 'all', label: 'All Students' },
-    { value: 'passed', label: 'Passed Only' },
-    { value: 'failed', label: 'Failed Only' },
-  ]);
+  const { t } = useTranslation();
+  const transferOptions = useMemo(() => ([
+    { value: 'all', label: t('transferTab.optAll') },
+    { value: 'passed', label: t('transferTab.optPassed') },
+    { value: 'failed', label: t('transferTab.optFailed') },
+  ]), [t]);
 
   /* ── Lazy loaders (server-side: 25 default + search) ── */
   const classLoader   = useMemo(() => makeOptionLoader('class_options'), []);
@@ -93,7 +95,7 @@ export default function AcademicTransferTab() {
           leftIcon={<UserMinus className="w-4 h-4" />}
           onClick={() => setOpenModal('studentDowngrade')}
         >
-          Student Downgrade
+          {t('transferTab.studentDowngrade')}
         </Button>
         <Button
           size="sm"
@@ -101,7 +103,7 @@ export default function AcademicTransferTab() {
           leftIcon={<ArrowDown className="w-4 h-4" />}
           onClick={() => setOpenModal('academicDowngrade')}
         >
-          Academic Downgrade
+          {t('transferTab.academicDowngrade')}
         </Button>
         <Button
           size="sm"
@@ -109,7 +111,7 @@ export default function AcademicTransferTab() {
           leftIcon={<ArrowRightLeft className="w-4 h-4" />}
           onClick={() => setOpenModal('studentTransfer')}
         >
-          Student Transfer
+          {t('transferTab.studentTransfer')}
         </Button>
         <Button
           size="sm"
@@ -117,7 +119,7 @@ export default function AcademicTransferTab() {
           leftIcon={<GraduationCap className="w-4 h-4" />}
           onClick={() => setOpenModal('academicTransfer')}
         >
-          Academic Transfer
+          {t('transferTab.academicTransfer')}
         </Button>
       </div>
 
@@ -126,8 +128,8 @@ export default function AcademicTransferTab() {
         <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <p className="font-semibold">New academic year is not created.</p>
-            <p className="text-sm text-amber-800/90">Please create the academic year before transferring students.</p>
+            <p className="font-semibold">{t('transferTab.warning')}</p>
+            <p className="text-sm text-amber-800/90">{t('transferTab.warningDesc')}</p>
           </div>
         </div>
       )}
@@ -136,19 +138,19 @@ export default function AcademicTransferTab() {
       <Modal
         isOpen={openModal === 'studentDowngrade'}
         onClose={closeModal}
-        title="Student Downgrade Form"
+        title={t('transferTab.studentDowngradeForm')}
         size="md"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Send className="w-4 h-4" />}
               onClick={handleStudentDowngrade}
               disabled={!sdStudentId || !sdClassId || !sdAcademicId}
             >
-              Transfer
+              {t('action.transfer')}
             </Button>
           </>
         }
@@ -159,7 +161,7 @@ export default function AcademicTransferTab() {
           selectedLabel={sdStudentLabel}
           onChange={setSdStudent}
           loadOptions={studentLoader}
-          placeholder="Select Student"
+          placeholder={t('select.student')}
         />
         <Select2
           name="sdClass"
@@ -167,7 +169,7 @@ export default function AcademicTransferTab() {
           selectedLabel={sdClassLabel}
           onChange={setSdClass}
           loadOptions={classLoader}
-          placeholder="Select Class"
+          placeholder={t('select.class')}
         />
         <Select2
           name="sdAcademic"
@@ -175,7 +177,7 @@ export default function AcademicTransferTab() {
           selectedLabel={sdAcademicLabel}
           onChange={setSdAcademic}
           loadOptions={academicLoader}
-          placeholder="Select Academic"
+          placeholder={t('select.academic')}
         />
       </Modal>
 
@@ -183,19 +185,19 @@ export default function AcademicTransferTab() {
       <Modal
         isOpen={openModal === 'academicDowngrade'}
         onClose={closeModal}
-        title="Academic Downgrade Form"
+        title={t('transferTab.academicDowngradeForm')}
         size="lg"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Send className="w-4 h-4" />}
               onClick={handleAcademicDowngrade}
               disabled={!adClassFrom || !adAcademicFrom || !adClassTo || !adAcademicTo}
             >
-              Transfer
+              {t('action.transfer')}
             </Button>
           </>
         }
@@ -207,7 +209,7 @@ export default function AcademicTransferTab() {
             selectedLabel={adClassFromLabel}
             onChange={setAdClassFrom}
             loadOptions={classLoader}
-            placeholder="Select Class"
+            placeholder={t('select.class')}
           />
           <Select2
             name="adAcademicFrom"
@@ -215,7 +217,7 @@ export default function AcademicTransferTab() {
             selectedLabel={adAcademicFromLabel}
             onChange={setAdAcademicFrom}
             loadOptions={academicLoader}
-            placeholder="Select academic From"
+            placeholder={t('select.academicFrom')}
           />
           <Select2
             name="adClassTo"
@@ -223,7 +225,7 @@ export default function AcademicTransferTab() {
             selectedLabel={adClassToLabel}
             onChange={setAdClassTo}
             loadOptions={classLoader}
-            placeholder="Select Class To"
+            placeholder={t('select.classTo')}
           />
           <Select2
             name="adAcademicTo"
@@ -231,7 +233,7 @@ export default function AcademicTransferTab() {
             selectedLabel={adAcademicToLabel}
             onChange={setAdAcademicTo}
             loadOptions={academicLoader}
-            placeholder="Select Academic To"
+            placeholder={t('select.academicTo')}
           />
         </div>
       </Modal>
@@ -240,19 +242,19 @@ export default function AcademicTransferTab() {
       <Modal
         isOpen={openModal === 'studentTransfer'}
         onClose={closeModal}
-        title="Student Transfer Form"
+        title={t('transferTab.studentTransferForm')}
         size="lg"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Send className="w-4 h-4" />}
               onClick={handleStudentTransfer}
               disabled={!stStudentId || !stAcademicFrom}
             >
-              Transfer
+              {t('action.transfer')}
             </Button>
           </>
         }
@@ -264,7 +266,7 @@ export default function AcademicTransferTab() {
             selectedLabel={stStudentLabel}
             onChange={setStStudent}
             loadOptions={studentLoader}
-            placeholder="Select Student"
+            placeholder={t('select.student')}
           />
           <Select2
             name="stAcademicFrom"
@@ -272,7 +274,7 @@ export default function AcademicTransferTab() {
             selectedLabel={stAcademicFromLabel}
             onChange={setStAcademicFrom}
             loadOptions={academicLoader}
-            placeholder="Select academic From"
+            placeholder={t('select.academicFrom')}
           />
         </div>
       </Modal>
@@ -281,19 +283,19 @@ export default function AcademicTransferTab() {
       <Modal
         isOpen={openModal === 'academicTransfer'}
         onClose={closeModal}
-        title="Academic Transfer Form"
+        title={t('transferTab.academicTransferForm')}
         size="lg"
         bodyClassName="space-y-3"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Send className="w-4 h-4" />}
               onClick={handleAcademicTransfer}
               disabled={!atClassFrom || !atClassTo || !atTransferOption}
             >
-              Transfer
+              {t('action.transfer')}
             </Button>
           </>
         }
@@ -305,7 +307,7 @@ export default function AcademicTransferTab() {
             selectedLabel={atClassFromLabel}
             onChange={setAtClassFrom}
             loadOptions={classLoader}
-            placeholder="Select Class From"
+            placeholder={t('select.classFrom')}
           />
           <Select2
             name="atClassTo"
@@ -313,7 +315,7 @@ export default function AcademicTransferTab() {
             selectedLabel={atClassToLabel}
             onChange={setAtClassTo}
             loadOptions={classLoader}
-            placeholder="Select Class To"
+            placeholder={t('select.classTo')}
           />
           <div className="sm:col-span-2">
             <Select2
@@ -322,7 +324,7 @@ export default function AcademicTransferTab() {
               selectedLabel={atTransferOptionLabel}
               onChange={setAtTransferOption}
               options={transferOptions}
-              placeholder="Select Transfer option"
+              placeholder={t('select.transferOption')}
             />
           </div>
         </div>

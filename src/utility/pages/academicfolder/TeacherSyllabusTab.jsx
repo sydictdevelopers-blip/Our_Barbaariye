@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, Plus, Save, Trash2, XCircle } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
@@ -6,15 +7,6 @@ import Modal from '../../../components/ui/Modal';
 import DataTableCard from '../../../components/DataTableCard';
 import { makeOptionLoader, fetchDataPaginated, crud } from '../../../services/api';
 import * as swal from '../../../utils/swal';
-
-const SYLLABUS_COLUMNS = [
-  { key: 'subject', label: 'Subject' },
-  { key: 'class', label: 'Class' },
-  { key: 'chapter', label: 'Chapter' },
-  { key: 'topic', label: 'Topic' },
-  { key: 'page', label: 'Page' },
-  { key: 'reg_date', label: 'Date' },
-];
 
 const AUTH_STORAGE_KEY = 'brabaariye_user';
 const getSessionUBrId = () => {
@@ -31,6 +23,15 @@ const getSessionUBrId = () => {
  * Backend functions waxa diyaarinaayo user-ka.
  */
 export default function TeacherSyllabusTab() {
+  const { t } = useTranslation();
+  const SYLLABUS_COLUMNS = useMemo(() => ([
+    { key: 'subject', label: t('teacherSyllabus.cols.subject') },
+    { key: 'class', label: t('teacherSyllabus.cols.class') },
+    { key: 'chapter', label: t('teacherSyllabus.cols.chapter') },
+    { key: 'topic', label: t('teacherSyllabus.cols.topic') },
+    { key: 'page', label: t('teacherSyllabus.cols.page') },
+    { key: 'reg_date', label: t('teacherSyllabus.cols.date') },
+  ]), [t]);
   /* ── Top toolbar 3 selects (id + label) ── */
   const [filterClass,    setFilterClass]    = useState(''); const [filterClassLabel,    setFilterClassLabel]    = useState('');
   const [filterAcademic, setFilterAcademic] = useState(''); const [filterAcademicLabel, setFilterAcademicLabel] = useState('');
@@ -154,10 +155,10 @@ export default function TeacherSyllabusTab() {
   const handleDeleteRow = async (row) => {
     if (!row?.id) return;
     const ok = await swal.swalConfirm({
-      title: 'Hubi tirtirka',
-      text: 'Ma hubtaa inaad tirtirto recordkan?',
-      confirmText: 'Haa, tirtir',
-      cancelText: 'Maya',
+      title: t('teacherSyllabus.confirmDeleteTitle'),
+      text: t('teacherSyllabus.confirmDeleteText'),
+      confirmText: t('teacherSyllabus.confirmYes'),
+      cancelText: t('teacherSyllabus.confirmNo'),
     });
     if (!ok) return;
     try {
@@ -175,10 +176,10 @@ export default function TeacherSyllabusTab() {
           u_br_id_sp: Number(getSessionUBrId()) || 0,
         },
       });
-      swal.swalSuccess('Guul', res?.message || 'Recordka waa la tirtiray.');
+      swal.swalSuccess(t('teacherSyllabus.successTitle'), res?.message || t('teacherSyllabus.deleted'));
       setTableData((prev) => prev.filter((r) => r.id !== row.id));
     } catch (err) {
-      swal.swalError('Qalad', err?.message || 'Tirtirka way fashilantay.');
+      swal.swalError(t('teacherSyllabus.errorTitle'), err?.message || t('teacherSyllabus.deleteFailed'));
     }
   };
 
@@ -189,7 +190,7 @@ export default function TeacherSyllabusTab() {
     return tableData.filter((r) =>
       SYLLABUS_COLUMNS.some((c) => String(r[c.key] ?? '').toLowerCase().includes(q))
     );
-  }, [tableData, searchQuery]);
+  }, [tableData, searchQuery, SYLLABUS_COLUMNS]);
 
   const total = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -274,14 +275,14 @@ export default function TeacherSyllabusTab() {
           u_br_id_sp: Number(getSessionUBrId()) || 0,
         },
       });
-      swal.swalSuccess('Guul', res?.message || (isEdit ? 'Xogta waa la cusboonaysiiyay.' : 'Xogta waa la kaydiyay.'));
+      swal.swalSuccess(t('teacherSyllabus.successTitle'), res?.message || (isEdit ? t('teacherSyllabus.updated') : t('teacherSyllabus.saved')));
       closeAddModal();
       if (tableLoaded && filterClass && filterAcademic && filterSubject) {
         const rows = await fetchSyllabusRows();
         setTableData(rows);
       }
     } catch (err) {
-      swal.swalError('Qalad', err?.message || 'Kaydinta way fashilantay.');
+      swal.swalError(t('teacherSyllabus.errorTitle'), err?.message || t('teacherSyllabus.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -298,7 +299,7 @@ export default function TeacherSyllabusTab() {
             selectedLabel={filterClassLabel}
             onChange={(e) => { setFilterClass(e.target.value); setFilterClassLabel(e.target.label || ''); }}
             loadOptions={classLoader}
-            placeholder="Select Class"
+            placeholder={t('select.class')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -308,7 +309,7 @@ export default function TeacherSyllabusTab() {
             selectedLabel={filterAcademicLabel}
             onChange={(e) => { setFilterAcademic(e.target.value); setFilterAcademicLabel(e.target.label || ''); }}
             loadOptions={academicLoader}
-            placeholder="Select AcademicYear"
+            placeholder={t('select.academicYear')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -320,7 +321,7 @@ export default function TeacherSyllabusTab() {
             onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }}
             loadOptions={filterSubjectLoader}
             isDisabled={!filterClass || !filterAcademic}
-            placeholder={filterClass && filterAcademic ? 'Select Subject' : 'Pick Class + Year first'}
+            placeholder={filterClass && filterAcademic ? t('select.subject') : t('select.pickClassYearFirst')}
           />
         </div>
 
@@ -331,7 +332,7 @@ export default function TeacherSyllabusTab() {
           onClick={handleGo}
           disabled={!filterClass || !filterAcademic || !filterSubject || loadingTable}
         >
-          {loadingTable ? 'Loading…' : 'Go'}
+          {loadingTable ? t('action.loading') : t('action.go')}
         </Button>
         <Button
           size="sm"
@@ -339,7 +340,7 @@ export default function TeacherSyllabusTab() {
           leftIcon={<Plus className="w-4 h-4" />}
           onClick={openAddModal}
         >
-          Add Teacher Syllabus
+          {t('teacherSyllabus.addSyllabus')}
         </Button>
       </div>
 
@@ -352,7 +353,7 @@ export default function TeacherSyllabusTab() {
           searchValue={searchQuery}
           onSearchChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
           onSearchSubmit={() => {}}
-          searchPlaceholder="Search syllabus..."
+          searchPlaceholder={t('teacherSyllabus.searchPlaceholder')}
           renderActions={renderActions}
           total={total}
           currentPage={currentPage}
@@ -362,8 +363,8 @@ export default function TeacherSyllabusTab() {
           onNextPage={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           onPageClick={(p) => setCurrentPage(p)}
           onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-          emptyTitle="Wax xog ah ma jiraan"
-          emptyDescription="Filter-yada kuwa kale isku day ama hubi inay records jiraan."
+          emptyTitle={t('empty.noData')}
+          emptyDescription={t('empty.noDataFilters')}
         />
       )}
 
@@ -371,19 +372,19 @@ export default function TeacherSyllabusTab() {
       <Modal
         isOpen={addOpen}
         onClose={closeAddModal}
-        title={editingId != null ? 'Teacher Syllabus — Edit' : 'Teacher Syllabus Form'}
+        title={editingId != null ? t('teacherSyllabus.editTitle') : t('teacherSyllabus.addTitle')}
         size="lg"
         bodyClassName="space-y-4"
         footer={
           <>
-            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeAddModal}>Close</Button>
+            <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeAddModal}>{t('common.close')}</Button>
             <Button
               variant="primary"
               leftIcon={<Save className="w-4 h-4" />}
               onClick={handleSave}
               disabled={saving || !form.teacher_id || !form.cl_id || !form.a_y_id || !form.sub_cl_id}
             >
-              {saving ? 'Kaydinayaa…' : 'Save'}
+              {saving ? t('action.saving') : t('common.save')}
             </Button>
           </>
         }
@@ -391,7 +392,7 @@ export default function TeacherSyllabusTab() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Teacher <span className="text-rose-500">*</span>
+              {t('teacherSyllabus.fields.teacher')} <span className="text-rose-500">*</span>
             </label>
             <Select2
               name="teacher"
@@ -399,12 +400,12 @@ export default function TeacherSyllabusTab() {
               selectedLabel={form.teacher_label}
               onChange={setSelectField('teacher_id', 'teacher_label')}
               loadOptions={teacherLoader}
-              placeholder="Select Teacher"
+              placeholder={t('select.teacher')}
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Class <span className="text-rose-500">*</span>
+              {t('teacherSyllabus.fields.class')} <span className="text-rose-500">*</span>
             </label>
             <Select2
               name="cl_id"
@@ -412,12 +413,12 @@ export default function TeacherSyllabusTab() {
               selectedLabel={form.cl_label}
               onChange={setSelectField('cl_id', 'cl_label')}
               loadOptions={classLoader}
-              placeholder="Select Class"
+              placeholder={t('select.class')}
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Academic Year <span className="text-rose-500">*</span>
+              {t('teacherSyllabus.fields.academicYear')} <span className="text-rose-500">*</span>
             </label>
             <Select2
               name="a_y_id"
@@ -425,12 +426,12 @@ export default function TeacherSyllabusTab() {
               selectedLabel={form.a_y_label}
               onChange={setSelectField('a_y_id', 'a_y_label')}
               loadOptions={academicLoader}
-              placeholder="Select Academic Year"
+              placeholder={t('select.academicYear')}
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Subject <span className="text-rose-500">*</span>
+              {t('teacherSyllabus.fields.subject')} <span className="text-rose-500">*</span>
             </label>
             <Select2
               key={`msub-${form.cl_id}-${form.a_y_id}`}
@@ -440,47 +441,47 @@ export default function TeacherSyllabusTab() {
               onChange={setSelectField('sub_cl_id', 'sub_cl_label')}
               loadOptions={modalSubjectLoader}
               isDisabled={!form.cl_id || !form.a_y_id}
-              placeholder={form.cl_id && form.a_y_id ? 'Select Subject' : 'Pick Class + Year first'}
+              placeholder={form.cl_id && form.a_y_id ? t('select.subject') : t('select.pickClassYearFirst')}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Chapter (ID)</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.chapter')}</label>
             <input
               type="number"
               min="0"
               value={form.chapter}
               onChange={(e) => setField('chapter', e.target.value)}
-              placeholder="e.g. 1"
+              placeholder={t('teacherSyllabus.placeholders.chapter')}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Topic</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.topic')}</label>
             <input
               type="text"
               value={form.topic}
               onChange={(e) => setField('topic', e.target.value)}
-              placeholder="e.g. Introduction"
+              placeholder={t('teacherSyllabus.placeholders.topic')}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Page</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.page')}</label>
             <input
               type="text"
               value={form.page}
               onChange={(e) => setField('page', e.target.value)}
-              placeholder="e.g. 12"
+              placeholder={t('teacherSyllabus.placeholders.page')}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Description</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.description')}</label>
             <textarea
               rows={3}
               value={form.description}
               onChange={(e) => setField('description', e.target.value)}
-              placeholder="Faahfaahin dheeraad ah (optional)"
+              placeholder={t('teacherSyllabus.placeholders.description')}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>

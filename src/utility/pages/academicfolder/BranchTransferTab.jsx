@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, CheckCheck, ArrowRightLeft, XCircle, Send } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
@@ -19,6 +20,7 @@ function useSelect(initial = '') {
  * Backend functions waxa diyaarinaayo user-ka. Halkan kaliya UI iyo selects.
  */
 export default function BranchTransferTab() {
+  const { t } = useTranslation();
   /* ── 4 main filter selects ── */
   const [classFromId, classFromLabel, setClassFrom] = useSelect();
   const [batchId,     batchLabel,     setBatch]     = useSelect();
@@ -83,7 +85,7 @@ export default function BranchTransferTab() {
             selectedLabel={classFromLabel}
             onChange={setClassFrom}
             loadOptions={classLoader}
-            placeholder="Select Class"
+            placeholder={t('select.class')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -93,7 +95,7 @@ export default function BranchTransferTab() {
             selectedLabel={batchLabel}
             onChange={setBatch}
             loadOptions={batchLoader}
-            placeholder="Select Batch"
+            placeholder={t('select.batch')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -103,7 +105,7 @@ export default function BranchTransferTab() {
             selectedLabel={branchToLabel}
             onChange={setBranchTo}
             loadOptions={branchLoader}
-            placeholder="Select Branch"
+            placeholder={t('select.branch')}
           />
         </div>
         <div className="min-w-[160px] flex-1">
@@ -113,7 +115,7 @@ export default function BranchTransferTab() {
             selectedLabel={classToLabel}
             onChange={setClassTo}
             loadOptions={classLoader}
-            placeholder="Select Class To"
+            placeholder={t('select.classTo')}
           />
         </div>
 
@@ -124,7 +126,7 @@ export default function BranchTransferTab() {
           onClick={handleShow}
           disabled={loadingStudents}
         >
-          Show
+          {t('action.show')}
         </Button>
         <Button
           size="sm"
@@ -132,7 +134,7 @@ export default function BranchTransferTab() {
           leftIcon={<CheckCheck className="w-4 h-4" />}
           onClick={handleAcceptTransfered}
         >
-          Accept Transfered Students
+          {t('branchTransfer.accept')}
         </Button>
         <Button
           size="sm"
@@ -140,7 +142,7 @@ export default function BranchTransferTab() {
           leftIcon={<ArrowRightLeft className="w-4 h-4" />}
           onClick={openTransferModal}
         >
-          Branch Transfer
+          {t('branchTransfer.branchTransfer')}
         </Button>
       </div>
 
@@ -149,18 +151,18 @@ export default function BranchTransferTab() {
         {students.length === 0 ? (
           <div className="py-10">
             <EmptyState
-              title="Wax xog ah ma jiraan"
-              description="Dooro filter-yada kor ku yaal, kadibna riix Show."
+              title={t('empty.noData')}
+              description={t('empty.selectFilters')}
             />
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-[#0B3C5D] text-white">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold">Student Name</th>
-                <th className="px-4 py-3 text-left font-semibold">Phone</th>
-                <th className="px-4 py-3 text-left font-semibold">Gender</th>
-                <th className="px-4 py-3 text-left font-semibold">Balance</th>
+                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.studentName')}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.phone')}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.gender')}</th>
+                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.balance')}</th>
               </tr>
             </thead>
             <tbody>
@@ -181,13 +183,13 @@ export default function BranchTransferTab() {
       <Modal
         isOpen={transferOpen}
         onClose={closeTransferModal}
-        title="Branch Transfer Form"
+        title={t('branchTransfer.branchTransferForm')}
         size="lg"
         bodyClassName="space-y-4"
         footer={
           <>
             <Button variant="ghost" leftIcon={<XCircle className="w-4 h-4" />} onClick={closeTransferModal}>
-              Close
+              {t('common.close')}
             </Button>
             <Button
               variant="primary"
@@ -195,43 +197,43 @@ export default function BranchTransferTab() {
               onClick={handleTransfer}
               disabled={!tStudentId || !tBranchId || !tClassId}
             >
-              Transfer
+              {t('action.transfer')}
             </Button>
           </>
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">Select Student</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.student')}</label>
             <Select2
               name="tStudent"
               value={tStudentId}
               selectedLabel={tStudentLabel}
               onChange={setTStudent}
               loadOptions={studentLoader}
-              placeholder="Select Student"
+              placeholder={t('select.student')}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">Select Branch</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.branch')}</label>
             <Select2
               name="tBranch"
               value={tBranchId}
               selectedLabel={tBranchLabel}
               onChange={setTBranch}
               loadOptions={branchLoader}
-              placeholder="Select Branch"
+              placeholder={t('select.branch')}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">Select Class</label>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.class')}</label>
             <Select2
               name="tClass"
               value={tClassId}
               selectedLabel={tClassLabel}
               onChange={setTClass}
               loadOptions={classLoader}
-              placeholder="Select Class"
+              placeholder={t('select.class')}
             />
           </div>
         </div>

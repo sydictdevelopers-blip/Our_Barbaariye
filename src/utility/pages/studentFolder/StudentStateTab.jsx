@@ -7,6 +7,7 @@ import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
 import StudentStateModal from '../../../modals/StudentStateModal';
+import MergeStudentsModal from '../../../modals/MergeStudentsModal';
 
 const STATE_COLUMNS = [
   { key: 'id',       label: 'ID' },
@@ -59,10 +60,10 @@ export default function StudentStateTab() {
     }
   };
 
-  const placeholder = (label) => () => swalSuccess(label, 'Feature horumar ayaa loogu jiraa');
-  const handleMergeStudent = placeholder('Merge Student');
   const [stateModalOpen, setStateModalOpen] = useState(false);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const handleAddNew = () => setStateModalOpen(true);
+  const handleMergeStudent = () => setMergeModalOpen(true);
 
   const handleView = useCallback((row) => {
     if (row.id === '__no_data__') return;
@@ -145,6 +146,14 @@ export default function StudentStateTab() {
         onClose={() => setStateModalOpen(false)}
         onSuccess={() => {
           setStateModalOpen(false);
+          if (tableLoaded) handleShowData();
+        }}
+      />
+      <MergeStudentsModal
+        isOpen={mergeModalOpen}
+        onClose={() => setMergeModalOpen(false)}
+        onSuccess={() => {
+          setMergeModalOpen(false);
           if (tableLoaded) handleShowData();
         }}
       />
