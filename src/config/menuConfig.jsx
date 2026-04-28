@@ -5,7 +5,13 @@ import {
   ClipboardList,
   BookMarked,
   Video,
+  FileCheck,
 } from 'lucide-react';
+import { createExamSection } from './exam/createExam';
+import { examServiceSection } from './exam/examService';
+import { examSettingSection } from './exam/examSetting';
+import { manageResultSection } from './exam/manageResult';
+import { appUsersSection } from './exam/appUsers';
 
 export const defaultMenuItems = [
   { id: 'dashboard', label: 'Dashboard', labelKey: 'menu.dashboard', icon: LayoutDashboard, path: '/' },
@@ -372,6 +378,14 @@ export const defaultMenuItems = [
     id: 'ExamManagement',
     label: 'Exam Management',
     labelKey: 'menu.examManagement',
+    icon: FileCheck,
+    children: [
+      createExamSection,
+      examServiceSection,
+      examSettingSection,
+      manageResultSection,
+      appUsersSection,
+    ],
     icon: ClipboardList,
     children: [
       {

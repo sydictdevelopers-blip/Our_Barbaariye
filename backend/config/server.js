@@ -113,6 +113,10 @@ app.post('/api/test-db', handleDbCheck);
 app.post('/api/all', dynamicController.handleDynamicRequest);
 app.post('/all', dynamicController.handleDynamicRequest);
 
+// Generic bulk transaction runner — accepts a steps array, runs in one transaction.
+const bulkController = require('./bulkController');
+app.post('/api/bulk', bulkController.handleBulk);
+
 // Step 6: Health check – JSON so clients can parse (works when proxy strips /api)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Nidaamku wuu shaqaynayaa (System operational)' });

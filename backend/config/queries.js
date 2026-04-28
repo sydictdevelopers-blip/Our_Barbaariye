@@ -146,6 +146,51 @@ const QUERIES = {
   // Subject dropdown for the SubjectActivity form. `subjects.sub_id` is aliased
   // to `subject_id` because the form's rowKey is `subject_id`.
   subjects: 'SELECT sub_id AS subject_id, name AS subject_name FROM subjects ORDER BY name',
+  chapter_options:'SELECT ch.chap_id id,ch.chapter name FROM chapters ch',
+  category_options: 'SELECT ec.ex_c_id id,ec.exam name FROM exam_category ec',
+  grade_options:'SELECT g.gr_id,g.grade_name  FROM grade g',
+
+  // SHOW DATA listing for QuestionsTableTab — joins lookup tables for readable labels.
+  // All filters are optional; if a filter is 0/missing, that constraint is skipped.
+  question_bank_show: (p) => {
+    const filters = [];
+    if (Number(p?.gr_id))   filters.push(`qb.gr_id   = ${Number(p.gr_id)}`);
+    if (Number(p?.su_id))   filters.push(`qb.su_id   = ${Number(p.su_id)}`);
+    if (Number(p?.chap_id)) filters.push(`qb.chap_id = ${Number(p.chap_id)}`);
+    if (Number(p?.ex_c_id)) filters.push(`qb.ex_c_id = ${Number(p.ex_c_id)}`);
+    const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    return `SELECT qb.q_b_id, qb.gr_id, qb.su_id, qb.chap_id, qb.ex_c_id, qb.question,
+                   ec.exam      AS category,
+                   c.chapter    AS chapter,
+                   s.name       AS subject,
+                   g.grade_name AS grade,
+                   qb.reg_date
+            FROM question_bank qb
+            LEFT JOIN exam_category ec ON ec.ex_c_id = qb.ex_c_id
+            LEFT JOIN chapters c       ON c.chap_id  = qb.chap_id
+            LEFT JOIN subjects s       ON s.sub_id   = qb.su_id
+            LEFT JOIN grade g          ON g.gr_id    = qb.gr_id
+            ${where}
+            ORDER BY qb.reg_date DESC, qb.q_b_id DESC`;
+  },
+
+  // Lookup the most-recently-inserted question_bank row matching the
+  // 4-field uniqueness key (used by /api/bulk Circle insert chain).
+  question_bank_last_id: (p) => `SELECT q_b_id FROM question_bank
+    WHERE ex_c_id = ${Number(p?.ex_c_id) || 0}
+      AND chap_id = ${Number(p?.chap_id) || 0}
+      AND su_id   = ${Number(p?.su_id) || 0}
+      AND question = '${sqlText(p?.question)}'
+    ORDER BY reg_date DESC, q_b_id DESC LIMIT 1`,
+
+  // All answers for a question (Circle/TF edit reload + cascade delete).
+  question_answers_by_qbid: (p) => `SELECT qu_a_id, q_b_id, answer, state
+    FROM question_answers
+    WHERE q_b_id = ${Number(p?.q_b_id) || 0}
+    ORDER BY qu_a_id`,
+
+  // Exam Instructions list (uses the vw_exam_in PG function).
+  exam_in_show: (p) => `SELECT * FROM vw_exam_in(${Number(p?.u_br_id) || 0})`,
 };
 
 /**

@@ -14,6 +14,11 @@ import ClassTransferTab from './ClassTransferTab';
 import TeacherSyllabusTab from './TeacherSyllabusTab';
 import LessonActivityMarksTab from './LessonActivityMarksTab';
 import LessonActivityResultsTab from './LessonActivityResultsTab';
+import QuestionsTableTab from '../exam/QuestionsTableTab';
+import ExamInstructionTab from '../exam/ExamInstructionTab';
+import GenerateExamTab from '../exam/GenerateExamTab';
+import CreateOnlineExamTab from '../exam/CreateOnlineExamTab';
+import ExamCopyTab from '../exam/ExamCopyTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { getTabsForPath } from '../../../config/menuConfig';
@@ -125,6 +130,41 @@ export default function AccountsPage() {
       return (
         <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
           <LessonActivityResultsTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'QuestionsTable' && location.pathname === '/ExamSetting') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <QuestionsTableTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'ExamInstruction' && location.pathname === '/ExamSetting') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <ExamInstructionTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'GenerateExam' && location.pathname === '/ExamSetting') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <GenerateExamTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'CreateOnlineExam' && location.pathname === '/ExamSetting') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <CreateOnlineExamTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'ExamCopy' && location.pathname === '/ExamSetting') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <ExamCopyTab />
         </motion.div>
       );
     }

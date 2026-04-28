@@ -85,6 +85,9 @@ function AppContent() {
                   <Route path="/student_marks" element={<AcademicSetup />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
                   <Route path="/ActivityManagement" element={<AcademicSetup />} />
+                  <Route path="/CreateExam" element={<AcademicSetup />} />
+                  <Route path="/ExamService" element={<AcademicSetup />} />
+                  <Route path="/ExamSetting" element={<AcademicSetup />} />
                   <Route path="/ExamSetup" element={<AcademicSetup />} />
                   <Route path="/CreateExam" element={<AcademicSetup />} />
                   <Route path="/ExamService" element={<AcademicSetup />} />
