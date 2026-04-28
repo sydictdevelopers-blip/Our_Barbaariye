@@ -248,7 +248,7 @@ export const defaultMenuItems = [
             "hiddenColumns": ["state"],
             "loadButtons": [
               { "id": "StudentResponsible", "label": "SHOW DATA", "icon": "Database" },
-              { "id": "Responsible", "label": "ALL", "icon": "Database" },
+              { "id": "allResponsible", "label": "ALL", "icon": "Database" },
               { "id": "change_Responsible", "label": "CHANGE", "icon": "Plus", "isBulkAction": true },
               { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "icon": "Database" },
               { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "icon": "Plus", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
@@ -290,6 +290,7 @@ export const defaultMenuItems = [
             "icon": "Database",
             "queryName": "update school",
             "hideDelete": true,
+            "hideAddNew": true,
             "loadButtons": [
               { "id": "update school", "label": "Show Schools", "icon": "Database" }
             ]

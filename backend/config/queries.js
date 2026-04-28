@@ -44,7 +44,7 @@ const QUERIES = {
     WHERE sc.state = 'Continue' AND sc.std_id = ${Number(p?.std_id) || 0}
     ORDER BY cl.cl_id, sc.a_y_id, cl.gr_id
   ) q ORDER BY q.gr_id, q.cl_id`,
-  studentClass_info: (p) => `SELECT * FROM vw_studentclass_info(${Number(p?.std_id) || 0})`,
+  studentClass_info: (p) => `SELECT * FROM vw_studentClass_info(${Number(p?.std_id) || 0})`,
   level_type: 'SELECT l.l_ty_id, l.name AS level_name FROM level_type l ORDER BY l.name',
   levels: (p) => `SELECT lev_id, level FROM levels_show(${Number(p?.br_id) || 0}) ORDER BY level`,
   grades: 'SELECT gr_id, grade_name FROM grade ORDER BY gr_id',
@@ -82,17 +82,20 @@ const QUERIES = {
   LessonActivityResults: (p) => `SELECT * FROM show_lesson_activity_results_sp(${Number(p?.a_y_id)||0}, ${Number(p?.cl_id)||0}, ${Number(p?.b_id)||0}, ${Number(p?.sub_cl_id)||0}, ${Number(p?.ac_id)||0}, ${Number(p?.ex_reg_id)||0})`,
   LessonActivityResultRow: (p) => `SELECT lar.lar_id, lar.ac_t_id, lar.std_cl_id, lar.marks_obtained, lar.state FROM lesson_activity_result lar WHERE lar.lar_id = ${Number(p?.lar_id)||0}`,
   Students: (p) => `SELECT * FROM vw_student(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}, ${Number(p?.b_id) || 0}, 'show')`,
-  Responsible: (p) => `SELECT * FROM responsible_show(${Number(p?.br_id) || 0})`,
-  StudentResponsible: (p) => `SELECT id, student, responsible, phone1, phone2 FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0}) WHERE student IS NOT NULL`,
+  StudentImages: (p) => `SELECT * FROM vw_student_image(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
+  ResponsiblesOneClass: (p) => `SELECT * FROM update_all_responsibles_one_class(${Number(p?.cl_id) || 0}, ${Number(p?.br_id) || 0}, ${Number(p?.a_y_id) || 0})`,
+  EmisIdCardList: (p) => `SELECT * FROM update_emis_idcardlist(${Number(p?.cl_id) || 0}, ${Number(p?.br_id) || 0}, ${Number(p?.a_y_id) || 0})`,
+  allResponsible: (p) => `SELECT * FROM vw_responsible(${Number(p?.br_id) || 0})`,
+  StudentResponsible: (p) => `SELECT * FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0})`,
   showprentwithnostudents: 'SELECT * FROM responsible_with_no_student_show()',
-  studentstate: (p) => `SELECT * FROM fn_student_state(${Number(p?.br_id) || 0})`,
-  bus: (p) => `SELECT * FROM bus_show(${Number(p?.br_id) || 0})`,
+  studentstate: (p) => `SELECT * FROM vw_student_state(${Number(p?.br_id) || 0})`,
+  bus: (p) => `SELECT * FROM vw_bus(${Number(p?.br_id) || 0})`,
   Studentinfo: (p) => ({
     sql: `SELECT * FROM studentinfo_show(${Number(p?.std_id) || 0}, '${sqlText(p?.search)}', ${Number(p?.limit) || 10}, ${offsetOf(p, 10)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,
   }),
   StudentinfoDuplicates: 'SELECT * FROM studentinfo_duplicates_show()',
-  'update school': 'SELECT id, school_name, school_reg_no FROM view_schools() WHERE id IS NOT NULL',
+  'update school': 'SELECT * FROM view_schools()',
 
   // ---- Activity Management ----
   // subject_activity.subject_id is a FK to subjects.sub_id (not subjects.subject_id —

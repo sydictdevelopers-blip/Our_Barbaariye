@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { swalSuccess, swalConfirm, swalError } from '../utils/swal';
+import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ActionButton from '../components/ui/ActionButton';
@@ -9,7 +9,7 @@ import Select2 from '../components/ui/Select2';
 import DataTableCard from '../components/DataTableCard';
 import Card from '../components/ui/Card';
 import { CRUD_CONFIG } from '../config/crudConfig';
-import { makeOptionLoader } from '../services/api';
+import { makeOptionLoader, crud } from '../services/api';
 import {
   loadData,
   setSearchQuery,
@@ -55,6 +55,7 @@ export default function EntityTab({
   showStudentSelect = false,
   studentOptionsQuery,
   hideEdit = false,
+  hideAddNew = false,
   hiddenColumns,
   extraRowActions,
   extraHeaderActions,
@@ -247,8 +248,23 @@ export default function EntityTab({
         const BtnIcon = btn.icon ?? Icon;
         const isBulkAction = !!btn.isBulkAction;
         const isAddNew = !!btn.modalKey;
+        const isDeleteAction = !!btn.deleteAction;
         const handleClick = () => {
-          if (isBulkAction && bulkForm) {
+          if (isDeleteAction) {
+            swalConfirmAction({
+              title: t('swal.titles.confirmDelete'),
+              text: t('entity.confirmDeleteRecord', 'Are you sure you want to delete this record?'),
+              confirmText: t('swal.buttons.yesDelete'),
+              confirmColor: '#dc2626',
+              onConfirm: async () => {
+                const result = await crud({ operation: 'delete', fn: btn.deleteAction, params: {} });
+                if (showDataPanel) {
+                  dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage || 1, limit, entity.searchQuery, activeExtra)));
+                }
+                return { message: result?.message };
+              },
+            });
+          } else if (isBulkAction && bulkForm) {
             setViewMode('form');
           } else if (isAddNew) {
             onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, academicYearId: academicYearIdForLoad });
@@ -273,7 +289,7 @@ export default function EntityTab({
           </Button>
         );
       })}
-      {!loadBtns.some((b) => b.modalKey) && modalKey && (
+      {!hideAddNew && !loadBtns.some((b) => b.modalKey) && modalKey && (
         <Button
           size="sm"
           variant="primary"
@@ -314,8 +330,8 @@ export default function EntityTab({
     return (
       <>
         <Card className="overflow-hidden rounded-2xl shadow-[0_4px_20px_-8px_rgba(11,60,93,0.15)] border border-slate-200/70 dark:border-slate-700/80 bg-white dark:bg-slate-900/90">
-          <div className="relative z-10 flex flex-wrap items-center gap-3 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
-            <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-auto">{headerActions}</div>
+          <div className="relative z-10 flex flex-wrap items-center gap-2 border-b border-slate-200/70 dark:border-slate-600/60 px-4 py-3 bg-white dark:bg-slate-900/95">
+            {headerActions}
           </div>
           <div className="p-4">
             {bulkForm({

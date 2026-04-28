@@ -33,6 +33,7 @@ if (fs.existsSync(envConfig)) require('dotenv').config({ path: envConfig });
 const dynamicController = require('./dynamicController');
 const api = require('./api');
 const moduleHelp = require('./moduleHelpController');
+const studentImage = require('./studentImageController');
 
 // Step 3: Abuur Express app instance
 const app = express();
@@ -120,6 +121,7 @@ app.get('/health', (req, res) => {
 // Step 6b: Barbaariye API routes (from api config)
 api.registerApiRoutes(app);
 moduleHelp.registerModuleHelpRoutes(app);
+studentImage.register(app);
 
 // 404 – return JSON so frontend can parse (avoid "Cannot POST /data" plain text)
 app.use((req, res) => {

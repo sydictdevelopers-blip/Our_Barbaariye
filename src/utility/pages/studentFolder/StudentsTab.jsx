@@ -7,6 +7,10 @@ import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
+import { getSessionBrId } from '../../../config/crudConfig';
+import StudentImagesPanel from './StudentImagesPanel';
+import StudentResponsiblesPanel from './StudentResponsiblesPanel';
+import StudentEmisPanel from './StudentEmisPanel';
 
 export default function StudentsTab() {
   const { t } = useTranslation();
@@ -72,6 +76,7 @@ export default function StudentsTab() {
       swalError(t('students.errFiltersRequired'));
       return;
     }
+    setViewMode('students');
     setLoadingTable(true);
     try {
       const rows = await fetchRows();
@@ -93,9 +98,29 @@ export default function StudentsTab() {
 
   const handleStudentClassUpdate = placeholder(t('students.classUpdateLabel'));
   const handleAddNew = placeholder(t('students.addNew'));
-  const handleAddImage = placeholder(t('students.addImage'));
-  const handleEditAllResponsibles = placeholder(t('students.editAllResponsibles'));
-  const handleEditAllEmis = placeholder(t('students.editAllEmis'));
+  // 'students' (default table) | 'images' (image upload panel) | 'responsibles' (edit panel) | 'emis' (id-card edit panel)
+  const [viewMode, setViewMode] = useState('students');
+  const handleAddImage = () => {
+    if (!filterClass || !filterBatch || !filterAcademic) {
+      swalError(t('students.errFiltersRequired'));
+      return;
+    }
+    setViewMode('images');
+  };
+  const handleEditAllResponsibles = () => {
+    if (!filterClass || !filterAcademic) {
+      swalError(t('students.errFiltersRequired'));
+      return;
+    }
+    setViewMode('responsibles');
+  };
+  const handleEditAllEmis = () => {
+    if (!filterClass || !filterAcademic) {
+      swalError(t('students.errFiltersRequired'));
+      return;
+    }
+    setViewMode('emis');
+  };
   const handleImportExcel = placeholder(t('students.importExcelLabel'));
 
   const handleView = useCallback((row) => {
@@ -212,27 +237,52 @@ export default function StudentsTab() {
   return (
     <div className="space-y-4">
       {filterToolbar}
-      <DataTableCard
-        showDataPanel={tableLoaded}
-        searchPlaceholder={t('common.search')}
-        searchValue={searchQuery}
-        onSearchChange={(e) => { setSearchQuery(e?.target?.value ?? ''); setCurrentPage(1); }}
-        onSearchSubmit={() => {}}
-        columns={RESULT_COLUMNS}
-        data={pagedRows}
-        isLoading={loadingTable}
-        renderActions={renderActions}
-        emptyTitleClickToLoad={t('empty.notLoaded')}
-        emptyDescClickToLoad={t('empty.showDataHint')}
-        total={totalRows}
-        currentPage={currentPage}
-        totalPages={Math.max(1, Math.ceil(totalRows / pageSize))}
-        itemsPerPage={pageSize}
-        onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
-        onNextPage={() => setCurrentPage((p) => Math.min(Math.max(1, Math.ceil(totalRows / pageSize)), p + 1))}
-        onPageClick={(p) => setCurrentPage(p)}
-        onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
-      />
+      {viewMode === 'images' ? (
+        <StudentImagesPanel
+          cl_id={filterClass}
+          b_id={filterBatch}
+          a_y_id={filterAcademic}
+          onClose={() => setViewMode('students')}
+        />
+      ) : viewMode === 'responsibles' ? (
+        <StudentResponsiblesPanel
+          cl_id={filterClass}
+          b_id={filterBatch}
+          a_y_id={filterAcademic}
+          br_id={Number(getSessionBrId()) || 0}
+          onClose={() => setViewMode('students')}
+        />
+      ) : viewMode === 'emis' ? (
+        <StudentEmisPanel
+          cl_id={filterClass}
+          b_id={filterBatch}
+          a_y_id={filterAcademic}
+          br_id={Number(getSessionBrId()) || 0}
+          onClose={() => setViewMode('students')}
+        />
+      ) : (
+        <DataTableCard
+          showDataPanel={tableLoaded}
+          searchPlaceholder={t('common.search')}
+          searchValue={searchQuery}
+          onSearchChange={(e) => { setSearchQuery(e?.target?.value ?? ''); setCurrentPage(1); }}
+          onSearchSubmit={() => {}}
+          columns={RESULT_COLUMNS}
+          data={pagedRows}
+          isLoading={loadingTable}
+          renderActions={renderActions}
+          emptyTitleClickToLoad={t('empty.notLoaded')}
+          emptyDescClickToLoad={t('empty.showDataHint')}
+          total={totalRows}
+          currentPage={currentPage}
+          totalPages={Math.max(1, Math.ceil(totalRows / pageSize))}
+          itemsPerPage={pageSize}
+          onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setCurrentPage((p) => Math.min(Math.max(1, Math.ceil(totalRows / pageSize)), p + 1))}
+          onPageClick={(p) => setCurrentPage(p)}
+          onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+        />
+      )}
     </div>
   );
 }
