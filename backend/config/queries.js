@@ -60,7 +60,7 @@ const QUERIES = {
   subject_class_options: (p) => `SELECT sub_cl_id, subject_name FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}) ORDER BY subject_name`,
   shift_options: 'SELECT * FROM shift',
   student_options: (p) => `SELECT * FROM student_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0})`,
-  academic_options: 'SELECT a_y_id, academic_name, state FROM academic_year ORDER BY a_y_id',
+  academic_options: 'SELECT a_y_id, academic_name, state FROM academic_year ORDER BY a_y_id DESC',
   accounts: (p) => `SELECT * FROM accounts_show(${Number(p?.br_id) || 0})`,
   gendersections: (p) => `SELECT * FROM accounts_show(${Number(p?.br_id) || 0})`,
 
@@ -98,8 +98,16 @@ const QUERIES = {
   // subject_activity.subject_id is a FK to subjects.sub_id (not subjects.subject_id —
   // subjects has no such column). The label `subject_name` is `subjects.name`.
   Performance: `SELECT * FROM performance_show()`,
+  student_performance_option: (p) => `SELECT std_cl_id, student AS student_name FROM student_performance_select(${Number(p?.br_id) || 0})`,
   StudentPerformance: (p) => `SELECT * FROM student_performance_show(${Number(p?.br_id) || 0}, ${Number(p?.std_cl_id) || 0})`,
   StudentPerformanceEdit: 'SELECT sae.sta_id, sae.student_id, st.student_name, sae.sub_act_id, CONCAT(a.activity_name, \' - \', s.name) AS subject_activity, sae.marks_obtained, sae.state FROM student_activity_edit sae JOIN students st ON st.student_id = sae.student_id JOIN subject_activity sa ON sa.sub_act_id = sae.sub_act_id JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY sae.sta_id',
+
+  // ---- Exam Management ----
+  ExamSetting: (p) => `SELECT * FROM exam_siting_show(${Number(p?.br_id) || 0})`,
+  Exam: (p) => `SELECT * FROM exam_show(${Number(p?.br_id) || 0})`,
+  ExamRegister: (p) => `SELECT s.*, er.a_y_id, er.ex_id FROM exam_reg_show(${Number(p?.br_id)}, ${Number(p?.academicYearId)}) s LEFT JOIN exam_reg er ON er.ex_reg_id = s.ex_reg_id`,
+  AssignClassExam: (p) => `SELECT s.*, ass.er_id, ass.cl_id, ass.b_id FROM assign_class_exam_show_single(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.br_id) || 0}) s LEFT JOIN assign_class_exam ass ON ass.a_c_ex = s."ID"`,
+  ExamSchedule: (p) => `SELECT s.*, sch.d_id, sch.pr_id, sch.sub_cl_id, sch.sh_id, sch.cl_id, sch.ex_r_id FROM exam_schedule_show(${Number(p?.br_id) || 0}) s JOIN exam_schedule sch ON sch.ex_s_id = s.ex_s_id`,
 
   // ---- User management ----
   // Function-style entry — runtime params ayaa lagu soo gudbiyaa (br_id)
@@ -108,7 +116,11 @@ const QUERIES = {
   batch_options: 'SELECT b_id, batch_name FROM batch ORDER BY batch_name',
   student_class_options: (p) => `SELECT * FROM student_class_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0})`,
   lesson_activity_options: (p) => `SELECT * FROM lesson_activity_options_show(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0})`,
-  exam_reg_options: 'SELECT * FROM exam_reg_options_show()',
+  exam_reg_options: (p) => `SELECT er.ex_reg_id, CONCAT(e.exam, ' - ', er.exam_type) AS exam_reg_name FROM exam_reg er JOIN exam e ON e.ex_id = er.ex_id JOIN user_branch ub ON ub.u_br_id = er.u_br_id WHERE (SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all' OR ub.br_id = ${Number(p?.br_id) || 0} ORDER BY er.start_date DESC`,
+  exam_options: (p) => `SELECT e.ex_id, e.exam FROM exam e JOIN user_branch ub ON ub.u_br_id = e.u_br_id WHERE (SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all' OR ub.br_id = ${Number(p?.br_id) || 0} ORDER BY e.ordering, e.exam`,
+  day_options: 'SELECT d_id, day FROM day ORDER BY d_id',
+  period_options: 'SELECT pr_id, period FROM period ORDER BY pr_id',
+  class_simple_options: (p) => `SELECT cl_id, class_name FROM class_show(${Number(p?.br_id) || 0}) ORDER BY class_name`,
   people_options: (p) => ({
     sql: `SELECT * FROM people_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,
@@ -124,7 +136,7 @@ const QUERIES = {
   subject_activity_options: 'SELECT sa.sub_act_id, CONCAT(a.activity_name, \' - \', s.name) AS sub_act_name FROM subject_activity sa JOIN activity a ON a.act_id = sa.act_id JOIN subjects s ON s.sub_id = sa.subject_id ORDER BY 2',
   performance_options: 'SELECT per_id, performance_name FROM performance ORDER BY performance_name',
   rate_options: 'SELECT rate_id, rate FROM rate ORDER BY rate',
-  student_performance_select: (p) => `SELECT * FROM vw_std_performance_all(${Number(p?.br_id) || 0})`,
+  student_performance: (p) => `SELECT * FROM vw_std_performance_all(${Number(p?.br_id) || 0})`,
 
   // Subject dropdown for the SubjectActivity form. `subjects.sub_id` is aliased
   // to `subject_id` because the form's rowKey is `subject_id`.

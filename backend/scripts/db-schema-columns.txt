@@ -1,0 +1,123 @@
+       table_name       |                                                                                                                                                                                                                                                columns                                                                                                                                                                                                                                                 
+------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ academic_calender      | ac_cl_id integer, ev_id integer, a_y_id integer, description text, start_date date, end_date date, u_br_id integer, reg_date date
+ academic_year          | a_y_id integer, academic_name character varying, started date, ended date, state character varying, u_br_id integer, reg_date date
+ acc_category           | ac_cat_id integer, type character varying
+ account_transfer       | acc_tr_id integer, from_acc integer, to_acc integer, amount numeric, description character varying, u_br_id integer, reg_date timestamp without time zone
+ account_type           | ac_ty_id integer, type character varying, ac_cat_id integer, state character varying, u_br_id integer
+ accounts               | acc_id integer, acc_name character varying, institution character varying, balance numeric, br_id integer, state character varying, u_br_id integer, reg_date timestamp without time zone
+ activity               | act_id integer, activity_name character varying, description text, state character varying, br_id_sp integer, created_at timestamp without time zone
+ activity_type          | ac_id integer, type character varying
+ address                | add_id integer, district character varying, village character varying, reg_date timestamp without time zone
+ alerts                 | al_id integer, body text, lang_id integer, title character varying
+ amount_type            | am_ty_id integer, name character varying, reg_date timestamp without time zone
+ asset_order            | as_or_id integer, ty_id integer, p_id integer, description character varying, state character varying, po_number character varying, freight numeric, or_date timestamp without time zone, u_br_id integer
+ asset_payment          | ass_pay_id integer, mm_id integer, p_id integer, amount numeric, acc_id integer, description character varying, num character varying, pay_date timestamp without time zone, reg_date timestamp without time zone, u_br_id integer
+ asset_transaction      | as_tr_id integer, as_or_id integer, ass_id integer, discription character varying, qty numeric, price numeric, reg_date timestamp without time zone, u_br_id integer
+ assets                 | ass_id integer, ac_ty_id integer, description character varying, balance numeric, amount numeric, dep_amount numeric, reg_date timestamp without time zone, u_br_id integer
+ assign_class_exam      | a_c_ex integer, er_id integer, cl_id integer, b_id integer, state character varying, u_br_id integer, reg_date timestamp without time zone
+ assign_student_room    | ass_std_ro_id integer, std_cl_id integer, ro_id integer, e_r_id integer, serial_num integer, sh_id integer, reg_date timestamp without time zone, u_br_id integer
+ assign_teacher_room    | ass_t_ro_id integer, ro_id integer, emp_id integer, d_id integer, e_r_id integer, sh_id integer, pe_id integer, reg_date timestamp without time zone, u_br_id integer
+ batch                  | b_id integer, batch_name character varying
+ branch                 | br_id integer, br_name character varying, location character varying, manager character varying, manager_tel character varying, fg text, logo_image text, banner_image text, contacts text, state character varying, reg_date timestamp without time zone
+ bus                    | bus_id integer, bus_name character varying, emp_id integer, targo character varying, u_br_id integer, reg_date timestamp without time zone
+ certificate            | crt_id integer, serial_number character varying, p_id integer, description text, ishue_date date, reg_date date, u_br_id integer
+ chapters               | chap_id integer, chapter character varying
+ charge                 | ch_id bigint, std_cl_id bigint, amount numeric, discount numeric, reason character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ charge_2025            | ch_id bigint, std_cl_id bigint, amount numeric, discount numeric, reason character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ charge_2026            | ch_id bigint, std_cl_id bigint, amount numeric, discount numeric, reason character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ charge_2027            | ch_id bigint, std_cl_id bigint, amount numeric, discount numeric, reason character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ charge_old             | ch_id integer, std_cl_id integer, amount numeric, discount numeric, reason character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ class                  | cl_id integer, class character varying, lev_id integer, gr_id integer, state character varying, br_id integer, u_br_id integer, reg_date date, sh_id integer
+ class_formaster        | c_f_id integer, cl_id integer, emp_id integer, std_id integer, a_y_id integer, state character varying, u_br_id integer, reg_date date
+ closing                | cl_id integer, start_date timestamp without time zone, close_date timestamp without time zone, u_br_id integer
+ complain               | com_id integer, name character varying, phone character varying, cabasho text, state character varying, comp_username character varying, reg_date date, u_br_id integer
+ contact_title          | con_t_id integer, tt_id integer, emp_br_id integer, contact_phone character varying, email character varying, signature_image text, stamp text, state character varying, reg_date timestamp without time zone, u_br_id integer
+ day                    | d_id integer, day character varying
+ depriciation_account   | dep_ac_id integer, ass_id integer, amount numeric, reg_date timestamp without time zone, u_br_id integer
+ employee               | emp_id integer, p_id integer, sh_id integer, j_id integer, tt_id integer, emp_type character varying, salary numeric, degree character varying, br_id integer, cv text, image text, hired_date date, u_br_id integer, reg_date date
+ employee_attendance    | emp_att_id integer, emp_sch_id integer, scheduale_time_in time without time zone, scheduale_time_out time without time zone, checktime_in time without time zone, checktime_out time without time zone, state character varying, reg_date timestamp without time zone, u_br_id integer
+ employee_charge        | emp_ch_id integer, emp_id integer, amount numeric, commissition numeric, decrease numeric, description character varying, reg_date timestamp without time zone, u_br_id integer
+ employee_payment       | emp_pay_id integer, emp_ch_id integer, amount numeric, acc_id integer, send_number character varying, description character varying, reg_date timestamp without time zone, u_br_id integer
+ employee_scheduale     | emp_sch_id integer, emp_id integer, time_in time without time zone, time_out time without time zone, day_id integer, sh_id integer, state character varying, reg_date timestamp without time zone, u_br_id integer
+ employee_vocation      | emp_voc_id integer, emp_id integer, voc_date date, type character varying, description character varying, reg_date timestamp without time zone, u_br_id integer
+ enroll_type            | en_ty_id integer, type character varying
+ event                  | ev_id integer, event character varying
+ exam                   | ex_id integer, exam character varying, ordering integer, u_br_id integer, reg_date timestamp without time zone
+ exam_attendance        | ex_t_id integer, std_cl_id integer, e_r_id integer, st_att_id integer, ro_id integer, su_id integer, reason text, reg_date timestamp without time zone, u_br_id integer
+ exam_reg               | ex_reg_id integer, a_y_id integer, ex_id integer, exam_type character varying, marks numeric, start_date date, end_date date, deadline date, br_id integer, exam_status character varying, attendance_marks numeric, u_br_id integer, reg_date timestamp without time zone
+ exam_schedule          | ex_s_id integer, d_id integer, pr_id integer, sub_cl_id integer, sh_id integer, cl_id integer, ex_r_id integer, start_time time without time zone, end_time time without time zone, exam_date date, reg_date timestamp without time zone, u_br_id integer
+ exam_siting            | ex_set_id integer, a_y_id integer, percentage_fail_pass numeric, attendance_marks numeric, activity_marks numeric, u_br_id integer, reg_date timestamp without time zone
+ exam_time              | ex_t_id integer, q_no integer, start_time time without time zone, end_time time without time zone, state character varying, reg_date timestamp without time zone, u_br_id integer
+ exp_payment            | ex_pay_id integer, ex_ch_id integer, amount numeric, phone character varying, acc_id integer, reg_date timestamp without time zone, u_br_id integer
+ expense                | ex_id integer, name character varying, br_id integer, reg_date timestamp without time zone, u_br_id integer
+ expense_budget         | exp_pud_id integer, ex_id integer, description character varying, amount numeric, reg_date timestamp without time zone, u_br_id integer
+ expense_charge         | ex_ch_id integer, ex_id integer, amount numeric, description character varying, exp_pud_id integer, reg_date timestamp without time zone, u_br_id integer
+ finance_apoint         | f_ap_id integer, res_id integer, comment character varying, state character varying, reg_date timestamp without time zone, u_br_id integer
+ grade                  | gr_id integer, grade_name character varying
+ idcard                 | idcard_id integer, p_id integer, ishue_date date, expire_date date, u_br_id integer, reg_date date
+ job                    | j_id integer, j_name character varying, state character varying, reg_date timestamp without time zone
+ lesson_activity        | ac_t_id integer, ac_id integer, cl_id integer, sub_cl_id integer, marks numeric, description text, deadline date, e_r_id integer, reg_date timestamp without time zone, u_br_id integer
+ lesson_activity_result | lar_id integer, ac_t_id integer, std_cl_id integer, marks_obtained numeric, state character varying, reg_date timestamp without time zone
+ lesson_check           | l_id integer, less_check character varying
+ lesson_checking        | less_ch_id integer, std_cl_id integer, l_id integer, reason text, st_l_ck_id integer, qur_id integer, page character varying, u_br_id integer, reg_date timestamp without time zone
+ lesson_plan            | l_p_id integer, emp_id integer, sub_cl_id integer, chap_id integer, topic character varying, page character varying, description text, u_br_id integer, reg_date date
+ lesson_schedule        | std_les_id integer, std_cl_id integer, type character varying, incident character varying, description text, u_br_id integer, reg_date timestamp without time zone
+ level_type             | l_ty_id integer, name character varying
+ levels                 | lev_id integer, l_ty_id integer, level character varying, fee numeric, u_br_id integer, re_date timestamp without time zone, br_id integer
+ li_privalege           | li_pr_id integer, pr_id integer, name character varying, link text, li_icon text, graph character varying
+ logos                  | id integer, table_names character varying, operation character varying, body text, event_date timestamp without time zone, username character varying
+ meeting_agenda         | m_ag_id integer, agenda text, participance text, comments text, decisions text, meet_date date, u_br_id integer, reg_date date
+ money_methods          | mm_id integer, method character varying, u_br_id integer
+ msg                    | body text
+ my_sms                 | sms_id integer, school_name character varying, sms_link character varying, sms_balance numeric, p_id integer, phone character varying, state character varying, u_br_id integer, br_id integer
+ note_payable           | note_pay_id integer, p_id integer, acc_id integer, amount numeric, rate numeric, type character varying, description character varying, reg_date timestamp without time zone, u_br_id integer
+ notification           | not_id integer, not_name character varying, not_count integer, state character varying, br_id integer
+ other_income           | ot_in_id integer, income_name character varying, amount numeric, description character varying, reciever_phone character varying, acc_id integer, u_br_id integer, reg_date timestamp without time zone
+ people                 | p_id integer, p_name character varying, tel character varying, sex character varying, email character varying, ad_id integer, state character varying, p_type character varying, reg_date timestamp without time zone, u_br_id integer
+ performance            | per_id integer, performance_name character varying
+ period                 | pr_id integer, period character varying
+ privilege              | pr_id integer, name character varying, link text, icon character varying, state character varying, priv_ordering integer
+ profit_sharing         | pr_sh_id integer, p_id integer, cl_id integer, amount numeric, new_investment numeric, reg_date timestamp without time zone, u_br_id integer
+ question_answers       | qu_a_id integer, q_b_id integer, answer text, state character varying, reg_date timestamp without time zone, u_br_id integer
+ question_bank          | q_b_id integer, ex_c_id integer, chap_id integer, su_id integer, gr_id integer, question text, reg_date timestamp without time zone, u_br_id integer
+ question_category      | q_cat_id integer, category character varying
+ question_type          | q_no integer, su_cl_id integer, chapters character varying, total integer, total_mark numeric, reg_date timestamp without time zone, u_br_id integer
+ questions              | q_id integer, gr_id integer, su_id integer, chap_id integer, chapter_page character varying, q_cat_id integer, q_name text, marks numeric, reg_date timestamp without time zone, u_br_id integer
+ quran                  | qur_id integer, surah character varying
+ rate                   | rate_id integer, rate character varying
+ receipt                | r_id integer, ch_id integer, amount numeric, acc_id integer, phone character varying, balance_text character varying, reg_date timestamp without time zone, u_br_id integer
+ responsible            | res_id integer, p_id integer, phone character varying, state character varying, u_br_id integer, reg_date date
+ responsible_relation   | r_r_id integer, relationtype character varying
+ result                 | r_id integer, std_cl_id integer, e_r_id integer, su_id integer, marks numeric, activity numeric, approve character varying, lock character varying, reg_date timestamp without time zone, approved_user integer, editted_user integer, u_br_id integer
+ rooms                  | r_id integer, room_name character varying, no_of_students integer, no_of_teachers integer, state character varying, u_br_id integer, reg_date timestamp without time zone
+ send_notices           | not_id integer, notice_title character varying, notice_body character varying, start_date date, end_date date, state character varying, schedule_notice character varying, reg_date timestamp without time zone, ischange boolean, u_br_id integer
+ shift                  | sh_id integer, shift character varying
+ state_attendance       | st_att_id integer, state character varying
+ state_less_check       | st_l_ck_id integer, state character varying
+ student                | std_id integer, emis_id character varying, id_card character varying, p_id integer, res_id integer, r_r_id integer, mothername character varying, mother_phone character varying, pob character varying, dob date, en_ty_id integer, transfer_school character varying, state character varying, image character varying, orphan_status character varying, disability_status character varying, refugee character varying, register_fee numeric, u_br_id integer, reg_date timestamp without time zone
+ student_activity_edit  | sta_id integer, student_id integer, sub_act_id integer, marks_obtained numeric, state character varying, created_at timestamp without time zone
+ student_attendance     | std_att_id integer, std_cl_id integer, pr_id integer, st_att_id integer, reason text, reg_date date, u_br_id integer
+ student_class          | std_cl_id integer, std_id integer, cl_id integer, a_y_id integer, b_id integer, fee numeric, food numeric, academic_fee numeric, discount numeric, bus_id integer, bus_fee numeric, st_ty_id integer, free_description text, resident_type character varying, bar_bilaw character varying, into_xidisanyahay character varying, state character varying, u_br_id integer, reg_date timestamp without time zone
+ student_performance    | st_per_id integer, std_cl_id integer, per_id integer, rate_id integer, reason text, u_br_id integer, reg_date timestamp without time zone
+ student_state          | std_st_id integer, std_cl_id integer, state character varying, description text, u_br_id integer, reg_date timestamp without time zone
+ student_type_fee       | st_ty_id integer, type_fee character varying, t_f_id integer, contact_number character varying, discount numeric, state character varying, u_br_id integer, reg_date timestamp without time zone
+ students               | student_id integer, student_name character varying, student_code character varying, email character varying, phone character varying
+ sub_privage            | sp_id integer, li_pr_id integer, name character varying, link text, state character varying, description text
+ sub_questions          | sub_q_id integer, q_id integer, sub_question_title text, state character varying, reg_date timestamp without time zone, u_br_id integer
+ subject_activity       | sub_act_id integer, act_id integer, subject_id integer, max_marks numeric, state character varying, created_at timestamp without time zone
+ subject_class          | sub_cl_id integer, cl_id integer, sub_id integer, emp_id integer, no_of_period integer, state character varying, u_br_id integer, reg_date date, a_y_id integer
+ subjects               | sub_id integer, name character varying, state character varying, ordering integer, reg_date date
+ title                  | tt_id integer, title character varying
+ transcript             | tr_id integer, serial_number character varying, std_cl_id integer, description text, ishue_date date, reg_date date, u_br_id integer
+ type_fee               | t_f_id integer, type character varying
+ types                  | ty_id integer, type_name character varying
+ user_branch            | u_br_id integer, usr_id integer, br_id integer, lock_user character varying, state character varying, user_type character varying, reg_date timestamp without time zone, privalage jsonb
+ user_info              | u_inf_id integer, username character varying, network_address character varying, windows character varying, browser character varying, all_data_description text, description text, login_date timestamp without time zone
+ user_privalege         | u_pr_id integer, u_br_id integer, sp_id integer, state character varying
+ users                  | usr_id integer, p_id integer, username character varying, password character varying, otp character varying, authkey character varying, lock_user character varying, state character varying, expired_date date, reg_date timestamp without time zone
+ v_check                | count bigint
+ v_exam_details         | ex_id integer, exam character varying, ordering integer, u_br_id integer, reg_date timestamp without time zone, branch_id integer, username character varying
+ v_user                 | usr_id integer, p_id integer, username character varying, password character varying, authkey character varying, lock_user character varying, state character varying
+(119 rows)
+

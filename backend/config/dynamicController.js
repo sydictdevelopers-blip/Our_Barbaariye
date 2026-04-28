@@ -32,6 +32,11 @@ const PROCEDURE_PARAM_ORDER = {
   student_state_sp: ['ids', 'clas', 'academic', 'reason', 'oper_fee', 'fee_amount', 'account_pr', 'to_class', 'description_sp', 'date_sp', 'user_id'],
   student_responsible: ['p_num', 'p_waalid', 'p_operation', 'p_user_id'],
   del_responsible_with_no_std_spv: [],
+  exam_sp: ['ex_id_sp', 'exam_sp_v', 'ordering_sp', 'u_br_id_sp', 'oper'],
+  exam_reg_sp: ['ex_reg_id_sp', 'a_y_id_sp', 'ex_id_sp', 'exam_type_sp', 'marks_sp', 'start_date_sp', 'end_date_sp', 'deadline_sp', 'br_id_sp', 'exam_status_sp', 'attendance_marks_sp', 'u_br_id_sp', 'oper'],
+  assign_class_exam_sp: ['a_c_ex_sp', 'er_id_sp', 'cl_id_sp', 'b_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  exam_schedule_sp: ['ex_s_id_sp', 'day_id_sp', 'per_id_sp', 'sub_cl_id_sp', 'sh_id_sp', 'cl_id_sp', 'ex_r_id_sp', 'start_time_sp', 'end_time_sp', 'exam_date_sp', 'u_br_id_sp', 'oper'],
+  exam_siting_sp: ['ex_set_id_sp', 'a_y_id_sp', 'percentage_fail_pass_sp', 'attendance_marks_sp', 'activity_marks_sp', 'u_br_id_sp', 'oper'],
 };
 
 /**
