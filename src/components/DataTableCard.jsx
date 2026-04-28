@@ -105,6 +105,11 @@ function DataTableCard({
   emptyTitleNoResult = 'No result',
   emptyDescNoResult = 'Xog lama helin. Raadinta si toos ah ayaa lagu dhaqangalayaa.',
   renderActions,
+  editableColumns,
+  editValues,
+  onEditChange,
+  rowKey,
+  footerActions,
   total,
   currentPage,
   totalPages,
@@ -114,6 +119,12 @@ function DataTableCard({
   onPageClick,
   onPageSizeChange,
 }) {
+  const editableSet = useMemo(() => new Set(editableColumns || []), [editableColumns]);
+  const getRowKey = (row, index) => {
+    if (typeof rowKey === 'function') return String(rowKey(row));
+    if (rowKey && row[rowKey] != null) return String(row[rowKey]);
+    return String(row.id ?? row.acc_id ?? row[columns?.[0]?.key] ?? index);
+  };
   const [sorting, setSorting] = useState([]);
 
   const filteredData = useMemo(() => {
@@ -139,7 +150,22 @@ function DataTableCard({
     const cols = (columns || []).map((col) => ({
       accessorKey: col.key,
       header: col.label,
-      cell: ({ row }) => formatCell(col, row.original),
+      cell: ({ row, table }) => {
+        if (editableSet.has(col.key)) {
+          const rid = getRowKey(row.original, row.index);
+          const v = editValues?.[rid]?.[col.key] ?? row.original[col.key] ?? '';
+          return (
+            <input
+              type="number"
+              step="any"
+              value={v}
+              onChange={(e) => onEditChange?.(rid, col.key, e.target.value)}
+              className="w-24 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0B3C5D]/30 focus:border-[#0B3C5D]"
+            />
+          );
+        }
+        return formatCell(col, row.original);
+      },
       meta: { align: getColumnAlign(col.key) },
       enableSorting: true,
     }));
@@ -153,7 +179,7 @@ function DataTableCard({
       });
     }
     return cols;
-  }, [columns, renderActions]);
+  }, [columns, renderActions, editableSet, editValues, onEditChange, rowKey]);
 
   const table = useReactTable({
     data: isLoading ? [] : filteredData,
@@ -162,7 +188,7 @@ function DataTableCard({
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getRowId: (row, index) => String(row.acc_id ?? row.id ?? row[columns?.[0]?.key] ?? index),
+    getRowId: (row, index) => getRowKey(row, index),
   });
 
   return (
@@ -373,6 +399,13 @@ function DataTableCard({
           </AnimatePresence>
         )}
       </div>
+
+      {/* ── Footer actions (e.g. GENERATE) ── */}
+      {showDataPanel && footerActions && (
+        <div className="flex justify-center gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-600/60 bg-white dark:bg-slate-900/40">
+          {footerActions}
+        </div>
+      )}
 
       {/* ── Pagination ── */}
       {showDataPanel && (

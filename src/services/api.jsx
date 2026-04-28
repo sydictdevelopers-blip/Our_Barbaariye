@@ -76,6 +76,27 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
   });
 }
 
+/**
+ * runBulk – POST /api/bulk { steps } in one transaction.
+ * Returns { success, vars, results } from the server.
+ */
+export async function runBulk(steps) {
+  const res = await fetch(`${API_BASE}/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steps }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || 'Bulk failed');
+  return json;
+}
+
+/** Read u_br_id from session for bulk SP params. */
+export function getSessionUBrIdNum() {
+  const v = getSessionUBrId();
+  return v ? Number(v) : 0;
+}
+
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
   const sessionBrId = getSessionBrId();
   const sessionUBrId = getSessionUBrId();

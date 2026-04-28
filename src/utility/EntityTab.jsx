@@ -9,7 +9,7 @@ import Select2 from '../components/ui/Select2';
 import DataTableCard from '../components/DataTableCard';
 import Card from '../components/ui/Card';
 import { CRUD_CONFIG } from '../config/crudConfig';
-import { makeOptionLoader, crud } from '../services/api';
+import { makeOptionLoader, crud, runBulk, getSessionUBrIdNum } from '../services/api';
 import {
   loadData,
   setSearchQuery,
@@ -56,6 +56,8 @@ export default function EntityTab({
   levelOptionsQuery,
   showExamSelect = false,
   examOptionsQuery,
+  showSubjectSelect = false,
+  subjectOptionsQuery,
   showResponsibleSelect = false,
   responsibleOptionsQuery,
   showStudentSelect = false,
@@ -104,6 +106,8 @@ export default function EntityTab({
   const limit = entity.itemsPerPage || 10;
   const [showDataPanel, setShowDataPanel] = useState(false);
   const [viewMode, setViewMode] = useState('data'); // 'data' | 'form'
+  const [editValues, setEditValues] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-show data panel after external loadData (e.g. reloadEntity post-CRUD)
   useEffect(() => {
@@ -111,6 +115,61 @@ export default function EntityTab({
       setShowDataPanel(true);
     }
   }, [entity.data, showDataPanel]);
+
+  // Result tab → ADD NEW: enable inline marks entry on `marks` column
+  const isResultAddNew = activeEntityKey === 'ResultAddNew';
+  const editableColumns = isResultAddNew ? ['marks'] : undefined;
+  const onEditChange = useCallback((rowId, colKey, value) => {
+    setEditValues((prev) => ({ ...prev, [rowId]: { ...prev[rowId], [colKey]: value } }));
+  }, []);
+  // Reset edits when query/filters change
+  useEffect(() => { setEditValues({}); }, [activeEntityKey, activeExtra]);
+
+  const handleGenerate = useCallback(async () => {
+    const items = Object.entries(editValues)
+      .map(([std_cl_id, vals]) => ({ std_cl_id: Number(std_cl_id), marks: Number(vals?.marks) }))
+      .filter((it) => Number.isFinite(it.std_cl_id) && Number.isFinite(it.marks));
+    if (!items.length) {
+      swalError('Marks lama gelin', 'Fadlan gali marks ugu yaraan hal arday.');
+      return;
+    }
+    const e_r_id = Number(activeExtra.ex_id) || 0;
+    const su_id = Number(activeExtra.sub_id) || 0;
+    const u_br_id = getSessionUBrIdNum();
+    if (!e_r_id || !su_id) {
+      swalError('Filterka lama dhamaystirin', 'Fadlan dooro Exam iyo Subject.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await runBulk([
+        {
+          type: 'forEach',
+          source: items,
+          step: {
+            type: 'sp',
+            fn: 'result_sp',
+            params: [
+              0,                          // p_id (kaliya delete-ka loo isticmaalo)
+              { refIter: 'std_cl_id' },   // p_student = std_cl_id (insert mode)
+              e_r_id,                     // p_exam
+              su_id,                      // p_subject
+              { refIter: 'marks' },       // p_mark (varchar — bulk wuxuu u dirayaa string)
+              u_br_id,                    // p_user_id = u_br_id
+              'insert',                   // p_operation
+            ],
+          },
+        },
+      ]);
+      swalSuccess('Waa la guulaystey', `${items.length} marks ayaa la kaydiyay.`);
+      setEditValues({});
+      dispatch(loadData(loadPayload(activeEntityKey, 1, limit, '', activeExtra)));
+    } catch (e) {
+      swalError('Khalad ayaa dhacay', e.message || '');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [editValues, activeExtra, activeEntityKey, limit, dispatch]);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
   const [selectedAcademicYearLabel, setSelectedAcademicYearLabel] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
@@ -121,6 +180,8 @@ export default function EntityTab({
   const [selectedLevelLabel, setSelectedLevelLabel] = useState('');
   const [selectedExamId, setSelectedExamId] = useState('');
   const [selectedExamLabel, setSelectedExamLabel] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [selectedSubjectLabel, setSelectedSubjectLabel] = useState('');
 
   // Automatic: haddii academicYearOptionsQuery la gudbin waayo, default waa academicYeartab
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
@@ -128,16 +189,31 @@ export default function EntityTab({
   const batOptionsQuery = batchOptionsQuery ?? 'batch_options';
   const lvlOptionsQuery = levelOptionsQuery ?? 'levels';
   const examOptQuery = examOptionsQuery ?? 'exam_options';
+  const subOptionsQuery = subjectOptionsQuery ?? 'result_subject_options';
   const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
   const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_select';
 
   // Lazy loaders — dropdown opens / user types → server fetches first 25 (search beyond that).
-  // No fetches happen on tab mount; the user picks the year/class/responsible from the dropdown.
-  const acadLoader = useMemo(() => makeOptionLoader(optionsQuery), [optionsQuery]);
+  // Loaders that depend on other selects (batch→class, subject→class+academic, exam→class+academic)
+  // read live state via getExtra so chained dropdowns refresh on selection change.
+  const acadLoader = useMemo(
+    () => makeOptionLoader(optionsQuery, () => ({ cl_id: selectedClassId })),
+    [optionsQuery, selectedClassId]
+  );
   const classLoader = useMemo(() => makeOptionLoader(clsOptionsQuery), [clsOptionsQuery]);
-  const batchLoader = useMemo(() => makeOptionLoader(batOptionsQuery), [batOptionsQuery]);
+  const batchLoader = useMemo(
+    () => makeOptionLoader(batOptionsQuery, () => ({ cl_id: selectedClassId })),
+    [batOptionsQuery, selectedClassId]
+  );
   const levelLoader = useMemo(() => makeOptionLoader(lvlOptionsQuery), [lvlOptionsQuery]);
-  const examLoader = useMemo(() => makeOptionLoader(examOptQuery), [examOptQuery]);
+  const examLoader = useMemo(
+    () => makeOptionLoader(examOptQuery, () => ({ cl_id: selectedClassId, a_y_id: selectedAcademicYearId })),
+    [examOptQuery, selectedClassId, selectedAcademicYearId]
+  );
+  const subjectLoader = useMemo(
+    () => makeOptionLoader(subOptionsQuery, () => ({ cl_id: selectedClassId, a_y_id: selectedAcademicYearId })),
+    [subOptionsQuery, selectedClassId, selectedAcademicYearId]
+  );
   const respLoader = useMemo(() => makeOptionLoader(resOptionsQuery), [resOptionsQuery]);
   const studentLoader = useMemo(() => makeOptionLoader(stuOptionsQuery), [stuOptionsQuery]);
 
@@ -146,16 +222,18 @@ export default function EntityTab({
   const batchIdForLoad = showBatchSelect ? selectedBatchId : undefined;
   const levelIdForLoad = showLevelSelect ? selectedLevelId : undefined;
   const examIdForLoad = showExamSelect ? selectedExamId : undefined;
+  const subjectIdForLoad = showSubjectSelect ? selectedSubjectId : undefined;
   const responsibleIdForLoad = showResponsibleSelect ? selectedResponsibleId : undefined;
   const studentIdForLoad = showStudentSelect ? selectedStudentId : undefined;
 
   const buildExtra = useCallback(
-    (academicYearId, classId, batchId, levelId, examId, responsibleId, studentId) => ({
+    (academicYearId, classId, batchId, levelId, examId, responsibleId, studentId, subjectId) => ({
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
       ...(classId != null && String(classId).trim() && { cl_id: String(classId).trim() }),
       ...(batchId != null && String(batchId).trim() && { b_id: String(batchId).trim() }),
       ...(levelId != null && String(levelId).trim() && { lev_id: String(levelId).trim() }),
       ...(examId != null && String(examId).trim() && { ex_id: String(examId).trim() }),
+      ...(subjectId != null && String(subjectId).trim() && { sub_id: String(subjectId).trim() }),
       ...(responsibleId != null && String(responsibleId).trim() && { res_id: String(responsibleId).trim() }),
       ...(studentId != null && String(studentId).trim() && { std_cl_id: String(studentId).trim() }),
       ...extraLoadParams,
@@ -164,8 +242,8 @@ export default function EntityTab({
   );
 
   const onShowData = useCallback(
-    (btnId, academicYearId, classId, batchId, levelId, examId, responsibleId, studentId) => {
-      const extra = buildExtra(academicYearId, classId, batchId, levelId, examId, responsibleId, studentId);
+    (btnId, academicYearId, classId, batchId, levelId, examId, responsibleId, studentId, subjectId) => {
+      const extra = buildExtra(academicYearId, classId, batchId, levelId, examId, responsibleId, studentId, subjectId);
       setViewMode('data');
       setShowDataPanel(true);
       setActiveEntityKey(btnId);
@@ -231,15 +309,35 @@ export default function EntityTab({
 
   const headerActions = (
     <>
-      {showLevelSelect && (
+      {showClassSelect && (
         <div className="min-w-[180px]">
           <Select2
-            name="levelSelect"
-            value={selectedLevelId}
-            selectedLabel={selectedLevelLabel}
-            onChange={(e) => { setSelectedLevelId(e.target.value); setSelectedLevelLabel(e.target.label || ''); }}
-            loadOptions={levelLoader}
-            placeholder="Select Level"
+            name="classSelect"
+            value={selectedClassId}
+            selectedLabel={selectedClassLabel}
+            onChange={(e) => {
+              setSelectedClassId(e.target.value);
+              setSelectedClassLabel(e.target.label || '');
+              setSelectedBatchId(''); setSelectedBatchLabel('');
+              setSelectedAcademicYearId(''); setSelectedAcademicYearLabel('');
+              setSelectedSubjectId(''); setSelectedSubjectLabel('');
+              setSelectedExamId(''); setSelectedExamLabel('');
+            }}
+            loadOptions={classLoader}
+            placeholder="Select Class"
+            isClearable={false}
+          />
+        </div>
+      )}
+      {showBatchSelect && (
+        <div className="min-w-[150px]">
+          <Select2
+            name="batchSelect"
+            value={selectedBatchId}
+            selectedLabel={selectedBatchLabel}
+            onChange={(e) => { setSelectedBatchId(e.target.value); setSelectedBatchLabel(e.target.label || ''); }}
+            loadOptions={batchLoader}
+            placeholder="Select Batch"
             isClearable={false}
           />
         </div>
@@ -250,9 +348,27 @@ export default function EntityTab({
             name="academicYear"
             value={selectedAcademicYearId}
             selectedLabel={selectedAcademicYearLabel}
-            onChange={(e) => { setSelectedAcademicYearId(e.target.value); setSelectedAcademicYearLabel(e.target.label || ''); }}
+            onChange={(e) => {
+              setSelectedAcademicYearId(e.target.value);
+              setSelectedAcademicYearLabel(e.target.label || '');
+              setSelectedSubjectId(''); setSelectedSubjectLabel('');
+              setSelectedExamId(''); setSelectedExamLabel('');
+            }}
             loadOptions={acadLoader}
             placeholder={t('entity.selectAcademic')}
+            isClearable={false}
+          />
+        </div>
+      )}
+      {showSubjectSelect && (
+        <div className="min-w-[180px]">
+          <Select2
+            name="subjectSelect"
+            value={selectedSubjectId}
+            selectedLabel={selectedSubjectLabel}
+            onChange={(e) => { setSelectedSubjectId(e.target.value); setSelectedSubjectLabel(e.target.label || ''); }}
+            loadOptions={subjectLoader}
+            placeholder="Select Subject"
             isClearable={false}
           />
         </div>
@@ -270,28 +386,15 @@ export default function EntityTab({
           />
         </div>
       )}
-      {showClassSelect && (
+      {showLevelSelect && (
         <div className="min-w-[180px]">
           <Select2
-            name="classSelect"
-            value={selectedClassId}
-            selectedLabel={selectedClassLabel}
-            onChange={(e) => { setSelectedClassId(e.target.value); setSelectedClassLabel(e.target.label || ''); }}
-            loadOptions={classLoader}
-            placeholder="Select Class"
-            isClearable={false}
-          />
-        </div>
-      )}
-      {showBatchSelect && (
-        <div className="min-w-[150px]">
-          <Select2
-            name="batchSelect"
-            value={selectedBatchId}
-            selectedLabel={selectedBatchLabel}
-            onChange={(e) => { setSelectedBatchId(e.target.value); setSelectedBatchLabel(e.target.label || ''); }}
-            loadOptions={batchLoader}
-            placeholder="Select Batch"
+            name="levelSelect"
+            value={selectedLevelId}
+            selectedLabel={selectedLevelLabel}
+            onChange={(e) => { setSelectedLevelId(e.target.value); setSelectedLevelLabel(e.target.label || ''); }}
+            loadOptions={levelLoader}
+            placeholder="Select Level"
             isClearable={false}
           />
         </div>
@@ -332,7 +435,6 @@ export default function EntityTab({
             swalError('Function-ka diyaar uma ahan', `${btn.label} weli lama dhammaystirin.`);
             return;
           }
-          if (isBulkAction && bulkForm) {
           if (isDeleteAction) {
             swalConfirmAction({
               title: t('swal.titles.confirmDelete'),
@@ -372,11 +474,15 @@ export default function EntityTab({
               swalError('Fadlan dooro Batch', '');
               return;
             }
+            if (showSubjectSelect && (!selectedSubjectId || String(selectedSubjectId).trim() === '')) {
+              swalError('Fadlan dooro Subject', '');
+              return;
+            }
             if (showStudentSelect && (!selectedStudentId || String(selectedStudentId).trim() === '')) {
               swalError(t('entity.selectStudent', 'Dooro Arday'), '');
               return;
             }
-            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, responsibleIdForLoad, studentIdForLoad);
+            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, responsibleIdForLoad, studentIdForLoad, subjectIdForLoad);
           }
         };
         return (
@@ -474,7 +580,16 @@ export default function EntityTab({
       emptyTitle={fallbackMessage || t('entity.notFound')}
       emptyDescription=""
       hasActions
-      renderActions={renderActions}
+      renderActions={isResultAddNew ? undefined : renderActions}
+      editableColumns={editableColumns}
+      editValues={editValues}
+      onEditChange={onEditChange}
+      rowKey="id"
+      footerActions={isResultAddNew && paginatedData?.length ? (
+        <Button size="sm" variant="primary" onClick={handleGenerate} disabled={isSubmitting}>
+          {isSubmitting ? 'KAYDINTA…' : 'GENERATE'}
+        </Button>
+      ) : null}
       total={totalRows}
       currentPage={entity.currentPage}
       totalPages={totalPages}
