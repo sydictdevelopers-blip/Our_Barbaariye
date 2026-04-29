@@ -89,6 +89,41 @@ async function deleteOldImage(stdId) {
   }
 }
 
+/**
+ * POST /api/student-image/upload-new — upload sawir hore-u-soo-shubid arday-cusub.
+ * Loo isticmaalo registration-form-ka (waqtigan std_id weli ma jiro). Wuxuu soo
+ * celiyaa { ok, image: '<public-url>' } oo form-ku ku kaydiya `image_sp`.
+ *
+ * Magaca S3 key-ga: Barbaare_v10_demo/_pending/<timestamp>_<random>_<filename>
+ * — magac aan kuli karin si aanan u qaldin sawirka kuwa hore.
+ */
+async function handleUploadNew(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const Bucket = process.env.S3_BUCKET;
+    const ts = Date.now();
+    const rand = Math.random().toString(36).slice(2, 8);
+    const Key = `${S3_FOLDER}/_pending/${ts}_${rand}_${sanitizeFilename(req.file.originalname)}`;
+
+    await s3.send(new PutObjectCommand({
+      Bucket,
+      Key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    }));
+
+    const base = process.env.S3_PUBLIC_BASE
+      || `https://${Bucket}.s3.${process.env.S3_REGION}.amazonaws.com`;
+    const publicUrl = `${base.replace(/\/$/, '')}/${Key}`;
+    res.json({ ok: true, image: publicUrl });
+  } catch (err) {
+    console.error('[student-image/upload-new]', err.message);
+    res.status(500).json({ error: err.message || 'Upload failed' });
+  }
+}
+
 async function handleUpload(req, res) {
   try {
     const stdId = Number(req.body?.std_id);
@@ -127,6 +162,7 @@ async function handleUpload(req, res) {
 
 function register(app) {
   app.post('/api/student-image/upload', upload.single('file'), handleUpload);
+  app.post('/api/student-image/upload-new', upload.single('file'), handleUploadNew);
 }
 
 module.exports = { register };

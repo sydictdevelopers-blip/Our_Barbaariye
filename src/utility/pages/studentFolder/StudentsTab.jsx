@@ -5,9 +5,10 @@ import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
-import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
+import { fetchDataPaginated, fetchSelectOptions, makeOptionLoader } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
-import { getSessionBrId } from '../../../config/crudConfig';
+import { CRUD_CONFIG, getSessionBrId } from '../../../config/crudConfig';
+import CrudModal from '../../../modals/CrudModal';
 import StudentImagesPanel from './StudentImagesPanel';
 import StudentResponsiblesPanel from './StudentResponsiblesPanel';
 import StudentEmisPanel from './StudentEmisPanel';
@@ -97,7 +98,47 @@ export default function StudentsTab() {
   const placeholder = (label) => () => swalSuccess(label, t('students.featureInProgress'));
 
   const handleStudentClassUpdate = placeholder(t('students.classUpdateLabel'));
-  const handleAddNew = placeholder(t('students.addNew'));
+
+  // ----- Student registration modal (StudentRegister CRUD config) -----
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registerMode, setRegisterMode] = useState('insert');
+  const [registerInitial, setRegisterInitial] = useState({});
+  const registerConfig = CRUD_CONFIG['StudentRegister'];
+
+  const handleAddNew = async () => {
+    // Academic Year + Batch are hidden in the form — supply them now.
+    // Prefer the toolbar filter; fall back to the active academic year from the DB.
+    let academicId = filterAcademic ? String(filterAcademic) : '';
+    if (!academicId) {
+      try {
+        const res = await fetchSelectOptions('academic_options', 25);
+        const rows = res?.data || [];
+        const active = rows.find((r) => String(r.state || '').toLowerCase() === 'active') || rows[0];
+        if (active?.a_y_id != null) academicId = String(active.a_y_id);
+      } catch { /* fall through — guard below shows error */ }
+    }
+    if (!academicId) {
+      swalError(t('students.errAcademicYearMissing'));
+      return;
+    }
+    const preset = {
+      a_y_id_sp: academicId,
+      ...(filterClass       && { cl_id_sp: String(filterClass) }),
+      ...(filterClassLabel  && { cl_id_sp_label: filterClassLabel }),
+      ...(filterBatch       && { b_id_sp: String(filterBatch) }),
+    };
+    setRegisterInitial(preset);
+    setRegisterMode('insert');
+    setRegisterOpen(true);
+  };
+  const handleRegisterSuccess = async () => {
+    if (filterClass && filterBatch && filterAcademic) {
+      try {
+        const rows = await fetchRows();
+        setTableData(rows.map((r, i) => ({ id: r.std_id ?? i, ...r })));
+      } catch { /* ignore: filter still informs UI */ }
+    }
+  };
   // 'students' (default table) | 'images' (image upload panel) | 'responsibles' (edit panel) | 'emis' (id-card edit panel)
   const [viewMode, setViewMode] = useState('students');
   const handleAddImage = () => {
@@ -261,6 +302,16 @@ export default function StudentsTab() {
           onClose={() => setViewMode('students')}
         />
       ) : (
+        <>
+        <CrudModal
+          isOpen={registerOpen}
+          onClose={() => setRegisterOpen(false)}
+          config={registerConfig}
+          initialForm={registerInitial}
+          mode={registerMode}
+          onSuccess={handleRegisterSuccess}
+          moduleKey="StudentRegister"
+        />
         <DataTableCard
           showDataPanel={tableLoaded}
           searchPlaceholder={t('common.search')}
@@ -282,6 +333,7 @@ export default function StudentsTab() {
           onPageClick={(p) => setCurrentPage(p)}
           onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
         />
+        </>
       )}
     </div>
   );
