@@ -224,6 +224,24 @@ export async function deleteModuleHelp(mh_id) {
   return body;
 }
 
+/**
+ * uploadNewStudentImage – upload sawir hore-u-soo-shubid arday-cusub.
+ * Wuxuu soo celiyaa { ok: true, image: '<public-url>' } S3-da. Loo isticmaalo
+ * StudentRegister modal-ka, ka hor inta SP-yada aanan la wicin.
+ */
+export async function uploadNewStudentImage(file) {
+  if (!file) throw new Error('No file');
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${API_BASE}/student-image/upload-new`, {
+    method: 'POST',
+    body: fd,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || 'Upload failed');
+  return body;
+}
+
 /** Upload video file → soo celi { url, filename }. file waa File object. */
 export async function uploadModuleVideo(file, onProgress) {
   if (!file) throw new Error('No file');

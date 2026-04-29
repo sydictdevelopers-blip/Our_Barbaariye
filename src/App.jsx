@@ -8,6 +8,8 @@ import LoginPage from './utility/LoginPage';
 import UserPrivilegePage from './utility/UserPrivilegePage';
 import AcademicSetup from './utility/pages/academicfolder/AcademicSetup';
 import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
+import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
+import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
 import { setBranch } from './slices/uiSlice';
 import { fetchUserBranches } from './services/api';
@@ -85,6 +87,8 @@ function AppContent() {
                   <Route path="/student_marks" element={<AcademicSetup />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
                   <Route path="/ActivityManagement" element={<AcademicSetup />} />
+                  <Route path="/ComplainManagement" element={<ComplainManagementPage />} />
+                  <Route path="/MeetingMinutes" element={<MeetingMinutesPage />} />
                   <Route path="/CreateExam" element={<AcademicSetup />} />
                   <Route path="/ExamService" element={<AcademicSetup />} />
                   <Route path="/ExamSetting" element={<AcademicSetup />} />

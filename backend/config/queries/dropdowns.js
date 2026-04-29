@@ -70,4 +70,38 @@ module.exports = {
   chapter_options: 'SELECT ch.chap_id id, ch.chapter name FROM chapters ch',
   category_options: 'SELECT ec.ex_c_id id, ec.exam name FROM exam_category ec',
   grade_options: 'SELECT g.gr_id, g.grade_name FROM grade g',
+
+  // ----- Student registration dropdown sources -----
+  enroll_type_options:           'SELECT en_ty_id, type AS enroll_type FROM enroll_type ORDER BY en_ty_id',
+  // Faxlid sii fudud — kaliya 8-da magac ee Soomaaliyeed ee laga rabo arday-registration.
+  responsible_relation_options: `
+    SELECT r_r_id, relationtype AS relation_name
+      FROM responsible_relation
+     WHERE relationtype IN ('Hooyo','Aabo','Aboowe','Abaayo','Adeer','Abti','Eedo','Habaryar')
+     ORDER BY CASE relationtype
+              WHEN 'Hooyo' THEN 1 WHEN 'Aabo'  THEN 2
+              WHEN 'Aboowe' THEN 3 WHEN 'Abaayo' THEN 4
+              WHEN 'Adeer' THEN 5 WHEN 'Abti' THEN 6
+              WHEN 'Eedo'  THEN 7 WHEN 'Habaryar' THEN 8
+              END`,
+  type_fee_options:              'SELECT t_f_id, type AS type_fee_name FROM type_fee ORDER BY t_f_id',
+  // Branch-aware bus list. Always prepend the global 'None' sentinel so the form
+  // can use it to mean "no bus assigned" — bus_fee then hides on the frontend
+  // and the SP forces bus_fee=0 server-side. vw_bus(p_branch) emits one synthetic
+  // row with id=NULL when empty — filter that out.
+  bus_options: (p) => `
+    SELECT id, bus_name FROM (
+      (SELECT 0 AS sort_key, b.bus_id AS id, b.bus_name
+         FROM bus b
+        WHERE lower(b.bus_name) = 'none'
+        ORDER BY b.bus_id
+        LIMIT 1)
+      UNION ALL
+      SELECT 1 AS sort_key, v.id, v.bus_name
+        FROM vw_bus(${Number(p?.br_id) || 0}) v
+       WHERE v.id IS NOT NULL AND lower(v.bus_name) <> 'none'
+    ) t
+    ORDER BY t.sort_key, t.bus_name
+  `,
+  student_type_fee_options: 'SELECT st_ty_id, type_fee AS type_fee_name FROM student_type_fee ORDER BY type_fee',
 };

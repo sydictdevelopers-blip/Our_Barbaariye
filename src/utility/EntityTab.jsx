@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, Check, X } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ActionButton from '../components/ui/ActionButton';
 import Select2 from '../components/ui/Select2';
@@ -27,6 +28,26 @@ const toLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1, -1);
 
 // Halkaan ka qeexo query-ka academic year – automatic loo isticmaalo haddii tab kuu pass gudbin
 const DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY = 'academicYeartab';
+
+// Persist filter selections per-tab in sessionStorage so they survive the tab
+// remount caused by AcademicSetup's `<motion.div key={activeTab}>`. Same API as
+// useState, just hydrates from / writes to a string key.
+function usePersistedState(key, defaultValue) {
+  const [val, setVal] = useState(() => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const stored = window.sessionStorage.getItem(key);
+      return stored != null ? JSON.parse(stored) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { window.sessionStorage.setItem(key, JSON.stringify(val)); } catch { /* quota or disabled */ }
+  }, [key, val]);
+  return [val, setVal];
+}
 
 /** Server-side: api/data supports page, limit, search. Pagination + search waa API. */
 const loadPayload = (entityKey, page, limit, search, extra = {}) => ({
@@ -79,16 +100,21 @@ function EntityTab({
   };
   const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
   const [activeExtra, setActiveExtra] = useState({});
-  const [selectedResponsibleId, setSelectedResponsibleId] = useState('');
-  const [selectedResponsibleLabel, setSelectedResponsibleLabel] = useState('');
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
+  // Filter selections persist per-tab via sessionStorage (key prefixed with entityKey).
+  const fkey = (f) => `filters:${entityKey}:${f}`;
+  const [selectedResponsibleId, setSelectedResponsibleId] = usePersistedState(fkey('respId'), '');
+  const [selectedResponsibleLabel, setSelectedResponsibleLabel] = usePersistedState(fkey('respLabel'), '');
+  const [selectedStudentId, setSelectedStudentId] = usePersistedState(fkey('studentId'), '');
+  const [selectedStudentLabel, setSelectedStudentLabel] = usePersistedState(fkey('studentLabel'), '');
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
-  const columns = hiddenColumns?.length
-    ? (rawColumns || []).filter((c) => !hiddenColumns.includes(c.key))
-    : rawColumns;
+  // Stable ref: tanstack-table treats `columns` change as a column rebuild,
+  // which can remount editable cells (loses input focus mid-typing).
+  const columns = useMemo(
+    () => (hiddenColumns?.length ? (rawColumns || []).filter((c) => !hiddenColumns.includes(c.key)) : rawColumns),
+    [rawColumns, hiddenColumns]
+  );
   const rawPaginatedData = useSelector(selectPaginatedData(activeEntityKey));
   // SP fallback row pattern: 1 row with no PK → treat as empty + extract message from
   // the first non-null string field (e.g. SP returns "This Information Was Not Found!").
@@ -110,16 +136,28 @@ function EntityTab({
   const [editValues, setEditValues] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-show data panel after external loadData (e.g. reloadEntity post-CRUD)
+  // Auto-show data panel after external loadData (e.g. reloadEntity post-CRUD).
+  // suppressAutoShowRef lets handleGenerate hide the panel without it bouncing
+  // back open just because entity.data still has the previous rows in memory.
+  const suppressAutoShowRef = useRef(false);
   useEffect(() => {
+    if (suppressAutoShowRef.current) return;
     if (!showDataPanel && Array.isArray(entity.data) && entity.data.length > 0) {
       setShowDataPanel(true);
     }
   }, [entity.data, showDataPanel]);
 
-  // Result tab → ADD NEW: enable inline marks entry on `marks` column
+  // Result tab → ADD NEW (insert) and EDIT EXAM (update): both use inline marks entry.
   const isResultAddNew = activeEntityKey === 'ResultAddNew';
-  const editableColumns = isResultAddNew ? ['marks'] : undefined;
+  const isEditExam = activeEntityKey === 'EditExam';
+  const isMarksEntry = isResultAddNew || isEditExam;
+  // Approve Exam tab uses approve/cancel per-row buttons instead of edit/delete.
+  const isApproveExam = activeEntityKey === 'ApproveExam';
+  // Stable ref so DataTableCard's column rebuild doesn't remount the input each keystroke.
+  const editableColumns = useMemo(() => (isMarksEntry ? ['marks'] : undefined), [isMarksEntry]);
+  // Per-column max source: btn_insert_exam returns max_mark on each row, so the
+  // input on the `marks` column caps at that value (also enforced server-side in result_sp).
+  const editableMaxField = useMemo(() => (isMarksEntry ? { marks: 'max_mark' } : undefined), [isMarksEntry]);
   const onEditChange = useCallback((rowId, colKey, value) => {
     setEditValues((prev) => ({ ...prev, [rowId]: { ...prev[rowId], [colKey]: value } }));
   }, []);
@@ -127,9 +165,11 @@ function EntityTab({
   useEffect(() => { setEditValues({}); }, [activeEntityKey, activeExtra]);
 
   const handleGenerate = useCallback(async () => {
+    // editValues is keyed by row.id — for ResultAddNew that's std_cl_id (insert),
+    // for EditExam that's r_id (update). Same shape, different SP semantics.
     const items = Object.entries(editValues)
-      .map(([std_cl_id, vals]) => ({ std_cl_id: Number(std_cl_id), marks: Number(vals?.marks) }))
-      .filter((it) => Number.isFinite(it.std_cl_id) && Number.isFinite(it.marks));
+      .map(([id, vals]) => ({ id: Number(id), marks: Number(vals?.marks) }))
+      .filter((it) => Number.isFinite(it.id) && Number.isFinite(it.marks));
     if (!items.length) {
       swalError('Marks lama gelin', 'Fadlan gali marks ugu yaraan hal arday.');
       return;
@@ -143,6 +183,9 @@ function EntityTab({
     }
     setIsSubmitting(true);
     try {
+      // For 'update' the SP convention puts r_id in p_student (and also p_id);
+      // for 'insert' p_id is unused so we pass 0 and put std_cl_id in p_student.
+      const oper = isEditExam ? 'update' : 'insert';
       await runBulk([
         {
           type: 'forEach',
@@ -151,38 +194,41 @@ function EntityTab({
             type: 'sp',
             fn: 'result_sp',
             params: [
-              0,                          // p_id (kaliya delete-ka loo isticmaalo)
-              { refIter: 'std_cl_id' },   // p_student = std_cl_id (insert mode)
-              e_r_id,                     // p_exam
-              su_id,                      // p_subject
-              { refIter: 'marks' },       // p_mark (varchar — bulk wuxuu u dirayaa string)
-              u_br_id,                    // p_user_id = u_br_id
-              'insert',                   // p_operation
+              isEditExam ? { refIter: 'id' } : 0,   // p_id
+              { refIter: 'id' },                     // p_student (std_cl_id or r_id)
+              e_r_id,                                 // p_exam
+              su_id,                                  // p_subject
+              { refIter: 'marks' },                   // p_mark (varchar)
+              u_br_id,                                // p_user_id
+              oper,                                   // p_operation
             ],
           },
         },
       ]);
       swalSuccess('Waa la guulaystey', `${items.length} marks ayaa la kaydiyay.`);
       setEditValues({});
-      dispatch(loadData(loadPayload(activeEntityKey, 1, limit, '', activeExtra)));
+      // Hide the data panel after Generate. User must click the load button
+      // (Add New / Edit Exam) again to re-fetch and re-show the table.
+      suppressAutoShowRef.current = true;
+      setShowDataPanel(false);
     } catch (e) {
       swalError('Khalad ayaa dhacay', e.message || '');
     } finally {
       setIsSubmitting(false);
     }
-  }, [editValues, activeExtra, activeEntityKey, limit, dispatch]);
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState('');
-  const [selectedAcademicYearLabel, setSelectedAcademicYearLabel] = useState('');
-  const [selectedClassId, setSelectedClassId] = useState('');
-  const [selectedClassLabel, setSelectedClassLabel] = useState('');
-  const [selectedBatchId, setSelectedBatchId] = useState('');
-  const [selectedBatchLabel, setSelectedBatchLabel] = useState('');
-  const [selectedLevelId, setSelectedLevelId] = useState('');
-  const [selectedLevelLabel, setSelectedLevelLabel] = useState('');
-  const [selectedExamId, setSelectedExamId] = useState('');
-  const [selectedExamLabel, setSelectedExamLabel] = useState('');
-  const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [selectedSubjectLabel, setSelectedSubjectLabel] = useState('');
+  }, [editValues, activeExtra, activeEntityKey, limit, dispatch, isEditExam]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = usePersistedState(fkey('acadId'), '');
+  const [selectedAcademicYearLabel, setSelectedAcademicYearLabel] = usePersistedState(fkey('acadLabel'), '');
+  const [selectedClassId, setSelectedClassId] = usePersistedState(fkey('classId'), '');
+  const [selectedClassLabel, setSelectedClassLabel] = usePersistedState(fkey('classLabel'), '');
+  const [selectedBatchId, setSelectedBatchId] = usePersistedState(fkey('batchId'), '');
+  const [selectedBatchLabel, setSelectedBatchLabel] = usePersistedState(fkey('batchLabel'), '');
+  const [selectedLevelId, setSelectedLevelId] = usePersistedState(fkey('levelId'), '');
+  const [selectedLevelLabel, setSelectedLevelLabel] = usePersistedState(fkey('levelLabel'), '');
+  const [selectedExamId, setSelectedExamId] = usePersistedState(fkey('examId'), '');
+  const [selectedExamLabel, setSelectedExamLabel] = usePersistedState(fkey('examLabel'), '');
+  const [selectedSubjectId, setSelectedSubjectId] = usePersistedState(fkey('subjectId'), '');
+  const [selectedSubjectLabel, setSelectedSubjectLabel] = usePersistedState(fkey('subjectLabel'), '');
 
   // Automatic: haddii academicYearOptionsQuery la gudbin waayo, default waa academicYeartab
   const optionsQuery = academicYearOptionsQuery ?? DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY;
@@ -246,10 +292,19 @@ function EntityTab({
     (btnId, academicYearId, classId, batchId, levelId, examId, responsibleId, studentId, subjectId) => {
       const extra = buildExtra(academicYearId, classId, batchId, levelId, examId, responsibleId, studentId, subjectId);
       setViewMode('data');
+      // Re-arm auto-show so the panel reopens once fresh data arrives.
+      suppressAutoShowRef.current = false;
       setShowDataPanel(true);
       setActiveEntityKey(btnId);
       setActiveExtra(extra);
-      dispatch(loadData(loadPayload(btnId, 1, limit, '', extra)));
+      // Marks-entry views (Add New & Edit Exam): default 50/page so teachers see most
+      // of a class without paging through small pages.
+      const isMarksEntryBtn = btnId === 'ResultAddNew' || btnId === 'EditExam';
+      const effectiveLimit = isMarksEntryBtn ? 50 : limit;
+      dispatch(loadData(loadPayload(btnId, 1, effectiveLimit, '', extra)));
+      if (isMarksEntryBtn) {
+        dispatch(setItemsPerPage({ entityKey: btnId, value: 50 }));
+      }
     },
     [limit, dispatch, buildExtra]
   );
@@ -309,6 +364,24 @@ function EntityTab({
     [config, activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery, buildExtra]
   );
 
+  // Approve Exam — per-row approve (commit `approve` → `marks`) / cancel (clear `approve`).
+  const doApproveRow = useCallback(
+    async (row, op) => {
+      try {
+        const result = await crud({
+          operation: op,
+          fn: 'result_approve_sp',
+          params: { p_id: Number(row.id), p_user_id: getSessionUBrIdNum() },
+        });
+        swalSuccess('Waa la guulaystey', result?.message || '');
+        dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage || 1, limit, entity.searchQuery, activeExtra)));
+      } catch (err) {
+        swalError('Khalad ayaa dhacay', err.message || '');
+      }
+    },
+    [activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery]
+  );
+
   const goToPage = useCallback(
     (page) => {
       dispatch(setCurrentPage({ entityKey: activeEntityKey, value: page }));
@@ -327,26 +400,48 @@ function EntityTab({
   );
 
   const renderActions = useCallback(
-    (row) => (
-      <div className="flex justify-center gap-1">
-        {extraRowActions && extraRowActions(row)}
-        {!hideEdit && (
-          <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, b_id: batchIdForLoad, lev_id: levelIdForLoad, ex_id: examIdForLoad, academicYearId: academicYearIdForLoad })}>
-            <Pencil className="w-4 h-4" />
+    (row) => {
+      if (isApproveExam) {
+        return (
+          <div className="flex justify-center gap-1">
+            <ActionButton
+              variant="success"
+              aria-label="Approve"
+              onClick={async () => { if (await swalConfirm()) doApproveRow(row, 'approve'); }}
+            >
+              <Check className="w-4 h-4" />
+            </ActionButton>
+            <ActionButton
+              variant="delete"
+              aria-label="Cancel"
+              onClick={async () => { if (await swalConfirm()) doApproveRow(row, 'cancel'); }}
+            >
+              <X className="w-4 h-4" />
+            </ActionButton>
+          </div>
+        );
+      }
+      return (
+        <div className="flex justify-center gap-1">
+          {extraRowActions && extraRowActions(row)}
+          {!hideEdit && (
+            <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, b_id: batchIdForLoad, lev_id: levelIdForLoad, ex_id: examIdForLoad, academicYearId: academicYearIdForLoad })}>
+              <Pencil className="w-4 h-4" />
+            </ActionButton>
+          )}
+          <ActionButton
+            variant="delete"
+            aria-label="Delete"
+            onClick={async () => {
+              if (await swalConfirm()) doDelete(row);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
           </ActionButton>
-        )}
-        <ActionButton
-          variant="delete"
-          aria-label="Delete"
-          onClick={async () => {
-            if (await swalConfirm()) doDelete(row);
-          }}
-        >
-          <Trash2 className="w-4 h-4" />
-        </ActionButton>
-      </div>
-    ),
-    [modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit]
+        </div>
+      );
+    },
+    [isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit]
   );
 
   const headerActions = (
@@ -366,7 +461,7 @@ function EntityTab({
               setSelectedExamId(''); setSelectedExamLabel('');
             }}
             loadOptions={classLoader}
-            placeholder="Select Class"
+            placeholder={t('entity.selectClass', 'Select Class')}
             isClearable={false}
           />
         </div>
@@ -379,7 +474,7 @@ function EntityTab({
             selectedLabel={selectedBatchLabel}
             onChange={(e) => { setSelectedBatchId(e.target.value); setSelectedBatchLabel(e.target.label || ''); }}
             loadOptions={batchLoader}
-            placeholder="Select Batch"
+            placeholder={t('entity.selectBatch', 'Select Batch')}
             isClearable={false}
           />
         </div>
@@ -410,7 +505,7 @@ function EntityTab({
             selectedLabel={selectedSubjectLabel}
             onChange={(e) => { setSelectedSubjectId(e.target.value); setSelectedSubjectLabel(e.target.label || ''); }}
             loadOptions={subjectLoader}
-            placeholder="Select Subject"
+            placeholder={t('entity.selectSubject', 'Select Subject')}
             isClearable={false}
           />
         </div>
@@ -423,7 +518,7 @@ function EntityTab({
             selectedLabel={selectedExamLabel}
             onChange={(e) => { setSelectedExamId(e.target.value); setSelectedExamLabel(e.target.label || ''); }}
             loadOptions={examLoader}
-            placeholder="Select Exam"
+            placeholder={t('entity.selectExam', 'Select Exam')}
             isClearable={false}
           />
         </div>
@@ -436,7 +531,7 @@ function EntityTab({
             selectedLabel={selectedLevelLabel}
             onChange={(e) => { setSelectedLevelId(e.target.value); setSelectedLevelLabel(e.target.label || ''); }}
             loadOptions={levelLoader}
-            placeholder="Select Level"
+            placeholder={t('entity.selectLevel', 'Select Level')}
             isClearable={false}
           />
         </div>
@@ -449,7 +544,7 @@ function EntityTab({
             selectedLabel={selectedResponsibleLabel}
             onChange={(e) => { setSelectedResponsibleId(e.target.value); setSelectedResponsibleLabel(e.target.label || ''); }}
             loadOptions={respLoader}
-            placeholder="Select Responsible"
+            placeholder={t('entity.selectResponsible', 'Select Responsible')}
             isClearable={false}
           />
         </div>
@@ -472,19 +567,61 @@ function EntityTab({
         const isBulkAction = !!btn.isBulkAction;
         const isAddNew = !!btn.modalKey;
         const isDeleteAction = !!btn.deleteAction;
+        const isBulkApproveAction = btn.bulkAction === 'approve' || btn.bulkAction === 'cancel';
         const handleClick = () => {
           if (btn.inDevelopment) {
             swalError('Function-ka diyaar uma ahan', `${btn.label} weli lama dhammaystirin.`);
             return;
           }
+          if (isBulkApproveAction) {
+            // Approve/Cancel All & Approve By Class — call result_approve_bulk_sp.
+            if (btn.requiresClass && !selectedClassId) {
+              swalError('Fadlan dooro Class', '');
+              return;
+            }
+            swalConfirmAction({
+              title: t('swal.titles.confirm', 'Hubi'),
+              text: btn.confirmText || t('entity.confirmAction', 'Are you sure?'),
+              confirmText: t('swal.buttons.yesContinue', 'Sii wad'),
+              confirmColor: btn.bulkAction === 'cancel' ? '#dc2626' : '#16a34a',
+              onConfirm: async () => {
+                const params = {
+                  p_class: btn.requiresClass ? Number(selectedClassId) : 0,
+                  p_user_id: getSessionUBrIdNum(),
+                };
+                const result = await crud({ operation: btn.bulkAction, fn: 'result_approve_bulk_sp', params });
+                if (showDataPanel) {
+                  dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
+                }
+                return { message: result?.message };
+              },
+            });
+            return;
+          }
           if (isDeleteAction) {
+            // Bulk-delete buttons (e.g. Class/Subject Exam Delete) need the same
+            // filter context as a load: validate selections, then forward them as
+            // p_* params to the SP. btn.withSubject also requires Subject.
+            if (showClassSelect && !selectedClassId) { swalError('Fadlan dooro Class', ''); return; }
+            if (showAcademicYearSelect && !selectedAcademicYearId) { swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), ''); return; }
+            if (showExamSelect && !selectedExamId) { swalError('Fadlan dooro Exam', ''); return; }
+            if (showBatchSelect && !selectedBatchId) { swalError('Fadlan dooro Batch', ''); return; }
+            if (btn.withSubject && !selectedSubjectId) { swalError('Fadlan dooro Subject', ''); return; }
             swalConfirmAction({
               title: t('swal.titles.confirmDelete'),
-              text: t('entity.confirmDeleteRecord', 'Are you sure you want to delete this record?'),
+              text: btn.confirmText || t('entity.confirmDeleteRecord', 'Are you sure you want to delete this record?'),
               confirmText: t('swal.buttons.yesDelete'),
               confirmColor: '#dc2626',
               onConfirm: async () => {
-                const result = await crud({ operation: 'delete', fn: btn.deleteAction, params: {} });
+                const params = {
+                  p_class: Number(selectedClassId) || 0,
+                  p_academic: Number(selectedAcademicYearId) || 0,
+                  p_exam: Number(selectedExamId) || 0,
+                  p_batch: Number(selectedBatchId) || 0,
+                  p_user_id: getSessionUBrIdNum(),
+                  ...(btn.withSubject && { p_subject: Number(selectedSubjectId) || 0 }),
+                };
+                const result = await crud({ operation: 'delete', fn: btn.deleteAction, params });
                 if (showDataPanel) {
                   dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage || 1, limit, entity.searchQuery, activeExtra)));
                 }
@@ -515,6 +652,10 @@ function EntityTab({
             });
           } else if (isAddNew) {
             onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, b_id: batchIdForLoad, lev_id: levelIdForLoad, ex_id: examIdForLoad, academicYearId: academicYearIdForLoad });
+          } else if (btn.skipFilterValidation) {
+            // "Show Data All" style — load with whatever filters happen to be set, but
+            // don't refuse on missing selections.
+            onShowData(btn.id, academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, responsibleIdForLoad, studentIdForLoad, subjectIdForLoad);
           } else {
             // Filter-validation: haddii btn.requires array uu jiro, kaliya
             // filter-yadaas ayaa la hubinayaa (eg. Show All wuxuu u baahan
@@ -608,6 +749,17 @@ function EntityTab({
   useEffect(() => {
     if (!showDataPanel) return;
     if (requiredFilterMissing) return;
+  // Search debouncer: re-runs when entity/limit/filters change too, but those paths
+  // (onShowData, handlePageSizeChange, doDelete) already dispatch loadData directly —
+  // so on context change we just sync the ref and skip, only firing on real searchQuery edits.
+  const lastContextRef = useRef('');
+  useEffect(() => {
+    if (!showDataPanel) return;
+    const currentContext = `${activeEntityKey}|${limit}|${JSON.stringify(activeExtra)}`;
+    if (lastContextRef.current !== currentContext) {
+      lastContextRef.current = currentContext;
+      return;
+    }
     const t = setTimeout(() => {
       dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
       dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
@@ -661,13 +813,20 @@ function EntityTab({
       emptyTitle={fallbackMessage || t('entity.notFound')}
       emptyDescription=""
       hasActions
-      renderActions={isResultAddNew ? undefined : renderActions}
+      renderActions={isMarksEntry ? undefined : renderActions}
       editableColumns={editableColumns}
+      editableMaxField={editableMaxField}
       editValues={editValues}
       onEditChange={onEditChange}
       rowKey="id"
-      footerActions={isResultAddNew && paginatedData?.length ? (
-        <Button size="sm" variant="primary" onClick={handleGenerate} disabled={isSubmitting}>
+      footerActions={isMarksEntry && paginatedData?.length ? (
+        <Button
+          variant="primary"
+          leftIcon={<Save className="w-5 h-5" />}
+          onClick={handleGenerate}
+          disabled={isSubmitting}
+          className="px-10 py-3 text-base font-semibold tracking-wide bg-gradient-to-r from-[#0f3d5e] to-[#1e5a7e] hover:from-[#0a2a3d] hover:to-[#0f3d5e] shadow-lg shadow-[#0f3d5e]/30 hover:shadow-xl hover:shadow-[#0f3d5e]/40 hover:-translate-y-0.5 transition-all duration-200"
+        >
           {isSubmitting ? 'KAYDINTA…' : 'GENERATE'}
         </Button>
       ) : null}

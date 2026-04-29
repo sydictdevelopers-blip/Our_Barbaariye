@@ -64,6 +64,39 @@ const MESSAGE_MAP = [
   { re: /^\s*database-ga lama xiriin karin.*$/i, key: 'swal.texts.connectionFailed' },
   { re: /^\s*ma hubtaa inaad tirtid\??\s*$/i, key: 'swal.titles.confirmDelete' },
   { re: /^\s*ma hubtaa\??\s*$/i, key: 'swal.titles.confirm' },
+
+  // EntityTab + result/approve workflow strings (Somali → entity.* keys)
+  { re: /^\s*marks\s+lama\s+gelin\s*$/i, key: 'entity.marksMissingTitle' },
+  { re: /^\s*fadlan\s+gali\s+marks\b.*$/i, key: 'entity.marksMissingText' },
+  { re: /^\s*(\d+)\s+marks?\s+ayaa\s+la\s+kaydiyay\.?\s*$/i, key: 'entity.marksSavedCount', countGroup: 1 },
+  { re: /^\s*filterka\s+lama\s+dhamaystirin\s*$/i, key: 'entity.filterMissingTitle' },
+  { re: /^\s*fadlan\s+dooro\s+exam\s+iyo\s+subject\.?\s*$/i, key: 'entity.filterMissingExamSubject' },
+  { re: /^\s*function-ka\s+diyaar\s+uma\s+ahan\s*$/i, key: 'entity.inDevTitle' },
+  { re: /^\s*(.+?)\s+weli\s+lama\s+dhammaystirin\.?\s*$/i, key: 'entity.inDevText', groups: { 1: 'label' } },
+  { re: /^\s*fadlan\s+dooro\s+class\s*$/i, key: 'entity.selectClass' },
+  { re: /^\s*fadlan\s+dooro\s+exam\s*$/i, key: 'entity.selectExam' },
+  { re: /^\s*fadlan\s+dooro\s+batch\s*$/i, key: 'entity.selectBatch' },
+  { re: /^\s*fadlan\s+dooro\s+subject\s*$/i, key: 'entity.selectSubject' },
+  { re: /^\s*fadlan\s+dooro\s+level\s*$/i, key: 'entity.selectLevel' },
+  { re: /^\s*dooro\s+arday\s*$/i, key: 'entity.selectStudent' },
+  // SP responses from result_approve_sp / result_approve_bulk_sp
+  { re: /^\s*waa\s+la\s+ansixiyay\.?\s*$/i, key: 'entity.approveSuccess' },
+  { re: /^\s*saxnaantii\s+waa\s+la\s+cancel\b.*$/i, key: 'entity.cancelSuccess' },
+  { re: /^\s*saxnaan\s+sugnaa\s+kuma\s+jirto\b.*$/i, key: 'entity.noPendingApprovalRow' },
+  { re: /^\s*saxnaan\s+sugnaa\s+lama\s+helin\.?\s*$/i, key: 'entity.noPendingApproval' },
+  { re: /^\s*natiijada\s+lama\s+helin\.?\s*$/i, key: 'entity.resultNotFound' },
+  { re: /^\s*(\d+)\s+natiijo\s+ayaa\s+la\s+ansixiyay\.?\s*$/i, key: 'entity.bulkApprovedCount', countGroup: 1 },
+  { re: /^\s*(\d+)\s+saxnaan\s+ayaa\s+la\s+cancel\b.*$/i, key: 'entity.bulkCancelledCount', countGroup: 1 },
+  { re: /^\s*hawl\s+aan\s+la\s+aqoonsan\b.*$/i, key: 'entity.operUnknown' },
+  // result_sp max-mark guard (interpolated values are dropped — message becomes generic)
+  { re: /^\s*dhibcaha\s+la\s+galiyay\b.*ka\s+badan\b.*maximum\b.*$/i, key: 'entity.maxMarkExceeded' },
+
+  // Bulk action confirm dialogs (Result tab Class/Subject Delete + Approve Exam tab)
+  { re: /^\s*tani\s+waxay\s+tirtirtaa\s+imtixaanka\s+oo\s+dhan\b.*$/i, key: 'entity.confirmClassExamDelete' },
+  { re: /^\s*tani\s+waxay\s+tirtirtaa\s+keliya\s+maaddada\b.*$/i, key: 'entity.confirmSubjectExamDelete' },
+  { re: /^\s*tani\s+waxay\s+ansixisaa\s+dhammaan\s+saxnaaynta\s+sugaya\s+ee\s+fasalka\b.*$/i, key: 'entity.confirmApproveByClass' },
+  { re: /^\s*tani\s+waxay\s+ansixisaa\s+(?:DHAMMAAN|dhammaan)\s+saxnaaynta\s+sugaya\s+ee\s+fasalada\b.*$/i, key: 'entity.confirmApproveAll' },
+  { re: /^\s*tani\s+waxay\s+tirtirtaa\s+(?:DHAMMAAN|dhammaan)\s+saxnaaynta\s+sugaya\b.*$/i, key: 'entity.confirmCancelAll' },
 ];
 
 /** U rog fariinta la soo diray i18n haddii ay la mid tahay pattern aan aqoono. */
@@ -76,6 +109,14 @@ function translateMessage(msg) {
     if (m) {
       if (entry.countGroup) {
         return t(entry.key, { count: Number(m[entry.countGroup]) || 0 });
+      }
+      if (entry.groups) {
+        // groups: { <regex group index>: <i18n placeholder name> }
+        const args = {};
+        for (const [idx, name] of Object.entries(entry.groups)) {
+          args[name] = m[Number(idx)] ?? '';
+        }
+        return t(entry.key, args);
       }
       return t(entry.key);
     }

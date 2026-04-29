@@ -203,6 +203,7 @@ export default function AccountsPage() {
             showStudentSelect={cfg.showStudentSelect}
             studentOptionsQuery={cfg.studentOptionsQuery}
             hideEdit={cfg.hideEdit}
+            hideAddNew={cfg.hideAddNew}
             hiddenColumns={cfg.hiddenColumns}
             bulkForm={
               cfg.entityKey === 'SubjectClassSetup'
