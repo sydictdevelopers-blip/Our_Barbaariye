@@ -2,7 +2,7 @@
 -- SHOW button-ka tab-ka "Assign Class Exam"
 -- Inputs: p_class (cl_id), p_b_idsp (b_id), p_academic (a_y_id), p_branch (br_id)
 -- Branch == 'All' → ma jiro filter branch ah; haddii kale, kaliya class-ka branch-ka la doortay.
--- Haddii la helo records, returns rows; haddii kale, returns 1 fallback row leh alerts.body 'notfound'.
+-- Haddii la helo records, returns rows; haddii kale, returns 1 fallback row leh alerts.body 'NotFound'.
 
 CREATE OR REPLACE FUNCTION assign_class_exam_show_single(
     p_class    INT,
@@ -69,7 +69,8 @@ BEGIN
                    NULL::VARCHAR   AS "State",
                    a.body          AS "Result"
               FROM alerts a
-             WHERE a.title = 'notfound';
+             WHERE a.title = 'NotFound'
+             LIMIT 1;
         END IF;
 
     ELSE
@@ -118,7 +119,8 @@ BEGIN
                    NULL::VARCHAR   AS "State",
                    a.body          AS "Result"
               FROM alerts a
-             WHERE a.title = 'notfound';
+             WHERE a.title = 'NotFound'
+             LIMIT 1;
         END IF;
 
     END IF;

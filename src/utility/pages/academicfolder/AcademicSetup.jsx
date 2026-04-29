@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,13 @@ import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
 import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
+import AssignClassExamBulkForm from '../../../modals/AssignClassExamBulkForm';
+import {
+  GenerateExamFormModal,
+  ExamStateFormModal,
+  RemoveByClassModal,
+  RemoveByExamModal,
+} from '../../../modals/AssignClassExamActionModals';
 import BranchTransferTab from './BranchTransferTab';
 import AcademicTransferTab from './AcademicTransferTab';
 import ClassTransferTab from './ClassTransferTab';
@@ -46,6 +53,8 @@ export default function AccountsPage() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const [modal, setModal] = useState({ entityKey: null, editRow: null, context: {} });
+  const [actionModal, setActionModal] = useState({ kind: null, context: null });
+  const entityTabRef = useRef(null);
 
   const rawTabs = getTabsForPath(location.pathname);
   const tabs = useMemo(
@@ -172,6 +181,7 @@ export default function AccountsPage() {
       return (
         <motion.div key={activeTab} {...motionProps}>
           <EntityTab
+            ref={entityTabRef}
             entityKey={cfg.entityKey}
             modalKey={cfg.modalKey}
             icon={cfg.icon}
@@ -195,11 +205,18 @@ export default function AccountsPage() {
             hideEdit={cfg.hideEdit}
             hideAddNew={cfg.hideAddNew}
             hiddenColumns={cfg.hiddenColumns}
-            bulkForm={cfg.entityKey === 'SubjectClassSetup'
-              ? ({ context, onSuccess }) => (
-                  <SubjectClassBulkForm context={context} onSuccess={onSuccess} />
-                )
-              : undefined}
+            bulkForm={
+              cfg.entityKey === 'SubjectClassSetup'
+                ? ({ context, onSuccess }) => (
+                    <SubjectClassBulkForm context={context} onSuccess={onSuccess} />
+                  )
+                : cfg.entityKey === 'AssignClassExam'
+                ? ({ context, onSuccess }) => (
+                    <AssignClassExamBulkForm context={context} onSuccess={onSuccess} />
+                  )
+                : undefined
+            }
+            onCustomAction={(kind, ctx) => setActionModal({ kind, context: ctx })}
           />
         </motion.div>
       );
@@ -233,9 +250,10 @@ export default function AccountsPage() {
       {modalEntities.map((entityKey) => {
         const config = CRUD_CONFIG[entityKey];
         if (!config) return null;
-        // SubjectClassSetup: insert-ka waxaa qaabilsan inline bulk form-ka,
-        // sidaas darteed CrudModal kaliya waxaa loo furaa edit mode (editRow jiro).
-        const isBulkEntity = entityKey === 'SubjectClassSetup';
+        // SubjectClassSetup & AssignClassExam: insert-ka waxaa qaabilsan inline
+        // bulk form-ka, sidaas darteed CrudModal kaliya waxaa loo furaa edit
+        // mode (editRow jiro).
+        const isBulkEntity = entityKey === 'SubjectClassSetup' || entityKey === 'AssignClassExam';
         const editRow = modal.editRow;
         const isOpen = modal.entityKey === entityKey && (isBulkEntity ? !!editRow : true);
         return (
@@ -250,6 +268,56 @@ export default function AccountsPage() {
           />
         );
       })}
+
+      <GenerateExamFormModal
+        isOpen={actionModal.kind === 'GenerateExam'}
+        onClose={() => setActionModal({ kind: null, context: null })}
+        onSuccess={(ctx) => {
+          // Ka dib guul Generate-ka, table-ka Assign Class Exam waxaa loo
+          // beddelaa view-ga "Show All" si user-ku u arko natiijada cusub.
+          entityTabRef.current?.showAs('AssignClassExamShowAll', {
+            academicYearId: ctx?.academicYearId,
+            academicYearLabel: ctx?.academicYearLabel,
+          });
+        }}
+        context={actionModal.context}
+      />
+      <ExamStateFormModal
+        isOpen={actionModal.kind === 'ExamState'}
+        onClose={() => setActionModal({ kind: null, context: null })}
+        onSuccess={(ctx) => {
+          if (ctx?.academicYearId) {
+            entityTabRef.current?.showAs('AssignClassExamShowAll', {
+              academicYearId: ctx.academicYearId,
+            });
+          }
+        }}
+        context={actionModal.context}
+      />
+      <RemoveByClassModal
+        isOpen={actionModal.kind === 'RemoveByClass'}
+        onClose={() => setActionModal({ kind: null, context: null })}
+        onSuccess={(ctx) => {
+          if (ctx?.academicYearId) {
+            entityTabRef.current?.showAs('AssignClassExamShowAll', {
+              academicYearId: ctx.academicYearId,
+            });
+          }
+        }}
+        context={actionModal.context}
+      />
+      <RemoveByExamModal
+        isOpen={actionModal.kind === 'RemoveByExam'}
+        onClose={() => setActionModal({ kind: null, context: null })}
+        onSuccess={(ctx) => {
+          if (ctx?.academicYearId) {
+            entityTabRef.current?.showAs('AssignClassExamShowAll', {
+              academicYearId: ctx.academicYearId,
+            });
+          }
+        }}
+        context={actionModal.context}
+      />
     </div>
   );
 }

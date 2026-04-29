@@ -57,13 +57,13 @@ export const createExamSection = {
       "showAcademicYearSelect": true,
       "hiddenColumns": ["ID", "Result", "er_id", "cl_id", "b_id"],
       "loadButtons": [
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "AssignClassExam" },
-        { "id": "GenerateAssignClassExam", "label": "Generate", "icon": "Database", "inDevelopment": true },
-        { "id": "AssignClassExamState", "label": "Exam State", "icon": "Database", "inDevelopment": true },
+        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "AssignClassExam", "isBulkAction": true, "requiresAcademic": true },
+        { "id": "GenerateAssignClassExam", "label": "Generate", "icon": "Database", "actionModal": "GenerateExam" },
+        { "id": "AssignClassExamState", "label": "Exam State", "icon": "Database", "actionModal": "ExamState" },
         { "id": "AssignClassExam", "label": "Show", "icon": "Database" },
-        { "id": "AssignClassExamShowAll", "label": "Show All", "icon": "Database", "inDevelopment": true },
-        { "id": "RemoveAssignByClass", "label": "Remove By Class", "icon": "Database", "inDevelopment": true },
-        { "id": "RemoveAssignByExam", "label": "Remove By Exam", "icon": "Database", "inDevelopment": true }
+        { "id": "AssignClassExamShowAll", "label": "Show All", "icon": "Database", "requires": ["academic"] },
+        { "id": "RemoveAssignByClass", "label": "Remove By Class", "icon": "Database", "actionModal": "RemoveByClass" },
+        { "id": "RemoveAssignByExam", "label": "Remove By Exam", "icon": "Database", "actionModal": "RemoveByExam" }
       ]
     },
     {

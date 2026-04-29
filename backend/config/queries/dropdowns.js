@@ -36,6 +36,17 @@ module.exports = {
   batch_options: (p) => (Number(p?.cl_id) > 0
     ? `SELECT * FROM vw_batch_by_class(${Number(p?.cl_id)})`
     : 'SELECT b_id, batch_name FROM batch ORDER BY batch_name'),
+  // Batches kaliya kuwa leh students-ka academic-ka iyo branch-ka la doortay
+  // (Generate Exam Form). DISTINCT JOIN student_class → kaliya batches-ka
+  // ka jira xogta dhabta ah ayaa muuqda — sidaas darteed user-ku ma muujiyo
+  // batch aanu jirin ardayda academic-kaas.
+  batch_by_academic_options: (p) => `SELECT DISTINCT b.b_id, b.batch_name
+                                       FROM batch b
+                                       JOIN student_class sc ON sc.b_id = b.b_id
+                                       JOIN class c          ON c.cl_id = sc.cl_id
+                                      WHERE sc.a_y_id = ${Number(p?.academicYearId) || 0}
+                                        AND c.br_id   = ${Number(p?.br_id) || 0}
+                                      ORDER BY b.batch_name`,
   student_class_options: (p) => `SELECT * FROM student_class_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0})`,
   lesson_activity_options: (p) => `SELECT * FROM lesson_activity_options_show(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   day_options: 'SELECT d_id, day FROM day ORDER BY d_id',

@@ -97,6 +97,12 @@ export function getSessionUBrIdNum() {
   return v ? Number(v) : 0;
 }
 
+/** Read br_id (current branch view) from session for SP params. */
+export function getSessionBrIdNum() {
+  const v = getSessionBrId();
+  return v ? Number(v) : 0;
+}
+
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
   const sessionBrId = getSessionBrId();
   const sessionUBrId = getSessionUBrId();

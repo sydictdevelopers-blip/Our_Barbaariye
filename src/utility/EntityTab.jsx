@@ -1,3 +1,4 @@
+import { useState, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -59,7 +60,7 @@ const loadPayload = (entityKey, page, limit, search, extra = {}) => ({
 
 const CHEVRON_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231F2937'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E";
 
-export default function EntityTab({
+function EntityTab({
   entityKey,
   modalKey,
   icon: Icon,
@@ -89,7 +90,8 @@ export default function EntityTab({
   extraHeaderActions,
   extraLoadParams,
   bulkForm,
-}) {
+  onCustomAction,
+}, ref) {
   const { t } = useTranslation();
   const tr = (btn) => {
     if (btn.labelKey) return t(btn.labelKey, btn.label);
@@ -305,6 +307,47 @@ export default function EntityTab({
       }
     },
     [limit, dispatch, buildExtra]
+  );
+
+  // Imperative API: AcademicSetup-ka (parent) wuxuu adeegsadaa ref-ka si uu
+  // EntityTab uga shaqaysiiyo button gaar ah si dhaqsi ah — tusaale: ka dib
+  // marka modal Generate uu guul gaadho, parent-ku wuxuu wacaa
+  // showAs('AssignClassExamShowAll', { academicYearId }) si table-ka uu u
+  // muujiyo natiijada cusub.
+  useImperativeHandle(
+    ref,
+    () => ({
+      showAs(queryName, params = {}) {
+        const ay = params.academicYearId;
+        if (ay && showAcademicYearSelect) {
+          setSelectedAcademicYearId(String(ay));
+          if (params.academicYearLabel) setSelectedAcademicYearLabel(String(params.academicYearLabel));
+        }
+        if (params.cl_id && showClassSelect) setSelectedClassId(String(params.cl_id));
+        if (params.b_id && showBatchSelect) setSelectedBatchId(String(params.b_id));
+        if (params.ex_id && showExamSelect) setSelectedExamId(String(params.ex_id));
+        if (params.lev_id && showLevelSelect) setSelectedLevelId(String(params.lev_id));
+        onShowData(
+          queryName,
+          ay,
+          params.cl_id,
+          params.b_id,
+          params.lev_id,
+          params.ex_id,
+          params.res_id,
+          params.std_cl_id,
+          params.sub_id
+        );
+      },
+    }),
+    [
+      onShowData,
+      showAcademicYearSelect,
+      showClassSelect,
+      showBatchSelect,
+      showExamSelect,
+      showLevelSelect,
+    ]
   );
 
   const doDelete = useCallback(
@@ -586,7 +629,27 @@ export default function EntityTab({
               },
             });
           } else if (isBulkAction && bulkForm) {
+            // Hubi filter-yada looga baahan yahay si bulk form-ku u helo context buuxa
+            // (e.g. "Add New" ee Assign Class Exam ayaa u baahan academicYearId).
+            if (btn.requiresAcademic && (!selectedAcademicYearId || String(selectedAcademicYearId).trim() === '')) {
+              swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
+              return;
+            }
             setViewMode('form');
+          } else if (btn.actionModal) {
+            // Custom modal action — onCustomAction-ka waxaa lagu kala soo dhigaa
+            // AcademicSetup.jsx, kaas oo soo bandhiga modal saxda ah.
+            if (btn.requiresAcademic && (!selectedAcademicYearId || String(selectedAcademicYearId).trim() === '')) {
+              swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
+              return;
+            }
+            onCustomAction?.(btn.actionModal, {
+              academicYearId: academicYearIdForLoad,
+              cl_id: classIdForLoad,
+              b_id: batchIdForLoad,
+              ex_id: examIdForLoad,
+              lev_id: levelIdForLoad,
+            });
           } else if (isAddNew) {
             onEdit(btn.modalKey)(null, { cl_id: classIdForLoad, b_id: batchIdForLoad, lev_id: levelIdForLoad, ex_id: examIdForLoad, academicYearId: academicYearIdForLoad });
           } else if (btn.skipFilterValidation) {
@@ -594,31 +657,36 @@ export default function EntityTab({
             // don't refuse on missing selections.
             onShowData(btn.id, academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, responsibleIdForLoad, studentIdForLoad, subjectIdForLoad);
           } else {
-            if (showLevelSelect && (!selectedLevelId || String(selectedLevelId).trim() === '')) {
+            // Filter-validation: haddii btn.requires array uu jiro, kaliya
+            // filter-yadaas ayaa la hubinayaa (eg. Show All wuxuu u baahan
+            // yahay "academic" oo kaliya — ma raadinayo class/batch).
+            const reqs = Array.isArray(btn.requires) ? btn.requires : null;
+            const need = (k, fallback) => (reqs ? reqs.includes(k) : fallback);
+            if (need('level', showLevelSelect) && (!selectedLevelId || String(selectedLevelId).trim() === '')) {
               swalError('Fadlan dooro Level', '');
               return;
             }
-            if (showAcademicYearSelect && (!selectedAcademicYearId || String(selectedAcademicYearId).trim() === '')) {
+            if (need('academic', showAcademicYearSelect) && (!selectedAcademicYearId || String(selectedAcademicYearId).trim() === '')) {
               swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
               return;
             }
-            if (showExamSelect && (!selectedExamId || String(selectedExamId).trim() === '')) {
+            if (need('exam', showExamSelect) && (!selectedExamId || String(selectedExamId).trim() === '')) {
               swalError('Fadlan dooro Exam', '');
               return;
             }
-            if (showClassSelect && (!selectedClassId || String(selectedClassId).trim() === '')) {
+            if (need('class', showClassSelect) && (!selectedClassId || String(selectedClassId).trim() === '')) {
               swalError('Fadlan dooro Class', '');
               return;
             }
-            if (showBatchSelect && (!selectedBatchId || String(selectedBatchId).trim() === '')) {
+            if (need('batch', showBatchSelect) && (!selectedBatchId || String(selectedBatchId).trim() === '')) {
               swalError('Fadlan dooro Batch', '');
               return;
             }
-            if (showSubjectSelect && (!selectedSubjectId || String(selectedSubjectId).trim() === '')) {
+            if (need('subject', showSubjectSelect) && (!selectedSubjectId || String(selectedSubjectId).trim() === '')) {
               swalError('Fadlan dooro Subject', '');
               return;
             }
-            if (showStudentSelect && (!selectedStudentId || String(selectedStudentId).trim() === '')) {
+            if (need('student', showStudentSelect) && (!selectedStudentId || String(selectedStudentId).trim() === '')) {
               swalError(t('entity.selectStudent', 'Dooro Arday'), '');
               return;
             }
@@ -665,6 +733,22 @@ export default function EntityTab({
     dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
   }, [activeEntityKey, limit, dispatch, entity.searchQuery, activeExtra]);
 
+  // Skip auto-load haddii filter loo baahan yahay aanu la dooran. Ka hortagga
+  // wicitaan SQL ah oo soo celin doona "column 'nan' does not exist" markii
+  // user-ku tab-ka ku soo noqdo selection-la'aan.
+  const requiredFilterMissing = (
+    (showAcademicYearSelect && !String(selectedAcademicYearId || '').trim()) ||
+    (showClassSelect && !String(selectedClassId || '').trim()) ||
+    (showBatchSelect && !String(selectedBatchId || '').trim()) ||
+    (showLevelSelect && !String(selectedLevelId || '').trim()) ||
+    (showExamSelect && !String(selectedExamId || '').trim()) ||
+    (showSubjectSelect && !String(selectedSubjectId || '').trim()) ||
+    (showStudentSelect && !String(selectedStudentId || '').trim())
+  );
+
+  useEffect(() => {
+    if (!showDataPanel) return;
+    if (requiredFilterMissing) return;
   // Search debouncer: re-runs when entity/limit/filters change too, but those paths
   // (onShowData, handlePageSizeChange, doDelete) already dispatch loadData directly —
   // so on context change we just sync the ref and skip, only firing on real searchQuery edits.
@@ -681,7 +765,7 @@ export default function EntityTab({
       dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
     }, 300);
     return () => clearTimeout(t);
-  }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra]);
+  }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra, requiredFilterMissing]);
 
 
   if (bulkForm && viewMode === 'form') {
@@ -758,3 +842,5 @@ export default function EntityTab({
     </>
   );
 }
+
+export default forwardRef(EntityTab);
