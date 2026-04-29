@@ -7,12 +7,60 @@ module.exports = {
   // Datatable lists
   ExamSetting: (p) => `SELECT * FROM exam_siting_show(${Number(p?.br_id) || 0})`,
   Exam: (p) => `SELECT * FROM exam_show(${Number(p?.br_id) || 0})`,
-  ExamRegister: (p) => `SELECT s.*, er.a_y_id, er.ex_id FROM exam_reg_show(${Number(p?.br_id)}, ${Number(p?.academicYearId)}) s LEFT JOIN exam_reg er ON er.ex_reg_id = s.ex_reg_id`,
+  ExamRegister: (p) => `SELECT s.*, er.a_y_id, er.ex_id FROM exam_reg_show(${Number(p?.br_id) || 0}, ${Number(p?.academicYearId) || 0}) s LEFT JOIN exam_reg er ON er.ex_reg_id = s.ex_reg_id`,
   AssignClassExam: (p) => `SELECT s.*, ass.er_id, ass.cl_id, ass.b_id FROM assign_class_exam_show_single(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.br_id) || 0}) s LEFT JOIN assign_class_exam ass ON ass.a_c_ex = s."ID"`,
+  // Show All button-ka tab-ka Assign Class Exam — academic + branch oo kaliya.
+  AssignClassExamShowAll: (p) => ({
+    sql: `SELECT s.*, ass.er_id, ass.cl_id, ass.b_id FROM assign_class_exam_show_all(${Number(p?.academicYearId) || 0}, ${Number(p?.br_id) || 0}) s LEFT JOIN assign_class_exam ass ON ass.a_c_ex = s."ID"`,
+    prePaginated: true,
+  }),
+  // Add-new bulk form ee Assign Class Exam: liiska (class - batch) ee academic-ka
+  // la doortay. prePaginated:true => api.js ma duubo COUNT/LIMIT/OFFSET, sidaas
+  // darteed dhammaan rows-ka hal mar ayaa la soo celiyaa (degdeg badan).
+  add_assing_class_exam_show: (p) => ({
+    sql: `SELECT * FROM add_assing_class_exam_show(${Number(p?.academicYearId) || 0}, ${Number(p?.br_id) || 0})`,
+    prePaginated: true,
+  }),
   ExamSchedule: (p) => `SELECT s.*, sch.d_id, sch.pr_id, sch.sub_cl_id, sch.sh_id, sch.cl_id, sch.ex_r_id FROM exam_schedule_show(${Number(p?.br_id) || 0}) s JOIN exam_schedule sch ON sch.ex_s_id = s.ex_s_id`,
 
-  // Exam dropdowns
-  exam_reg_options: (p) => `SELECT er.ex_reg_id, CONCAT(e.exam, ' - ', er.exam_type) AS exam_reg_name FROM exam_reg er JOIN exam e ON e.ex_id = er.ex_id JOIN user_branch ub ON ub.u_br_id = er.u_br_id WHERE (SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all' OR ub.br_id = ${Number(p?.br_id) || 0} ORDER BY er.start_date DESC`,
+  // Exams DISTINCT ee la xidhay class+batch+academic la doortay — loo isticmaalo
+  // dropdown-ka "Remove By Class". Soo celiyaa ex_id (oo lala socdaa SP-ga
+  // remove_assign_class_byclass_sp) iyo magaca exam-ka.
+  exam_by_class_options: (p) => `SELECT DISTINCT e.ex_id, e.exam
+                                   FROM assign_class_exam ace
+                                   JOIN exam_reg er ON er.ex_reg_id = ace.er_id
+                                   JOIN exam     e  ON e.ex_id     = er.ex_id
+                                  WHERE ace.cl_id  = ${Number(p?.cl_id) || 0}
+                                    AND ace.b_id   = ${Number(p?.b_id) || 0}
+                                    AND er.a_y_id  = ${Number(p?.academicYearId) || 0}
+                                    AND er.br_id   = ${Number(p?.br_id) || 0}
+                                  ORDER BY e.exam`,
+  // Exams DISTINCT ee leh exam_reg academic-kaas + branch-kaas — loo
+  // isticmaalo dropdown-ka "Remove By Exam". Soo celiyaa ex_id (oo lala
+  // socdaa SP-ga remove_assign_class_byexam_sp).
+  exam_by_academic_options: (p) => `SELECT DISTINCT e.ex_id, e.exam
+                                      FROM exam_reg er
+                                      JOIN exam     e ON e.ex_id = er.ex_id
+                                     WHERE er.a_y_id = ${Number(p?.academicYearId) || 0}
+                                       AND er.br_id  = ${Number(p?.br_id) || 0}
+                                     ORDER BY e.exam`,
+
+  // Exam dropdowns. Marka academicYearId la gudbiyo, kaliya exam_reg-yada ku
+  // jira academic-kaas ayaa la soo celiyaa — taas oo kala xidhid yeesha
+  // dropdown-ka exam-ka iyo academic-ka la doortay (tab-ka Assign Class Exam).
+  exam_reg_options: (p) => {
+    const brId = Number(p?.br_id) || 0;
+    const ayId = Number(p?.academicYearId) || 0;
+    const ayFilter = ayId > 0 ? `AND er.a_y_id = ${ayId}` : '';
+    return `SELECT er.ex_reg_id, CONCAT(e.exam, ' - ', er.exam_type) AS exam_reg_name
+            FROM exam_reg er
+            JOIN exam e ON e.ex_id = er.ex_id
+            JOIN user_branch ub ON ub.u_br_id = er.u_br_id
+            WHERE ((SELECT TRIM(br_name) FROM branch WHERE br_id = ${brId}) ILIKE 'all'
+                   OR ub.br_id = ${brId})
+              ${ayFilter}
+            ORDER BY er.start_date DESC`;
+  },
   exam_options: (p) => `SELECT e.ex_id, e.exam FROM exam e JOIN user_branch ub ON ub.u_br_id = e.u_br_id WHERE (SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all' OR ub.br_id = ${Number(p?.br_id) || 0} ORDER BY e.ordering, e.exam`,
 
   // Manage Result → Result tab (chained dropdowns: class → batch → academic → subject → exam)
