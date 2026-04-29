@@ -6,6 +6,8 @@ import {
   BookMarked,
   Video,
   FileCheck,
+  MessageSquare,
+  CalendarClock,
 } from 'lucide-react';
 import { createExamSection } from './exam/createExam';
 import { examServiceSection } from './exam/examService';
@@ -371,6 +373,50 @@ export const defaultMenuItems = [
             ]
           }
         ],
+      },
+    ],
+  },
+  {
+    id: 'ComplainManagement',
+    label: 'Complain Managment',
+    labelKey: 'menu.complainManagement',
+    icon: MessageSquare,
+    path: '/ComplainManagement',
+    tabs: [
+      {
+        id: 'Complain',
+        label: 'Complain',
+        labelKey: 'tabs.complain',
+        entityKey: 'Complain',
+        modalKey: 'Complain',
+        icon: 'Users',
+        queryName: 'Complain',
+        hiddenColumns: ['username'],
+        loadButtons: [
+          { id: 'Complain', label: 'Show Data', labelKey: 'action.showData', icon: 'Database' },
+          { id: 'addNew',   label: 'Add new',  labelKey: 'entity.addNew',   icon: 'Plus', modalKey: 'Complain' },
+        ],
+      },
+      {
+        id: 'ComplainDone',
+        label: 'Complain Done',
+        labelKey: 'tabs.complainDone',
+        icon: 'Timer',
+      },
+    ],
+  },
+  {
+    id: 'MeetingMinutes',
+    label: 'Meeting Minutes',
+    labelKey: 'menu.meetingMinutes',
+    icon: CalendarClock,
+    path: '/MeetingMinutes',
+    tabs: [
+      {
+        id: 'MeetingMinutes',
+        label: 'Meeting Minutes',
+        labelKey: 'tabs.meetingMinutes',
+        icon: 'Users',
       },
     ],
   },

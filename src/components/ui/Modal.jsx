@@ -29,6 +29,7 @@ export default function Modal({
   showCloseButton = true,
   closeOnOverlay = true,
   showHeader = true,
+  pageScroll = false,
   className = '',
   bodyClassName = '',
   footerClassName = '',
@@ -70,7 +71,7 @@ export default function Modal({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            className={`relative w-full ${sizes[size] || sizes.md} max-h-[80vh] flex flex-col rounded-2xl overflow-hidden
+            className={`relative w-full ${sizes[size] || sizes.md} ${pageScroll ? '' : 'max-h-[80vh] overflow-hidden'} flex flex-col rounded-2xl
               bg-white dark:bg-slate-800/95
               shadow-[0_25px_50px_-12px_rgba(15,23,42,0.15),0_0_0_1px_rgba(0,0,0,0.04)]
               dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.06)]
@@ -91,7 +92,7 @@ export default function Modal({
                 {showCloseButton && <div className="flex-shrink-0">{closeBtn}</div>}
               </div>
             )}
-            <div className={`flex-1 overflow-y-auto p-6 bg-slate-50/70 dark:bg-slate-900/30 ${bodyClassName}`}>
+            <div className={`flex-1 ${pageScroll ? '' : 'overflow-y-auto'} p-6 bg-slate-50/70 dark:bg-slate-900/30 ${bodyClassName}`}>
               {children}
             </div>
             {footer != null && (

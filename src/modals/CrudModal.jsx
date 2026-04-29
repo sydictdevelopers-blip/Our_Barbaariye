@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HelpCircle, Info, PlayCircle } from 'lucide-react';
+import { HelpCircle, Info, PlayCircle, Plus } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ModuleHelpModal from '../components/ModuleHelpModal';
 import * as swal from '../utils/swal';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Select2 from '../components/ui/Select2';
-import { crud, fetchSelectOptions, fetchModuleHelp } from '../services/api';
+import { crud, fetchSelectOptions, fetchModuleHelp, uploadNewStudentImage } from '../services/api';
+import { CRUD_CONFIG } from '../config/crudConfig';
 
 /** Auto-detect valueKey (first *_id) iyo labelKey (first *_name ama column 2) */
 function detectKeys(columns, row) {
@@ -105,12 +106,69 @@ async function submitOperation(config, form, operation) {
   return await crud({ operation, fn: config.fn, params });
 }
 
-function FieldWrapper({ label, error, children }) {
+/**
+ * Image-upload field. Picks a local image, uploads to S3 immediately,
+ * and pushes the public URL into the form via onChange (synthetic event).
+ */
+function ImageUploadField({ name, value, label, error, onChange, t, disabled }) {
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const inputId = `crud-${name}`;
+  const handleFile = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) {
+      setErrMsg(t('crudModal.imageOnly', { defaultValue: 'Only image files are allowed' }));
+      return;
+    }
+    setErrMsg('');
+    setBusy(true);
+    try {
+      const resp = await uploadNewStudentImage(f);
+      const url = resp?.image || '';
+      onChange({ target: { name, value: url } });
+    } catch (err) {
+      setErrMsg(err?.message || 'Upload failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-1">
+      {label && (
+        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          {label}
+        </label>
+      )}
+      <div className="flex items-center gap-3">
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          disabled={busy || disabled}
+          onChange={handleFile}
+          className="text-sm text-slate-700 dark:text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-[#0f3d5e] file:text-white file:cursor-pointer hover:file:bg-[#0d3553] disabled:opacity-60"
+        />
+        {value && !busy && (
+          <a href={value} target="_blank" rel="noreferrer" className="shrink-0">
+            <img src={value} alt="preview" className="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-600" />
+          </a>
+        )}
+        {busy && <span className="text-xs text-slate-500">{t('crudModal.uploading', { defaultValue: 'Uploading...' })}</span>}
+      </div>
+      {(error || errMsg) && (
+        <p className="text-sm text-red-600 dark:text-red-400">{errMsg || error}</p>
+      )}
+    </div>
+  );
+}
+
+function FieldWrapper({ label, error, children, formatError }) {
   return (
     <div className="space-y-1">
       {label && <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
       {children}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{formatError ? formatError(error) : error}</p>}
     </div>
   );
 }
@@ -130,13 +188,37 @@ export default function CrudModal({
 }) {
   if (!config) return null;
 
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // If the string looks like an i18n key (e.g. "students.registerForm.fields.fullName")
+  // run it through t(); otherwise return as-is. Static labels like "Class" remain unchanged.
+  const tr = (s) => {
+    if (s == null) return s;
+    const str = String(s);
+    if (!str.includes('.')) return str;
+    return t(str, { defaultValue: str });
+  };
+  const trOpts = (opts) => Array.isArray(opts) ? opts.map((o) => ({ ...o, label: tr(o.label) })) : opts;
+  // Validation messages from crudConfig look like "<label-or-i18n-key> required".
+  // Translate the key fragment + the trailing word.
+  const trError = (msg) => {
+    if (!msg) return msg;
+    const m = String(msg);
+    const idx = m.lastIndexOf(' required');
+    if (idx === -1) return m;
+    const labelPart = m.slice(0, idx);
+    const requiredWord = t('common.required', { defaultValue: 'required' });
+    return `${tr(labelPart)} ${requiredWord}`;
+  };
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetchedLabels, setFetchedLabels] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpPreview, setHelpPreview] = useState(null);
+  // Sub-modal state for the inline "+ Add New" responsible flow.
+  // open=true renders a nested <CrudModal/> below; on save we refetch the parent
+  // dropdown and select the new row automatically.
+  const [subModal, setSubModal] = useState({ open: false });
   const selectedLabelRef = useRef({});
 
   const helpKey = moduleKey || config.moduleKey || '';
@@ -237,7 +319,9 @@ export default function CrudModal({
     try {
       const result = await submitOperation(config, form, operation);
       onClose();
-      onSuccess?.();
+      // Pass the saved form so a parent CrudModal (in the Add-New flow) can find
+      // the newly created row by name + phone after a refetch.
+      onSuccess?.(form, result);
       await swal.swalSuccess('Wa la guulaystey', result?.message || '');
     } catch (err) {
       const msg = err?.message || '';
@@ -262,17 +346,54 @@ export default function CrudModal({
   const handleUpdate = (e) => { e.preventDefault(); handleSubmit('update'); };
   const handleClose = () => { setForm({}); setErrors({}); onClose(); };
 
+  // Sub-modal "+ Add New" flow — invoked when the user picks the inline Add-New
+  // button inside an unmatched search. After save, refetch the parent dropdown
+  // and select the newly created row automatically.
+  const handleSubModalSuccess = useCallback(async (savedForm) => {
+    const f = subModal.returnField;
+    const seedField = subModal.seedField || 'p_name_sp';
+    const lookupName = String(savedForm?.[seedField] ?? subModal.searchText ?? '').trim();
+    if (!f || !lookupName) {
+      setSubModal({ open: false });
+      return;
+    }
+    const extra = extraParamsFor(f, form);
+    // Drop any cached results for this dropdown so we hit the backend fresh.
+    const ck = cacheKeyFor(f.optionsKey, extra);
+    delete selectCache[ck];
+    let opts = [];
+    try {
+      opts = await loadOptionsForKey(f.optionsKey, lookupName, false, extra);
+    } catch { opts = []; }
+    const lc = lookupName.toLowerCase();
+    const found = opts.find((o) =>
+      !o.isHint && String(o.label || '').toLowerCase().includes(lc)
+    ) || opts.find((o) => !o.isHint);
+    if (found?.value != null) {
+      setForm((prev) => ({
+        ...prev,
+        [f.name]: String(found.value),
+        [`${f.name}_label`]: found.label,
+      }));
+      selectedLabelRef.current[f.name] = found.label;
+      if (errors[f.name]) setErrors((prev) => ({ ...prev, [f.name]: '' }));
+    }
+    setSubModal({ open: false });
+  }, [subModal, form, extraParamsFor, errors]);
+
   const isEdit = mode === 'update';
   const showUpdate = !!config.fn;
 
   const getInputClasses = (fieldName) =>
     `w-full px-4 py-2 rounded-xl border text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0f3d5e] focus:border-transparent ${errors[fieldName] ? 'border-red-500 dark:border-red-500' : ''}`;
 
-  const getOptions = (f) => f.options ?? [];
+  const getOptions = (f) => trOpts(f.options ?? []);
 
   const renderField = (f) => {
     const val = form[f.name];
     const opts = getOptions(f);
+    const fLabel = tr(f.label);
+    const fPh = tr(f.placeholder);
     if (f.type === 'hidden') {
       return <input key={f.name} type="hidden" name={f.name} value={val ?? f.default ?? ''} readOnly />;
     }
@@ -283,8 +404,36 @@ export default function CrudModal({
       const hasDeps = !!f.dependsOn;
       const depsUnmet = hasDeps && Object.values(extra).some((v) => v === '' || v == null);
       const depSig = hasDeps ? Object.values(extra).join('|') : '';
+      // Inline "+ Add New" support — when the dropdown's search has no matches and
+      // f.addNewConfigKey is set, render an Add-New button. Click opens a nested
+      // CrudModal pre-filled with the search text.
+      const noMatchMsg = f.addNewConfigKey
+        ? ({ inputValue }) => {
+            const q = (inputValue ?? '').trim();
+            if (!q) return t('crudModal.noResults', { defaultValue: 'Xogtaad raadisay ma jirto' });
+            return (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() =>
+                  setSubModal({
+                    open: true,
+                    configKey: f.addNewConfigKey,
+                    returnField: f,
+                    searchText: q,
+                    seedField: f.addNewSearchKey || 'p_name_sp',
+                  })
+                }
+                className="inline-flex items-center gap-1.5 text-[#0f3d5e] dark:text-teal-400 font-medium hover:underline"
+              >
+                <Plus className="w-4 h-4" />
+                {t('crudModal.addNew', { defaultValue: '+ Add New' })} "{q}"
+              </button>
+            );
+          }
+        : () => t('crudModal.noResults', { defaultValue: 'Xogtaad raadisay ma jirto' });
       return (
-        <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
+        <FieldWrapper key={f.name} label={fLabel} error={errors[f.name]} formatError={trError}>
           <Select2
             key={hasDeps ? `${f.name}:${depSig}` : f.name}
             name={f.name}
@@ -293,10 +442,10 @@ export default function CrudModal({
             onChange={handleChange}
             options={useAsync ? [] : opts}
             loadOptions={useAsync ? createLoadOptions(key, () => extraParamsFor(f, form)) : undefined}
-            placeholder={depsUnmet ? 'Marka hore dooro kala xiriirka...' : (f.placeholder ?? 'Raadi...')}
+            placeholder={depsUnmet ? t('crudModal.selectFirst', { defaultValue: 'Marka hore dooro kala xiriirka...' }) : (fPh ?? t('crudModal.search', { defaultValue: 'Raadi...' }))}
             isDisabled={depsUnmet}
-            noOptionsMessage={() => 'Xogtaad raadisay ma jirto'}
-            loadingMessage={() => 'Waa la baarayaa...'}
+            noOptionsMessage={noMatchMsg}
+            loadingMessage={() => t('crudModal.loading', { defaultValue: 'Waa la baarayaa...' })}
             isOptionDisabled={(opt) => opt?.isHint}
             formatOptionLabel={(opt) =>
               opt?.isHint ? <span className="text-slate-500 italic">{opt.label}</span> : opt?.label
@@ -309,7 +458,7 @@ export default function CrudModal({
     }
     if (f.type === 'radio') {
       return (
-        <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
+        <FieldWrapper key={f.name} label={fLabel} error={errors[f.name]} formatError={trError}>
           <div className="flex flex-wrap gap-4">
             {opts.map((opt) => (
               <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -323,27 +472,54 @@ export default function CrudModal({
     }
     if (f.type === 'textarea') {
       return (
-        <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
-          <textarea name={f.name} value={val ?? ''} onChange={handleChange} rows={f.rows ?? 3} placeholder={f.placeholder} className={getInputClasses(f.name)} {...f.props} />
+        <FieldWrapper key={f.name} label={fLabel} error={errors[f.name]} formatError={trError}>
+          <textarea name={f.name} value={val ?? ''} onChange={handleChange} rows={f.rows ?? 3} placeholder={fPh} className={getInputClasses(f.name)} {...f.props} />
         </FieldWrapper>
       );
     }
     if (f.type === 'checkbox') {
       return (
-        <FieldWrapper key={f.name} label={f.label} error={errors[f.name]}>
+        <FieldWrapper key={f.name} label={fLabel} error={errors[f.name]} formatError={trError}>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name={f.name} checked={!!val} onChange={handleChange} className="w-4 h-4 rounded text-[#0f3d5e]" {...f.props} />
-            <span className="text-sm text-slate-600 dark:text-slate-400">{f.placeholder || f.label}</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400">{fPh || fLabel}</span>
           </label>
         </FieldWrapper>
       );
     }
+    if (f.type === 'image-upload') {
+      return (
+        <ImageUploadField
+          key={f.name}
+          name={f.name}
+          value={val ?? ''}
+          label={fLabel}
+          error={errors[f.name] ? trError(errors[f.name]) : ''}
+          onChange={handleChange}
+          t={t}
+        />
+      );
+    }
     return (
-      <Input key={f.name} label={f.label} name={f.name} type={f.type || 'text'} value={val ?? ''} onChange={handleChange} placeholder={f.placeholder} error={errors[f.name]} {...f.props} />
+      <Input
+        key={f.name}
+        id={`crud-${f.name}`}
+        label={fLabel}
+        name={f.name}
+        type={f.type || 'text'}
+        value={val ?? ''}
+        onChange={handleChange}
+        placeholder={fPh}
+        error={errors[f.name] ? trError(errors[f.name]) : ''}
+        {...f.props}
+      />
     );
   };
 
-  const formClass = config.gridCols === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4';
+  const formClass =
+    config.gridCols === 3 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' :
+    config.gridCols === 2 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' :
+    'space-y-4';
   const hasDesc = !!helpPreview?.description;
   const hasVideo = !!helpPreview?.video_url;
 
@@ -352,10 +528,11 @@ export default function CrudModal({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
+        pageScroll={!!config.pageScroll}
         header={
           <div className="flex items-center gap-2 min-w-0">
             <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-100 tracking-tight truncate">
-              {config.title}
+              {tr(config.title)}
             </h2>
             {helpKey && (
               <button
@@ -374,15 +551,17 @@ export default function CrudModal({
           <div className="flex justify-end gap-2 w-full flex-wrap">
             {!isEdit && (
               <Button type="button" onClick={handleSave} disabled={loading}>
-                {loading ? '...' : 'Save'}
+                {loading ? '...' : t('common.save', { defaultValue: 'Save' })}
               </Button>
             )}
             {isEdit && showUpdate && (
               <Button type="button" onClick={handleUpdate} disabled={loading}>
-                {loading ? '...' : 'Update'}
+                {loading ? '...' : t('common.update', { defaultValue: 'Update' })}
               </Button>
             )}
-            <Button type="button" variant="secondary" onClick={handleClose}>Close</Button>
+            <Button type="button" variant="secondary" onClick={handleClose}>
+              {t('common.close', { defaultValue: 'Close' })}
+            </Button>
           </div>
         }
       >
@@ -418,9 +597,10 @@ export default function CrudModal({
           onSubmit={(e) => { e.preventDefault(); isEdit ? handleUpdate(e) : handleSave(e); }}
           className={formClass}
         >
-          {errors.submit && <p className={`text-sm text-red-600 ${config.gridCols === 2 ? 'md:col-span-2' : ''}`}>{errors.submit}</p>}
+          {errors.submit && <p className={`text-sm text-red-600 ${config.gridCols === 3 ? 'md:col-span-2 lg:col-span-3' : config.gridCols === 2 ? 'md:col-span-2' : ''}`}>{errors.submit}</p>}
           {config.fields
             ?.filter((f) => !f.showOnMode || f.showOnMode === (isEdit ? 'update' : 'insert'))
+            .filter((f) => !f.showWhen || f.showWhen(form))
             .map((f) => renderField(f))}
         </form>
       </Modal>
@@ -431,6 +611,21 @@ export default function CrudModal({
           onClose={() => setHelpOpen(false)}
           moduleKey={helpKey}
           moduleLabel={config.title || helpKey}
+        />
+      )}
+
+      {/* Inline + Add New sub-modal (e.g. registers a Responsible without leaving
+          the Student Register flow). On save, the parent dropdown is refetched
+          and the new row is selected automatically. */}
+      {subModal.open && CRUD_CONFIG[subModal.configKey] && (
+        <CrudModal
+          isOpen={true}
+          onClose={() => setSubModal({ open: false })}
+          config={CRUD_CONFIG[subModal.configKey]}
+          initialForm={{ [subModal.seedField || 'p_name_sp']: subModal.searchText || '' }}
+          mode="insert"
+          onSuccess={handleSubModalSuccess}
+          moduleKey={subModal.configKey}
         />
       )}
     </>

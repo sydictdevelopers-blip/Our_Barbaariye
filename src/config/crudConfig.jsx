@@ -78,6 +78,8 @@ function generateCrudConfig(schema) {
     const e = {};
     fields
       .filter((f) => {
+        // Skip fields hidden by a conditional showWhen (e.g. transfer_school when en_ty_id=1).
+        if (typeof f.showWhen === 'function' && !f.showWhen(form)) return false;
         if (f.required) return true;
         if (f.requiredOnMode && f.requiredOnMode === mode) return true;
         return false;
@@ -85,7 +87,14 @@ function generateCrudConfig(schema) {
       .forEach((f) => {
         const v = form[f.name];
         const invalid = f.type === 'checkbox' ? v !== true : !(v ?? '').toString().trim();
-        if (invalid) e[f.name] = `${toLabel(f.label || f.name)} required`;
+        if (invalid) {
+          // If label is an i18n key (e.g. "students.registerForm.fields.fullName"),
+          // store it raw so CrudModal can translate; the modal renders "<label> required".
+          const labelText = (f.label && String(f.label).includes('.'))
+            ? f.label
+            : toLabel(f.label || f.name);
+          e[f.name] = `${labelText} required`;
+        }
       });
     if (typeof extraValidate === 'function') {
       Object.assign(e, extraValidate(form, mode) || {});
@@ -514,6 +523,129 @@ const ENTITIES = [
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
   },
+  // ---- Student Master Registration (people + student + student_class + charge) ----
+  // Layout matches legacy modal: 3 cols, row-major. Modal uses page scroll (no inner scrollbar).
+  {
+    key: 'StudentRegister',
+    title: 'students.registerForm.title',
+    fn: 'student_master_sp',
+    idKey: 'std_id',
+    idParam: 'std_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 3,
+    modalSize: 'xl',
+    pageScroll: true,
+    fields: [
+      // Row 1: ID. (read-only) | EMIS NO. | Student name.
+      { name: 'std_id_display',    label: 'students.registerForm.fields.id',           type: 'number', omitFromParams: true, rowKey: 'std_id', default: 0, props: { readOnly: true, disabled: true } },
+      { name: 'emis_id_sp',        label: 'students.registerForm.fields.emisId',       type: 'text',                    rowKey: 'emis_id',      param: 'emis_id_sp',        default: '0' },
+      { name: 'p_name_sp',         label: 'students.registerForm.fields.fullName',     type: 'text',   required: true,  rowKey: 'student_name', param: 'p_name_sp',         placeholder: 'students.registerForm.ph.fullName' },
+
+      // Row 2: Student Phone. | Address | Sex
+      { name: 'tel_sp',            label: 'students.registerForm.fields.phone',        type: 'text',   required: true,  rowKey: 'phone',        param: 'tel_sp',            placeholder: 'students.registerForm.ph.phone' },
+      { name: 'ad_id_sp',          label: 'students.registerForm.fields.address',      type: 'select', required: true,  rowKey: 'ad_id',        param: 'ad_id_sp',
+        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', placeholder: 'students.registerForm.ph.address', default: '' },
+      { name: 'sex_sp',            label: 'students.registerForm.fields.sex',          type: 'select', required: true,  rowKey: 'sex',          param: 'sex_sp',            default: 'Male',
+        options: [{ value: 'Male', label: 'students.registerForm.opts.male' }, { value: 'Female', label: 'students.registerForm.opts.female' }] },
+
+      // Row 3: Mother name. | Mother Phone. | POB.
+      { name: 'mothername_sp',     label: 'students.registerForm.fields.motherName',   type: 'text',                    rowKey: 'mothername',   param: 'mothername_sp',     placeholder: 'students.registerForm.ph.motherName' },
+      { name: 'mother_phone_sp',   label: 'students.registerForm.fields.motherPhone',  type: 'text',                    rowKey: 'mother_phone', param: 'mother_phone_sp',   placeholder: 'students.registerForm.ph.motherPhone' },
+      { name: 'pob_sp',            label: 'students.registerForm.fields.pob',          type: 'text',                    rowKey: 'pob',          param: 'pob_sp',            placeholder: 'students.registerForm.ph.pob' },
+
+      // Row 4: DOB. | Academic Year | Responsible (with inline + Add New)
+      { name: 'dob_sp',            label: 'students.registerForm.fields.dob',          type: 'date',   required: true,  rowKey: 'dob',          param: 'dob_sp',            default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'a_y_id_sp',         label: 'students.registerForm.fields.academicYear', type: 'select', required: true,  rowKey: 'a_y_id',       param: 'a_y_id_sp',
+        optionsKey: 'academic_options', value: 'a_y_id', nameKey: 'academic_name', placeholder: 'students.registerForm.ph.academicYear', default: '' },
+      { name: 'res_id_sp',         label: 'students.registerForm.fields.responsible',  type: 'select', required: true,  rowKey: 'res_id',       param: 'res_id_sp',
+        optionsKey: 'responsible_options', value: 'res_id', nameKey: 'p_name', placeholder: 'students.registerForm.ph.responsible', default: '',
+        // When the searched responsible is not found, show "+ Add New" — opens
+        // the ResponsibleModal CRUD pre-filled with the search text. After save
+        // the parent dropdown is refetched and the new row is auto-selected.
+        addNewConfigKey: 'ResponsibleModal', addNewSearchKey: 'p_name_sp' },
+
+      // Row 5: Relation | Enrollment Type | Transferred School. (hidden unless Transfer)
+      { name: 'r_r_id_sp',         label: 'students.registerForm.fields.relation',     type: 'select', required: true,  rowKey: 'r_r_id',       param: 'r_r_id_sp',
+        optionsKey: 'responsible_relation_options', value: 'r_r_id', nameKey: 'relation_name', placeholder: 'students.registerForm.ph.relation', default: '' },
+      { name: 'en_ty_id_sp',       label: 'students.registerForm.fields.enrollType',   type: 'select', required: true,  rowKey: 'en_ty_id',     param: 'en_ty_id_sp',
+        optionsKey: 'enroll_type_options', value: 'en_ty_id', nameKey: 'enroll_type', placeholder: 'students.registerForm.ph.enrollType', default: '' },
+      { name: 'transfer_school_sp', label: 'students.registerForm.fields.transferSchool', type: 'text',                  rowKey: 'transfer_school', param: 'transfer_school_sp',
+        placeholder: 'students.registerForm.ph.transferSchool', default: '',
+        // Show only when the picked enrollment type is "Transfer" (case-insensitive).
+        showWhen: (form) => String(form.en_ty_id_sp_label ?? '').trim().toLowerCase() === 'transfer' },
+
+      // Row 6: Discount. | Type Fee (student_type_fee) | Description (hidden unless Free)
+      { name: 'discount_sp',       label: 'students.registerForm.fields.discount',     type: 'number',                  rowKey: 'discount',     param: 'discount_sp',       default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'std_ty_f_id_sp',    label: 'students.registerForm.fields.studentTypeFee', type: 'select', required: true, rowKey: 'st_ty_id',  param: 'std_ty_f_id_sp',
+        optionsKey: 'student_type_fee_options', value: 'st_ty_id', nameKey: 'type_fee_name', placeholder: 'students.registerForm.ph.studentTypeFee', default: '' },
+      { name: 'free_description_sp', label: 'students.registerForm.fields.freeDescription', type: 'select', rowKey: 'free_description', param: 'free_description_sp', default: '',
+        options: [
+          { value: 'Sabool',          label: 'students.registerForm.opts.sabool' },
+          { value: 'Ilma Shaqaale',   label: 'students.registerForm.opts.ilmaShaqaale' },
+          { value: 'Maxmuul',         label: 'students.registerForm.opts.maxmuul' },
+          { value: 'Kaalin',          label: 'students.registerForm.opts.kaalin' },
+        ],
+        // Show only when the picked Type Fee row is "Free" (case-insensitive).
+        showWhen: (form) => String(form.std_ty_f_id_sp_label ?? '').trim().toLowerCase() === 'free' },
+
+      // Row 7: Bus | Bus Fee. (hidden when None bus picked) | Orphan
+      { name: 'bus_id_sp',         label: 'students.registerForm.fields.bus',          type: 'select', required: true,  rowKey: 'bus_id',       param: 'bus_id_sp',
+        optionsKey: 'bus_options', value: 'id', nameKey: 'bus_name', placeholder: 'students.registerForm.ph.bus', default: '' },
+      { name: 'bus_fee_sp',        label: 'students.registerForm.fields.busFee',       type: 'number',                  rowKey: 'bus_fee',      param: 'bus_fee_sp',        default: 0, props: { min: 0, step: 0.01 },
+        // Hide when the picked bus row is "None".
+        showWhen: (form) => {
+          const lbl = String(form.bus_id_sp_label ?? '').trim().toLowerCase();
+          return lbl !== '' && lbl !== 'none';
+        } },
+      { name: 'orphan_status_sp',  label: 'students.registerForm.fields.orphanStatus', type: 'select',                  rowKey: 'orphan_status',     param: 'orphan_status_sp',     default: 'Not orphan',
+        options: [
+          { value: 'Not orphan',  label: 'students.registerForm.opts.notOrphan' },
+          { value: 'No father',   label: 'students.registerForm.opts.noFather' },
+          { value: 'No mother',   label: 'students.registerForm.opts.noMother' },
+          { value: 'Both parent', label: 'students.registerForm.opts.bothParent' },
+        ] },
+
+      // Row 8: Disability | Refugee | Register Fee.
+      { name: 'disability_status_sp', label: 'students.registerForm.fields.disabilityStatus', type: 'select',           rowKey: 'disability_status', param: 'disability_status_sp', default: 'No Disability',
+        options: [
+          { value: 'No Disability',     label: 'students.registerForm.opts.noDisability' },
+          { value: 'Mental',            label: 'students.registerForm.opts.mental' },
+          { value: 'Visual',            label: 'students.registerForm.opts.visual' },
+          { value: 'Hearing',           label: 'students.registerForm.opts.hearing' },
+          { value: 'Limbs (Movement)',  label: 'students.registerForm.opts.limbs' },
+          { value: 'Gift/talented',     label: 'students.registerForm.opts.gifted' },
+          { value: 'others',            label: 'students.registerForm.opts.others' },
+        ] },
+      { name: 'refugee_sp',        label: 'students.registerForm.fields.refugee',      type: 'select',                  rowKey: 'refugee',           param: 'refugee_sp',           default: 'Not Refugee',
+        options: [
+          { value: 'Not Refugee', label: 'students.registerForm.opts.notRefugee' },
+          { value: 'IDP',         label: 'students.registerForm.opts.idp' },
+          { value: 'Refugee',     label: 'students.registerForm.opts.refugee' },
+        ] },
+      { name: 'register_fee_sp',   label: 'students.registerForm.fields.registerFee',  type: 'number',                  rowKey: 'register_fee', param: 'register_fee_sp',   default: 0, props: { min: 0, step: 0.01 } },
+
+      // Row 9: New academic Fee. | Image upload | Class
+      { name: 'academic_fee_sp',   label: 'students.registerForm.fields.academicFee',  type: 'number',                  rowKey: 'academic_fee', param: 'academic_fee_sp',   default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'image_sp',          label: 'students.registerForm.fields.imageUrl',     type: 'image-upload',            rowKey: 'image',        param: 'image_sp',          default: '' },
+      { name: 'cl_id_sp',          label: 'students.registerForm.fields.class',        type: 'select', required: true,  rowKey: 'cl_id',        param: 'cl_id_sp',
+        optionsKey: 'class_options', value: 'cl_id', nameKey: 'class', placeholder: 'students.registerForm.ph.class', default: '' },
+
+      // Row 10: Registeration Date.
+      { name: 'reg_date_sp',       label: 'students.registerForm.fields.regDate',      type: 'date',                    rowKey: 'reg_date',     param: 'reg_date_sp',       default: () => new Date().toISOString().slice(0, 10) },
+
+      // ===== Hidden defaults (function/database fills the rest) =====
+      // p_type/state/sc_state/u_br_id are session/system values.
+      // resident_type: SP COALESCE handles default.
+      // (Academic Year is now visible in the form, not hidden.)
+      { name: 'p_type_sp',         type: 'hidden', param: 'p_type_sp',     default: 'Student' },
+      { name: 'state_p_sp',        type: 'hidden', param: 'state_p_sp',    default: 'Active' },
+      { name: 'std_state_sp',      type: 'hidden', param: 'std_state_sp',  default: 'Active' },
+      { name: 'sc_state_sp',       type: 'hidden', param: 'sc_state_sp',   default: 'Continue' },
+      { name: 'resident_type_sp',  type: 'hidden', param: 'resident_type_sp', default: '' },
+      { name: 'u_br_id_sp',        type: 'hidden', param: 'u_br_id_sp',    default: getSessionUBrId },
+    ],
+  },
   {
     key: 'ExamSchedule',
     title: 'Exam Schedule',
@@ -535,6 +667,28 @@ const ENTITIES = [
       { name: 'start_time_sp', label: 'Start Time', type: 'time', required: true, rowKey: 'start_time', param: 'start_time_sp' },
       { name: 'end_time_sp', label: 'End Time', type: 'time', required: true, rowKey: 'end_time', param: 'end_time_sp' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+  {
+    key: 'Complain',
+    title: 'Complain',
+    fn: 'complain_sp',
+    idKey: 'id',
+    omitPId: true,
+    omitPUsrId: true,
+    idParam: 'com_id_sp',
+    gridCols: 2,
+    fields: [
+      { name: 'name_sp',     label: 'complain.fields.name',    type: 'text',     required: true, rowKey: 'name',     param: 'name_sp' },
+      { name: 'phone_sp',    label: 'complain.fields.phone',   type: 'text',     required: true, rowKey: 'phone',    param: 'phone_sp' },
+      { name: 'cabasho_sp',  label: 'complain.fields.comment', type: 'textarea', required: true, rows: 4, rowKey: 'comments', param: 'cabasho_sp' },
+      { name: 'reg_date_sp', label: 'complain.fields.date',    type: 'date',     required: true, rowKey: 'reg_date', param: 'reg_date_sp', default: () => new Date().toISOString().slice(0, 10) },
+      // Hidden defaults — keep complain_sp signature stable. The UI only
+      // collects the four user-facing fields (Name / Phone / Comment / Date).
+      { name: 'comp_type_sp', type: 'hidden', param: 'comp_type_sp', default: 'Other' },
+      { name: 'student_sp',   type: 'hidden', param: 'student_sp',   default: '' },
+      { name: 'teacher_sp',   type: 'hidden', param: 'teacher_sp',   default: '' },
+      { name: 'u_br_id_sp',   type: 'hidden', param: 'u_br_id_sp',   default: getSessionUBrId },
     ],
   },
 ];
