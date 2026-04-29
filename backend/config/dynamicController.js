@@ -60,6 +60,11 @@ const PROCEDURE_PARAM_ORDER = {
     'bus_id_sp', 'bus_fee_sp', 'std_ty_f_id_sp', 'free_description_sp',
     'resident_type_sp', 'sc_state_sp', 'reg_date_sp', 'oper',
   ],
+  result_sp: ['p_id', 'p_student', 'p_exam', 'p_subject', 'p_mark', 'p_user_id', 'oper'],
+  class_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_user_id', 'oper'],
+  subject_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_subject', 'p_user_id', 'oper'],
+  result_approve_sp: ['p_id', 'p_user_id', 'oper'],
+  result_approve_bulk_sp: ['p_class', 'p_user_id', 'oper'],
 };
 
 /**

@@ -1,24 +1,27 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
 import AsyncSelect from 'react-select/async';
+import { tDb } from '../../i18n/i18n';
 
 /**
  * Renders an option label with an Active/Inactive badge when the option carries
  * a `state` field. Used inside the dropdown menu only — the selected value
- * shows just the label so the input stays compact.
+ * shows just the label so the input stays compact. Both label and state badge
+ * pass through tDb so fixed-vocabulary values translate with the active language.
  */
 function renderOptionWithState(opt, meta) {
-  if (meta?.context !== 'menu' || !opt?.state) return opt?.label ?? '';
+  if (meta?.context !== 'menu' || !opt?.state) return tDb(opt?.label ?? '');
   const isActive = String(opt.state).toLowerCase() === 'active';
   const badgeClass = isActive
     ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
     : 'bg-slate-100 text-slate-500 border border-slate-200';
   return (
     <div className="flex items-center justify-between gap-2 w-full">
-      <span className="truncate">{opt.label}</span>
+      <span className="truncate">{tDb(opt.label)}</span>
       <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClass}`}>
-        {isActive ? 'Active' : opt.state}
+        {tDb(opt.state)}
       </span>
     </div>
   );
@@ -97,6 +100,9 @@ export default function Select2({
   styles: stylesOverride,
   ...props
 }) {
+  // Subscribe to i18n so the rendered labels (via getOptionLabel/formatOptionLabel)
+  // re-evaluate when the user switches language.
+  useTranslation();
   const isDark = document.documentElement.classList.contains('dark');
   const baseStyles = isDark ? darkSelect2Styles : select2Styles;
   const styles = stylesOverride
@@ -167,7 +173,10 @@ export default function Select2({
           defaultOptions={defaultOpts}
           onMenuOpen={handleMenuOpen}
           cacheOptions
-          getOptionLabel={(opt) => (opt?.label != null ? String(opt.label) : opt?.value != null ? String(opt.value) : '')}
+          getOptionLabel={(opt) => {
+            const raw = opt?.label != null ? String(opt.label) : opt?.value != null ? String(opt.value) : '';
+            return tDb(raw);
+          }}
           getOptionValue={(opt) => opt?.value}
           formatOptionLabel={renderOptionWithState}
         />
@@ -183,6 +192,11 @@ export default function Select2({
         {...common}
         options={opt}
         value={selected}
+        getOptionLabel={(o) => {
+          const raw = o?.label != null ? String(o.label) : o?.value != null ? String(o.value) : '';
+          return tDb(raw);
+        }}
+        formatOptionLabel={renderOptionWithState}
       />
     </div>
   );
