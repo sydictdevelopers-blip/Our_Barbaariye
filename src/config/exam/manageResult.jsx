@@ -24,12 +24,29 @@ export const manageResultSection = {
       "subjectOptionsQuery": "result_subject_options",
       "examOptionsQuery": "result_exam_options",
       "hiddenColumns": ["gender", "max_mark", "message", "cl_id", "b_id", "a_y_id", "sub_id", "ex_id"],
+      "hideEdit": true,
+      "hideAddNew": true,
       "loadButtons": [
-        { "id": "ClassExamDelete", "label": "Class Exam Delete", "icon": "Database", "inDevelopment": true },
-        { "id": "SubjectExamDelete", "label": "Subject Exam Delete", "icon": "Database", "inDevelopment": true },
-        { "id": "Result", "label": "Show Exam", "icon": "Database" },
-        { "id": "EditExam", "label": "Edit Exam", "icon": "Database", "inDevelopment": true },
-        { "id": "ResultAddNew", "label": "Add New", "icon": "Plus" }
+        {
+          "id": "ClassExamDelete",
+          "label": "Class Exam Delete",
+          "labelKey": "manageResult.classExamDelete",
+          "icon": "Database",
+          "deleteAction": "class_exam_delete_sp",
+          "confirmText": "Tani waxay tirtirtaa imtixaanka oo dhan ee fasalka. Sii wad?"
+        },
+        {
+          "id": "SubjectExamDelete",
+          "label": "Subject Exam Delete",
+          "labelKey": "manageResult.subjectExamDelete",
+          "icon": "Database",
+          "deleteAction": "subject_exam_delete_sp",
+          "withSubject": true,
+          "confirmText": "Tani waxay tirtirtaa keliya maaddada doorashada. Sii wad?"
+        },
+        { "id": "Result",       "label": "Show Exam", "labelKey": "manageResult.showExam", "icon": "Database" },
+        { "id": "EditExam",     "label": "Edit Exam", "labelKey": "manageResult.editExam", "icon": "Database" },
+        { "id": "ResultAddNew", "label": "Add New",   "labelKey": "entity.addNew",         "icon": "Plus" }
       ]
     },
     {
@@ -41,11 +58,35 @@ export const manageResultSection = {
       "icon": "ClipboardCheck",
       "queryName": "ApproveExam",
       "showClassSelect": true,
-      "showAcademicYearSelect": true,
-      "showExamSelect": true,
+      "hiddenColumns": ["cl_id"],
+      "hideAddNew": true,
       "loadButtons": [
-        { "id": "ApproveExam", "label": "Show Data", "icon": "Database" },
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ApproveExam" }
+        {
+          "id": "ApproveByClass",
+          "label": "Approve By Class",
+          "labelKey": "manageResult.approveByClass",
+          "icon": "CheckCircle",
+          "bulkAction": "approve",
+          "requiresClass": true,
+          "confirmText": "Tani waxay ansixisaa dhammaan saxnaaynta sugaya ee fasalka. Sii wad?"
+        },
+        {
+          "id": "ApproveAll",
+          "label": "Approve All",
+          "labelKey": "manageResult.approveAll",
+          "icon": "CheckCheck",
+          "bulkAction": "approve",
+          "confirmText": "Tani waxay ansixisaa DHAMMAAN saxnaaynta sugaya ee fasalada oo dhan. Sii wad?"
+        },
+        {
+          "id": "CancelAll",
+          "label": "Cancel All",
+          "labelKey": "manageResult.cancelAll",
+          "icon": "XCircle",
+          "bulkAction": "cancel",
+          "confirmText": "Tani waxay tirtirtaa DHAMMAAN saxnaaynta sugaya. Sii wad?"
+        },
+        { "id": "ApproveExam", "label": "Show Data All", "labelKey": "manageResult.showDataAll", "icon": "Database", "skipFilterValidation": true }
       ]
     },
     {

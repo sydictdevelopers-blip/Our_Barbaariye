@@ -23,6 +23,39 @@ module.exports = {
   ResultAddNew: (p) => `SELECT * FROM btn_insert_exam(${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.sub_id) || 0}, ${Number(p?.b_id) || 0}, 'std')`,
   // Result → SHOW/EDIT EXAM: liiska ardayda marks-ku haray (operation='update')
   Result: (p) => `SELECT * FROM btn_insert_exam(${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.sub_id) || 0}, ${Number(p?.b_id) || 0}, 'update')`,
+  // Result → EDIT EXAM: same dataset as Result, but a separate entityKey so the UI
+  // renders inline marks editing + GENERATE without sharing state with Show Exam.
+  EditExam: (p) => `SELECT * FROM btn_insert_exam(${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.sub_id) || 0}, ${Number(p?.b_id) || 0}, 'update')`,
+
+  // Approve Exam: rows where someone proposed a corrected mark (result.approve filled).
+  // Filters: cl_id is optional — empty means all classes ("Show Data All").
+  ApproveExam: (p) => {
+    const filters = [`r.approve IS NOT NULL AND TRIM(r.approve) <> ''`];
+    if (Number(p?.cl_id)) filters.push(`sc.cl_id = ${Number(p.cl_id)}`);
+    return `
+      SELECT r.r_id                      AS id,
+             p.p_name                    AS student,
+             cl.class                    AS class_name,
+             su.name                     AS course,
+             e.exam                      AS exam,
+             r.marks::text               AS ex_result,
+             r.approve                   AS new_result,
+             COALESCE(u.username, '-')   AS username,
+             sc.cl_id
+      FROM result r
+      JOIN student_class sc ON sc.std_cl_id = r.std_cl_id
+      JOIN student       s  ON s.std_id     = sc.std_id
+      JOIN people        p  ON p.p_id       = s.p_id
+      JOIN class         cl ON cl.cl_id     = sc.cl_id
+      JOIN subjects      su ON su.sub_id    = r.su_id
+      JOIN exam_reg      er ON er.ex_reg_id = r.e_r_id
+      JOIN exam          e  ON e.ex_id      = er.ex_id
+      LEFT JOIN user_branch ub ON ub.u_br_id = r.editted_user
+      LEFT JOIN users       u  ON u.usr_id   = ub.usr_id
+      WHERE ${filters.join(' AND ')}
+      ORDER BY p.p_name
+    `;
+  },
   ResultMaximum: (p) => `SELECT * FROM btn_insert_exam(${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.sub_id) || 0}, ${Number(p?.b_id) || 0}, 'maximum')`,
 
   // Question bank — SHOW DATA listing for QuestionsTableTab (joins lookup tables for readable labels).
