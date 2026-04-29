@@ -31,6 +31,7 @@ CREATE OR REPLACE FUNCTION public.result_sp(
  RETURNS TABLE(result text)
  LANGUAGE plpgsql
 AS $function$
+#variable_conflict use_variable
 DECLARE
     v_username  varchar;
     v_name      varchar;
@@ -40,6 +41,7 @@ DECLARE
     v_old_mark  text;
     v_log_body  text;
     v_user_ok   boolean;
+    v_max_mark  numeric;
 BEGIN
     -- 1) Hubi user-ka inuu Active oo Unlocked yahay
     SELECT EXISTS (
@@ -109,6 +111,13 @@ BEGIN
             RETURN;
         END IF;
 
+        -- Refuse marks above exam_reg.marks (the exam's max). Skipped if max is null.
+        SELECT er.marks INTO v_max_mark FROM exam_reg er WHERE er.ex_reg_id = p_exam;
+        IF v_max_mark IS NOT NULL AND p_mark::numeric > v_max_mark THEN
+            RETURN QUERY SELECT ('Dhibcaha la galiyay (' || p_mark || ') way ka badan yihiin maximum-ka imtixaanka (' || v_max_mark::text || ').')::text;
+            RETURN;
+        END IF;
+
         INSERT INTO result (std_cl_id, e_r_id, su_id, marks, activity, approve, lock, reg_date, u_br_id)
         VALUES (p_student, p_exam, p_subject, p_mark::numeric, 0, '', 'Locked', NOW(), p_user_id);
 
@@ -131,9 +140,21 @@ BEGIN
             RETURN;
         END IF;
 
+        -- Refuse marks above exam_reg.marks (the exam's max). Skipped if max is null.
+        SELECT er.marks INTO v_max_mark FROM exam_reg er WHERE er.ex_reg_id = p_exam;
+        IF v_max_mark IS NOT NULL AND p_mark::numeric > v_max_mark THEN
+            RETURN QUERY SELECT ('Dhibcaha la galiyay (' || p_mark || ') way ka badan yihiin maximum-ka imtixaanka (' || v_max_mark::text || ').')::text;
+            RETURN;
+        END IF;
+
+        -- Edit Exam: stash the proposed (corrected) mark in `approve`. The committed
+        -- `marks` column stays untouched until the Approve Exam workflow promotes
+        -- `approve` → `marks`. `editted_user` records the editor; `u_br_id` (creator)
+        -- and `approved_user` are not touched here.
         UPDATE result
-        SET approve = p_mark,
-            e_r_id  = p_exam
+        SET approve      = p_mark,
+            e_r_id       = p_exam,
+            editted_user = p_user_id
         WHERE r_id = p_student;
 
         SELECT p.p_name, e.exam, su.name, r.marks

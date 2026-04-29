@@ -537,6 +537,23 @@ const ENTITIES = [
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
   },
+  // Manage Result → Result tab. Delete-only entry: row.id maps to r_id (set as p_id),
+  // p_user_id = session u_br_id; p_student/p_exam/p_subject/p_mark are required by the
+  // SP signature but unused by the delete branch, so we send 0/''.
+  {
+    key: 'Result',
+    title: 'Result',
+    fn: 'result_sp',
+    idKey: 'id',
+    omitPUsrId: true,
+    fields: [
+      { name: 'p_student', type: 'hidden', param: 'p_student', default: 0 },
+      { name: 'p_exam',    type: 'hidden', param: 'p_exam',    default: 0 },
+      { name: 'p_subject', type: 'hidden', param: 'p_subject', default: 0 },
+      { name: 'p_mark',    type: 'hidden', param: 'p_mark',    default: '0' },
+      { name: 'p_user_id', type: 'hidden', param: 'p_user_id', default: getSessionUBrId },
+    ],
+  },
 ];
 
 export const CRUD_CONFIG = Object.fromEntries(

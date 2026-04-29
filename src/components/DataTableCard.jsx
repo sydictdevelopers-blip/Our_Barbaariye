@@ -6,7 +6,7 @@
  *   • sticky first column, sortable headers
  *   • polished pagination
  */
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, useEffect, memo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,9 +15,11 @@ import {
 } from '@tanstack/react-table';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, X, ChevronsUpDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Card from './ui/Card';
 import EmptyState from './ui/EmptyState';
 import ErrorAlert from './ui/ErrorAlert';
+import { tDb } from '../i18n/i18n';
 
 /* ─── Cell classifiers ─── */
 const CURRENCY_KEYS = ['balance', 'amount', 'salary', 'fee', 'price'];
@@ -39,6 +41,9 @@ const formatDate = (value) => {
 };
 
 const StatusBadge = ({ value }) => {
+  // Color buckets keyed off the original DB value (lowercased), independent of
+  // the active language — so an "Active" row stays green even when displayed
+  // as "Firfircoon" / "نشط".
   const v = String(value ?? '').trim().toLowerCase();
   const positive = ['active', 'enabled', 'yes', 'true', '1', 'open', 'approved', 'paid', 'unlocked'];
   const negative = ['inactive', 'disabled', 'no', 'false', '0', 'closed', 'rejected', 'unpaid', 'locked'];
@@ -57,7 +62,8 @@ const StatusBadge = ({ value }) => {
     : neutral.includes(v)
     ? 'bg-amber-500'
     : 'bg-slate-400';
-  const label = String(value ?? '—');
+  const translated = tDb(value);
+  const label = translated == null || translated === '' ? '—' : String(translated);
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${cls}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
@@ -71,6 +77,35 @@ function getColumnAlign(key) {
   return 'left';
 }
 
+// Local-state editable cell: keeps focus on every keystroke even when the parent
+// re-renders (parent re-renders happen every onChange because editValues lifts up).
+// The committed value is propagated upward via onChange, but the input's own state
+// is owned here so React never replaces the DOM input mid-typing.
+function EditableCell({ initialValue, max, onChange }) {
+  const [val, setVal] = useState(String(initialValue ?? ''));
+  // Reset only when the underlying row value changes (e.g. data reload).
+  useEffect(() => { setVal(String(initialValue ?? '')); }, [initialValue]);
+  const maxNum = max != null && max !== '' ? Number(max) : null;
+  return (
+    <input
+      type="number"
+      step="any"
+      min={0}
+      max={maxNum != null && Number.isFinite(maxNum) ? maxNum : undefined}
+      value={val}
+      onChange={(e) => {
+        let next = e.target.value;
+        if (maxNum != null && Number.isFinite(maxNum) && next !== '' && Number(next) > maxNum) {
+          next = String(maxNum);
+        }
+        setVal(next);
+        onChange?.(next);
+      }}
+      className="w-24 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0B3C5D]/30 focus:border-[#0B3C5D]"
+    />
+  );
+}
+
 const formatCell = (col, row) => {
   const value = row[col.key];
   if (isCurrencyCol(col.key)) {
@@ -81,7 +116,9 @@ const formatCell = (col, row) => {
   if (isStatusCol(col.key)) return <StatusBadge value={value} />;
   if (isDateCol(col.key)) return <span className="tabular-nums text-slate-600 dark:text-slate-300">{formatDate(value)}</span>;
   if (value == null || value === '') return <span className="text-slate-300 dark:text-slate-600">—</span>;
-  return <span className="text-slate-700 dark:text-slate-200">{String(value)}</span>;
+  // tDb passes user-entered strings (names, etc.) through unchanged and only
+  // translates known fixed-vocabulary values like 'By Name' / 'By Serial'.
+  return <span className="text-slate-700 dark:text-slate-200">{tDb(String(value))}</span>;
 };
 
 function DataTableCard({
@@ -106,6 +143,7 @@ function DataTableCard({
   emptyDescNoResult = 'Xog lama helin. Raadinta si toos ah ayaa lagu dhaqangalayaa.',
   renderActions,
   editableColumns,
+  editableMaxField,
   editValues,
   onEditChange,
   rowKey,
@@ -119,6 +157,9 @@ function DataTableCard({
   onPageClick,
   onPageSizeChange,
 }) {
+  // Subscribe to language changes so cells & dropdowns re-render when the user
+  // switches language — tDb reads i18n at call time but doesn't trigger renders itself.
+  useTranslation();
   const editableSet = useMemo(() => new Set(editableColumns || []), [editableColumns]);
   const getRowKey = (row, index) => {
     if (typeof rowKey === 'function') return String(rowKey(row));
@@ -146,21 +187,22 @@ function DataTableCard({
   const isEmpty = !columns?.length && !filteredData?.length;
   const hasData = columns?.length && filteredData?.length;
 
+  // tableColumns intentionally excludes `editValues` from deps — the cell uses
+  // EditableCell's local state so we don't need to rebuild columns on every keystroke.
   const tableColumns = useMemo(() => {
     const cols = (columns || []).map((col) => ({
       accessorKey: col.key,
       header: col.label,
-      cell: ({ row, table }) => {
+      cell: ({ row }) => {
         if (editableSet.has(col.key)) {
           const rid = getRowKey(row.original, row.index);
-          const v = editValues?.[rid]?.[col.key] ?? row.original[col.key] ?? '';
+          const maxField = editableMaxField?.[col.key];
+          const max = maxField ? row.original[maxField] : undefined;
           return (
-            <input
-              type="number"
-              step="any"
-              value={v}
-              onChange={(e) => onEditChange?.(rid, col.key, e.target.value)}
-              className="w-24 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0B3C5D]/30 focus:border-[#0B3C5D]"
+            <EditableCell
+              initialValue={row.original[col.key]}
+              max={max}
+              onChange={(v) => onEditChange?.(rid, col.key, v)}
             />
           );
         }
@@ -179,7 +221,7 @@ function DataTableCard({
       });
     }
     return cols;
-  }, [columns, renderActions, editableSet, editValues, onEditChange, rowKey]);
+  }, [columns, renderActions, editableSet, editableMaxField, onEditChange, rowKey]);
 
   const table = useReactTable({
     data: isLoading ? [] : filteredData,
