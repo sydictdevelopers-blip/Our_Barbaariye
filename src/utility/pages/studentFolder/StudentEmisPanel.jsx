@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Save, X, RefreshCw, Mail, Search } from 'lucide-react';
 import Card from '../../../components/ui/Card';
-import { fetchDataPaginated } from '../../../services/api';
+import { dedupeRequest, fetchDataPaginated, runBulk } from '../../../services/api';
 import { swalError, swalSuccess } from '../../../utils/swal';
 import { getSessionUBrId } from '../../../config/crudConfig';
-
-const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 /** Server text patterns oo macnaheeda yahay error/warning halkii guul. */
 const FAILURE_PATTERN = /lock|locked|not\s+registered|not\s+found|denied|forbidden|userlock|notreg/i;
@@ -27,28 +25,37 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
   const [loading, setLoading] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [search, setSearch] = useState('');
+  // Windowed rendering — 82k+ row haddii la render gareeyo browser-ku wuu qaboobi
+  // karaa. Render kaliya N row, ku dar marka scroll gaadho 80%-ka.
+  const PAGE_CHUNK = 200;
+  const [displayLimit, setDisplayLimit] = useState(PAGE_CHUNK);
+  const inFlightRef = useRef(false);
 
   const filtersReady = !!(cl_id && a_y_id && br_id);
 
   const loadRows = useMemo(
     () => async () => {
       if (!filtersReady) return;
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setLoading(true);
       try {
-        const res = await fetchDataPaginated({
+        const key = `EmisIdCardList:${cl_id}:${br_id}:${a_y_id}`;
+        const res = await dedupeRequest(key, () => fetchDataPaginated({
           queryName: 'EmisIdCardList',
           page: 1,
           limit: 1000,
           cl_id,
           br_id,
           a_y_id,
-        });
+        }));
         const list = (res?.data ?? []).filter((r) => r.id != null);
         setRows(list);
         setEdited({});
       } catch (err) {
         swalError(t('swal.titles.error'), err.message);
       } finally {
+        inFlightRef.current = false;
         setLoading(false);
       }
     },
@@ -56,7 +63,12 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
   );
 
   useEffect(() => {
-    loadRows();
+    let cancelled = false;
+    (async () => {
+      await loadRows();
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
   }, [loadRows]);
 
   const setField = (id, value) => {
@@ -87,6 +99,19 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
     ));
   }, [rows, search]);
 
+  // Marka rows ama search-ku bedelo, dib u dhig limit-ka displayed-ka.
+  useEffect(() => { setDisplayLimit(PAGE_CHUNK); }, [rows, search]);
+
+  const visibleRows = useMemo(() => filteredRows.slice(0, displayLimit), [filteredRows, displayLimit]);
+
+  // Scroll handler: marka 80%-ka container-ka la gaadho, kordhi limit-ka.
+  const handleScroll = useCallback((e) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight * 0.8) {
+      setDisplayLimit((prev) => (prev < filteredRows.length ? prev + PAGE_CHUNK : prev));
+    }
+  }, [filteredRows.length]);
+
   const handleUpdateAll = async () => {
     if (!sessionUBrId) {
       swalError(t('swal.titles.error'), t('emisPanel.errNoSession'));
@@ -95,44 +120,44 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
     if (dirtyRows.length === 0) return;
 
     setSavingAll(true);
-    let okCount = 0;
-    const failures = [];
-    const successMsgs = [];
     try {
-      const results = await Promise.allSettled(
-        dirtyRows.map(async (row) => {
-          const body = {
-            fn: 'update_emis_student_id_sp',
-            p_std_id: Number(row.id),
-            p_id_card: String(valueOf(row)).trim(),
-            p_u_br_id: sessionUBrId,
-            oper: 'update',
-          };
-          const resp = await fetch(`${API_BASE}/all`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          const text = (await resp.text()).trim();
-          if (!resp.ok) throw new Error(text || 'Failed');
-          if (FAILURE_PATTERN.test(text)) {
-            const e = new Error(text);
-            e.isServerAlert = true;
-            throw e;
-          }
-          return { row, body, text };
-        })
-      );
+      // Hal request → /api/bulk. Dhammaan dirty rows-ka hal transaction ah ayaa
+      // lagu fuliyaa. Param order ee dynamicController.js:
+      // [p_std_id, p_id_card, p_u_br_id]
+      const steps = dirtyRows.map((row) => ({
+        type: 'sp',
+        fn: 'update_emis_student_id_sp',
+        params: [
+          Number(row.id),
+          String(valueOf(row)).trim(),
+          sessionUBrId,
+        ],
+      }));
+
+      let bulkRes;
+      try {
+        bulkRes = await runBulk(steps);
+      } catch (err) {
+        swalError('', err?.message || 'Bulk update failed');
+        return;
+      }
+
+      const stepResults = Array.isArray(bulkRes?.results) ? bulkRes.results : [];
 
       const updatedById = {};
-      results.forEach((r, i) => {
-        if (r.status === 'fulfilled') {
-          okCount += 1;
-          const { row, body, text } = r.value;
-          updatedById[row.id] = body.p_id_card;
-          if (text) successMsgs.push(text);
+      const failures = [];
+      const successMsgs = [];
+      let okCount = 0;
+
+      dirtyRows.forEach((row, i) => {
+        const stepRows = stepResults[i] || [];
+        const text = stepRows[0] ? String(Object.values(stepRows[0])[0] ?? '').trim() : '';
+        if (text && FAILURE_PATTERN.test(text)) {
+          failures.push({ id: row.id, message: text });
         } else {
-          failures.push({ id: dirtyRows[i].id, message: r.reason?.message || 'Failed' });
+          okCount += 1;
+          updatedById[row.id] = String(valueOf(row)).trim();
+          if (text) successMsgs.push(text);
         }
       });
 
@@ -253,7 +278,7 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
       </div>
 
       {/* Body */}
-      <div className="overflow-auto max-h-[60vh]">
+      <div className="overflow-auto max-h-[60vh]" onScroll={handleScroll}>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
             <RefreshCw className="w-6 h-6 animate-spin text-[#1a6296]" />
@@ -273,7 +298,7 @@ export default function StudentEmisPanel({ cl_id, b_id, a_y_id, br_id, onClose }
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((r) => {
+              {visibleRows.map((r) => {
                 const inputId = `emis-idcard-${r.id}`;
                 const isDirty = dirtyRowSet.has(r.id);
                 return (

@@ -3,7 +3,7 @@
  * State: state.data.entities[queryName] = { columns, data, searchQuery, pagination, ... }
  */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { crud, fetchDataPaginated } from '../services/api';
+import { fetchDataPaginated } from '../services/api';
 
 const defaultEntity = {
   columns: [],
@@ -90,15 +90,34 @@ const dataSlice = createSlice({
       const { entityKey, value } = action.payload;
       if (state.entities[entityKey]) state.entities[entityKey].itemsPerPage = Math.min(100, Math.max(5, value));
     },
+    /** Tirtir xogta entity gaar ah — la wacayo marka tab-ga (activeEntityKey) la
+        bedelo si rows-ka hore aanay u soo bandhigin marka query cusub uu socdo. */
+    clearEntityData: (state, action) => {
+      const entityKey = typeof action.payload === 'string' ? action.payload : action.payload?.entityKey;
+      if (!entityKey || !state.entities[entityKey]) return;
+      state.entities[entityKey].data = [];
+      state.entities[entityKey].originalData = [];
+      state.entities[entityKey].totalRows = 0;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(loadData.pending, (state, action) => {
         const arg = action.meta.arg;
         const queryName = typeof arg === 'string' ? arg : (arg?.queryName || 'accounts');
-        if (!state.entities[queryName]) state.entities[queryName] = { ...defaultEntity };
-        state.entities[queryName].isLoading = true;
-        state.entities[queryName].error = null;
+        const prev = state.entities[queryName] || defaultEntity;
+        // Atomic replace: ku abuur entity cusub oo data madhan, si rows-ka
+        // hore aanay u sii muuqan halka request cusub uu socdo. Tani waxay
+        // ka hortagtaa "data accumulation" cilad-yo Immer-ka asalka ah.
+        state.entities[queryName] = {
+          ...defaultEntity,
+          searchQuery: prev.searchQuery,
+          columns: prev.columns,
+          itemsPerPage: prev.itemsPerPage,
+          currentPage: prev.currentPage,
+          isLoading: true,
+          error: null,
+        };
       })
       .addCase(loadData.fulfilled, (state, action) => {
         const { queryName, data } = action.payload;
@@ -108,16 +127,38 @@ const dataSlice = createSlice({
         const pagination = payload?.pagination || {};
         if (columns.length === 0 && rows.length > 0) columns = buildColumns(rows);
         const idKey = getIdKey(columns, rows[0]);
-        const normalized = rows.map((r) => normalizeRow(r, columns, idKey));
-        if (!state.entities[queryName]) state.entities[queryName] = { ...defaultEntity };
-        state.entities[queryName].columns = columns;
-        state.entities[queryName].data = normalized;
-        state.entities[queryName].originalData = [...normalized];
-        state.entities[queryName].currentPage = pagination.page ?? state.entities[queryName].currentPage;
-        state.entities[queryName].itemsPerPage = pagination.limit ?? state.entities[queryName].itemsPerPage;
-        state.entities[queryName].totalRows = pagination.total ?? normalized.length;
-        state.entities[queryName].isLoading = false;
-        state.entities[queryName].error = null;
+        // Content-based dedup: SP qaarkood (e.g. student_responsible) JOIN-yo
+        // keentaan duplicates (e.g. arday leh student_class rows badan).
+        const seen = new Set();
+        const dedupedRows = [];
+        for (const r of rows) {
+          const sig = columns.length
+            ? columns.map((c) => String(r[c.key] ?? '')).join('|')
+            : JSON.stringify(r);
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+          dedupedRows.push(r);
+        }
+        const normalized = dedupedRows.map((r) => normalizeRow(r, columns, idKey));
+        // ATOMIC REPLACE: dhis entity-ga oo dhan oo cusub si Immer aanu u sii
+        // hayn references-ka qadiimiga ah. Tani waxay xal-bisaa ciladda data
+        // ay ku sii qabsaday array-ga hore.
+        const prev = state.entities[queryName] || defaultEntity;
+        state.entities[queryName] = {
+          ...defaultEntity,
+          searchQuery: prev.searchQuery,
+          columns,
+          data: normalized,
+          originalData: [...normalized],
+          currentPage: pagination.page ?? prev.currentPage,
+          itemsPerPage: pagination.limit ?? prev.itemsPerPage,
+          totalRows: Math.min(
+            pagination.total ?? normalized.length,
+            normalized.length
+          ),
+          isLoading: false,
+          error: null,
+        };
       })
       .addCase(loadData.rejected, (state, action) => {
         const { queryName, error } = action.payload || {};
@@ -129,7 +170,7 @@ const dataSlice = createSlice({
   },
 });
 
-export const { setSearchQuery, setCurrentPage, setItemsPerPage } = dataSlice.actions;
+export const { setSearchQuery, setCurrentPage, setItemsPerPage, clearEntityData } = dataSlice.actions;
 
 /** Select full entity by key (accounts, subjects, ...). Uses stable default ref to avoid rerenders. */
 export const selectEntity = (entityKey) => (state) =>

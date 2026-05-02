@@ -13,7 +13,10 @@ module.exports = {
     sql: `SELECT * FROM all_student_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,
   }),
-  std_admin_all_options: (p) => `SELECT * FROM vw_std_admin_all(${Number(p?.br_id) || 0})`,
+  std_admin_all_options: (p) => ({
+    sql: `SELECT * FROM all_student_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
+    prePaginated: true,
+  }),
   address_options: "SELECT add_id, concat(district, ' - ', village) AS address_name FROM address ORDER BY district, village",
   account_options: 'SELECT acc_id, acc_name FROM accounts ORDER BY acc_id',
   level_type: 'SELECT l.l_ty_id, l.name AS level_name FROM level_type l ORDER BY l.name',

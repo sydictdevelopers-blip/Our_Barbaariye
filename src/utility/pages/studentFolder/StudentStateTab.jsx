@@ -1,11 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Eye, Pencil, Database, RefreshCw, Plus, GitMerge } from 'lucide-react';
+import { Database, RefreshCw, Plus, GitMerge } from 'lucide-react';
 import Button from '../../../components/ui/Button';
-import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated } from '../../../services/api';
-import { swalError, swalSuccess } from '../../../utils/swal';
+import { swalError } from '../../../utils/swal';
 import StudentStateModal from '../../../modals/StudentStateModal';
 import MergeStudentsModal from '../../../modals/MergeStudentsModal';
 
@@ -65,16 +64,6 @@ export default function StudentStateTab() {
   const handleAddNew = () => setStateModalOpen(true);
   const handleMergeStudent = () => setMergeModalOpen(true);
 
-  const handleView = useCallback((row) => {
-    if (row.id === '__no_data__') return;
-    swalSuccess('View', String(row.student ?? ''));
-  }, []);
-
-  const handleEdit = useCallback((row) => {
-    if (row.id === '__no_data__') return;
-    swalSuccess('Edit', String(row.student ?? ''));
-  }, []);
-
   const filteredRows = useMemo(() => {
     const list = tableLoaded && tableData.length === 0 ? NO_DATA_ROW : tableData;
     const q = searchQuery.trim().toLowerCase();
@@ -88,17 +77,6 @@ export default function StudentStateTab() {
     const s = (currentPage - 1) * pageSize;
     return filteredRows.slice(s, s + pageSize);
   }, [filteredRows, currentPage, pageSize]);
-
-  const renderActions = useCallback((row) => (
-    <div className="flex justify-center gap-1">
-      <ActionButton variant="success" aria-label="View" onClick={() => handleView(row)}>
-        <Eye className="w-4 h-4" />
-      </ActionButton>
-      <ActionButton variant="edit" aria-label="Edit" onClick={() => handleEdit(row)}>
-        <Pencil className="w-4 h-4" />
-      </ActionButton>
-    </div>
-  ), [handleView, handleEdit]);
 
   const compactBtn = 'px-3 py-2 text-sm rounded-lg gap-2';
 
@@ -129,7 +107,6 @@ export default function StudentStateTab() {
         columns={STATE_COLUMNS}
         data={pagedRows}
         isLoading={loadingTable}
-        renderActions={renderActions}
         emptyTitleClickToLoad="Wax xog ah lama soo bandhigin"
         emptyDescClickToLoad="Riix Show Data si aad u aragto Student State."
         total={totalRows}

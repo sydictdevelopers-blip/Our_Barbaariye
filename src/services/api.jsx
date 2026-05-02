@@ -50,11 +50,29 @@ export async function loginUser(username, password) {
  * crud – fetch | insert | update | delete
  * fetchDataPaginated – POST /api/data { queryName, page, limit } (automatic pagination)
  * fetchSelectOptions – POST /api/data { queryName, page: 1, limit: 25 } (for dropdowns)
+ *
+ * DROPDOWN CACHE: fetchSelectOptions waxay kayd-gareysaa jawaab kasta oo dropdown
+ * ah (queryName + search + extras + session) — sidaas darteed marka isla raadinta
+ * mar kale la diro, DB lagu wici maayo. Kayd-ka waxaa la tirtirayaa marka CRUD
+ * ama bulk-update lagu fuliyo, sababtoo ah xogtu way bedeli kartaa.
  */
+const _dropdownCache = new Map(); // key → { data, ts }
+export function clearDropdownCache() { _dropdownCache.clear(); }
+function _dropdownKey(queryName, limit, search, extra, brId, uBrId) {
+  // Sort extra keys si key-gu uu xasilo (order-isbeddel ku ma faragelin doono).
+  const extraKeys = Object.keys(extra || {}).sort();
+  const extraStr = extraKeys.map((k) => `${k}=${extra[k] ?? ''}`).join('&');
+  return `${queryName}|${limit}|${(search || '').trim().toLowerCase()}|${extraStr}|${brId}|${uBrId}`;
+}
+
 export async function fetchSelectOptions(queryName, limit = 25, search = '', extra = {}) {
   const sessionBrId = getSessionBrId();
   const sessionUBrId = getSessionUBrId();
-  return fetch(`${API_BASE}/data`, {
+  const cacheKey = _dropdownKey(queryName, limit, search, extra, sessionBrId, sessionUBrId);
+  const cached = _dropdownCache.get(cacheKey);
+  if (cached) return cached;
+
+  const promise = fetch(`${API_BASE}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -73,7 +91,15 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
       });
     }
     return res.json();
+  }).catch((err) => {
+    // Khalad → ka saar cache si retry-ga uusan u xidhmin xun
+    _dropdownCache.delete(cacheKey);
+    throw err;
   });
+
+  // Kaydi promise-ka toos — taasi ka caawisa concurrent calls inay ka faa'iidaystaan
+  _dropdownCache.set(cacheKey, promise);
+  return promise;
 }
 
 /**
@@ -88,6 +114,8 @@ export async function runBulk(steps) {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || 'Bulk failed');
+  // Bulk wax bedelay → tirtir dropdown cache-ka si dropdown-yada uu xog cusub helo
+  clearDropdownCache();
   return json;
 }
 
@@ -101,6 +129,22 @@ export function getSessionUBrIdNum() {
 export function getSessionBrIdNum() {
   const v = getSessionBrId();
   return v ? Number(v) : 0;
+}
+
+// In-flight request cache: collapses concurrent fetches that share a key into
+// a single network call. Mainly defends against React StrictMode's double-mount
+// in dev (which otherwise fires every initial fetch twice) and against rapid
+// re-renders that re-trigger the same data load before the first finishes.
+const _inFlightRequests = new Map();
+export function dedupeRequest(key, fn) {
+  if (!key) return fn();
+  const existing = _inFlightRequests.get(key);
+  if (existing) return existing;
+  const promise = Promise.resolve()
+    .then(fn)
+    .finally(() => { _inFlightRequests.delete(key); });
+  _inFlightRequests.set(key, promise);
+  return promise;
 }
 
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
@@ -311,5 +355,7 @@ export async function crud({ operation, fn, params = {}, query }) {
   if (!res.ok) throw new Error(errMsg);
   // Backend returns HTTP 200 for success, non-200 for errors.
   // Trust res.ok — any 200 response from /api/all is a success.
+  // Insert/Update/Delete-ka wax bedelay → tirtir dropdown cache-ka.
+  clearDropdownCache();
   return { success: true, message: text };
 }
