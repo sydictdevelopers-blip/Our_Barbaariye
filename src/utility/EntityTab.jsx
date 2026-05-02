@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
@@ -13,6 +12,7 @@ import { CRUD_CONFIG } from '../config/crudConfig';
 import { makeOptionLoader, crud, runBulk, getSessionUBrIdNum } from '../services/api';
 import {
   loadData,
+  clearEntityData,
   setSearchQuery,
   setCurrentPage,
   setItemsPerPage,
@@ -295,6 +295,14 @@ function EntityTab({
       // Re-arm auto-show so the panel reopens once fresh data arrives.
       suppressAutoShowRef.current = false;
       setShowDataPanel(true);
+      // Tirtir slice-ka cusub si rows-ka hore (haddii ay jiraan) aanay u soo
+      // bandhigin marka query cusub uu socdo. Sidoo kale tirtir slice-ka hore
+      // marka key cusub uu yahay (e.g. SHOW DATA → ALL) si markii loo soo
+      // noqdo aanay xog laga galay laga sii hayn.
+      if (activeEntityKey && activeEntityKey !== btnId) {
+        dispatch(clearEntityData(activeEntityKey));
+      }
+      dispatch(clearEntityData(btnId));
       setActiveEntityKey(btnId);
       setActiveExtra(extra);
       // Marks-entry views (Add New & Edit Exam): default 50/page so teachers see most
@@ -306,7 +314,7 @@ function EntityTab({
         dispatch(setItemsPerPage({ entityKey: btnId, value: 50 }));
       }
     },
-    [limit, dispatch, buildExtra]
+    [limit, dispatch, buildExtra, activeEntityKey]
   );
 
   // Imperative API: AcademicSetup-ka (parent) wuxuu adeegsadaa ref-ka si uu
@@ -382,21 +390,55 @@ function EntityTab({
     [activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery]
   );
 
+  // isFullyLoaded: dhammaan rows-ka backend-ka horeba waa la helay (prePaginated
+  // queries-yada). Marka, pagination iyo search waxaa lagu sameeyaa client-side
+  // — ma jiro request cusub oo loo dirayo DB-ga.
+  const isFullyLoaded = totalRows > 0 && Array.isArray(rawPaginatedData) && rawPaginatedData.length === totalRows;
+
+  // Client-side filter + pagination — kaliya marka isFullyLoaded.
+  const clientFilteredData = useMemo(() => {
+    if (!isFullyLoaded) return paginatedData;
+    const q = (entity.searchQuery || '').toString().trim().toLowerCase();
+    if (!q) return paginatedData;
+    const keys = (columns || []).map((c) => c.key).filter(Boolean);
+    return paginatedData.filter((row) =>
+      keys.some((key) => {
+        const v = row[key];
+        return v != null && String(v).toLowerCase().includes(q);
+      })
+    );
+  }, [isFullyLoaded, paginatedData, entity.searchQuery, columns]);
+
+  const displayedData = useMemo(() => {
+    if (!isFullyLoaded) return paginatedData;
+    const start = (Math.max(1, entity.currentPage || 1) - 1) * limit;
+    return clientFilteredData.slice(start, start + limit);
+  }, [isFullyLoaded, paginatedData, clientFilteredData, entity.currentPage, limit]);
+
+  const displayedTotal = isFullyLoaded ? clientFilteredData.length : totalRows;
+  const displayedTotalPages = isFullyLoaded
+    ? Math.max(1, Math.ceil(displayedTotal / limit))
+    : totalPages;
+
   const goToPage = useCallback(
     (page) => {
       dispatch(setCurrentPage({ entityKey: activeEntityKey, value: page }));
-      dispatch(loadData(loadPayload(activeEntityKey, page, limit, entity.searchQuery, activeExtra)));
+      if (!isFullyLoaded) {
+        dispatch(loadData(loadPayload(activeEntityKey, page, limit, entity.searchQuery, activeExtra)));
+      }
     },
-    [activeEntityKey, limit, dispatch, activeExtra, entity.searchQuery]
+    [activeEntityKey, limit, dispatch, activeExtra, entity.searchQuery, isFullyLoaded]
   );
 
   const handlePageSizeChange = useCallback(
     (newSize) => {
       dispatch(setItemsPerPage({ entityKey: activeEntityKey, value: newSize }));
       dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
-      dispatch(loadData(loadPayload(activeEntityKey, 1, newSize, entity.searchQuery, activeExtra)));
+      if (!isFullyLoaded) {
+        dispatch(loadData(loadPayload(activeEntityKey, 1, newSize, entity.searchQuery, activeExtra)));
+      }
     },
-    [activeEntityKey, dispatch, activeExtra, entity.searchQuery]
+    [activeEntityKey, dispatch, activeExtra, entity.searchQuery, isFullyLoaded]
   );
 
   const renderActions = useCallback(
@@ -730,8 +772,10 @@ function EntityTab({
 
   const handleSearchSubmit = useCallback(() => {
     dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
-    dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
-  }, [activeEntityKey, limit, dispatch, entity.searchQuery, activeExtra]);
+    if (!isFullyLoaded) {
+      dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
+    }
+  }, [activeEntityKey, limit, dispatch, entity.searchQuery, activeExtra, isFullyLoaded]);
 
   // Skip auto-load haddii filter loo baahan yahay aanu la dooran. Ka hortagga
   // wicitaan SQL ah oo soo celin doona "column 'nan' does not exist" markii
@@ -746,26 +790,44 @@ function EntityTab({
     (showStudentSelect && !String(selectedStudentId || '').trim())
   );
 
+  // Search debouncer: re-runs when entity/limit/filters change too, but those paths
+  // (onShowData, handlePageSizeChange, doDelete) already dispatch loadData directly —
+  // so on context change we just sync both refs and skip, only firing on real
+  // searchQuery edits. Bug-kii hore: marka context-ku bedelo, ka dib re-render kale
+  // ka dhasho (e.g. entity.searchQuery: undefined → ''), debouncer-ku wuu fire
+  // gareyey oo isugu wici jiray /data mar labaad — sababtoo ah lastContextRef
+  // hore loo dejiyay, oo ma jirin wax searchQuery la barbar-dhig lahaa.
+  const lastContextRef = useRef('');
+  const lastSearchRef = useRef(undefined);
   useEffect(() => {
     if (!showDataPanel) return;
     if (requiredFilterMissing) return;
-  // Search debouncer: re-runs when entity/limit/filters change too, but those paths
-  // (onShowData, handlePageSizeChange, doDelete) already dispatch loadData directly —
-  // so on context change we just sync the ref and skip, only firing on real searchQuery edits.
-  const lastContextRef = useRef('');
-  useEffect(() => {
-    if (!showDataPanel) return;
     const currentContext = `${activeEntityKey}|${limit}|${JSON.stringify(activeExtra)}`;
     if (lastContextRef.current !== currentContext) {
+      // Context cusub: dejii labada ref-ba si debouncer-ku uusan u fire-garayn
+      // ilaa user-ku dhab ahaan wax ka beddelo searchQuery-ga.
       lastContextRef.current = currentContext;
+      lastSearchRef.current = entity.searchQuery;
       return;
+    }
+    // Isla context — kaliya fire haddii searchQuery dhab ahaan bedelay.
+    if (lastSearchRef.current === entity.searchQuery) return;
+    lastSearchRef.current = entity.searchQuery;
+    // Marka data oo dhan horeba la qaaday (prePaginated), DB-ga lagu wici maayo
+    // — kaliya currentPage ayaa la dib u dhigayaa, search-ka client-side ayaa
+    // lagu sameeyo (sii eeg displayedData/displayedTotal hoose).
+    if (isFullyLoaded) {
+      const t = setTimeout(() => {
+        dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
+      }, 300);
+      return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
       dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
       dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, activeExtra)));
     }, 300);
     return () => clearTimeout(t);
-  }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra, requiredFilterMissing]);
+  }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra, requiredFilterMissing, isFullyLoaded]);
 
 
   if (bulkForm && viewMode === 'form') {
@@ -805,7 +867,7 @@ function EntityTab({
       emptyDescClickToLoad={t('entity.loadHint')}
       emptyIconClickToLoad={Icon}
       columns={columns?.length ? columns : [{ key: 'id', label: 'ID' }]}
-      data={paginatedData}
+      data={displayedData}
       isLoading={entity.isLoading}
       error={entity.error}
       errorHint="Backend: npm start. DB: npm run init-db"
@@ -830,12 +892,12 @@ function EntityTab({
           {isSubmitting ? 'KAYDINTA…' : 'GENERATE'}
         </Button>
       ) : null}
-      total={totalRows}
+      total={displayedTotal}
       currentPage={entity.currentPage}
-      totalPages={totalPages}
+      totalPages={displayedTotalPages}
       itemsPerPage={limit}
       onPreviousPage={() => goToPage(Math.max(1, entity.currentPage - 1))}
-      onNextPage={() => goToPage(Math.min(totalPages, entity.currentPage + 1))}
+      onNextPage={() => goToPage(Math.min(displayedTotalPages, entity.currentPage + 1))}
       onPageClick={goToPage}
       onPageSizeChange={handlePageSizeChange}
     />

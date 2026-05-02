@@ -161,10 +161,15 @@ function DataTableCard({
   // switches language — tDb reads i18n at call time but doesn't trigger renders itself.
   useTranslation();
   const editableSet = useMemo(() => new Set(editableColumns || []), [editableColumns]);
+  // Mar walba ku dar `__${index}` si rows-ka isku id ah (e.g. SP qaarkood
+  // sida student_responsible oo soo celiya rows badan oo isku res_id ah)
+  // ay u helaan React keys gaar ah. Tani waxay xal-bisaa "Encountered two
+  // children with the same key" warning-ka, oo laga reebaa "duplicate
+  // rendering" cilad-ka React-ka.
   const getRowKey = (row, index) => {
-    if (typeof rowKey === 'function') return String(rowKey(row));
-    if (rowKey && row[rowKey] != null) return String(row[rowKey]);
-    return String(row.id ?? row.acc_id ?? row[columns?.[0]?.key] ?? index);
+    if (typeof rowKey === 'function') return `${String(rowKey(row))}__${index}`;
+    if (rowKey && row[rowKey] != null) return `${String(row[rowKey])}__${index}`;
+    return String(row.id ?? row.acc_id ?? row[columns?.[0]?.key] ?? index) + `__${index}`;
   };
   const [sorting, setSorting] = useState([]);
 

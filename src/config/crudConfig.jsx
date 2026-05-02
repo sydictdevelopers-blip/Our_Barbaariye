@@ -114,6 +114,7 @@ function generateCrudConfig(schema) {
     rows: f.rows,
     default: f.default,
     showOnMode: f.showOnMode,
+    ...(typeof f.showWhen === 'function' && { showWhen: f.showWhen }),
     ...(f.dependsOn && { dependsOn: f.dependsOn }),
     ...(f.props && { props: f.props }),
   }));
@@ -553,10 +554,9 @@ const ENTITIES = [
       { name: 'mother_phone_sp',   label: 'students.registerForm.fields.motherPhone',  type: 'text',                    rowKey: 'mother_phone', param: 'mother_phone_sp',   placeholder: 'students.registerForm.ph.motherPhone' },
       { name: 'pob_sp',            label: 'students.registerForm.fields.pob',          type: 'text',                    rowKey: 'pob',          param: 'pob_sp',            placeholder: 'students.registerForm.ph.pob' },
 
-      // Row 4: DOB. | Academic Year | Responsible (with inline + Add New)
+      // Row 4: DOB. | Responsible (with inline + Add New) — Academic Year removed:
+      // SP-ga cusub wuxuu si automatic ah u doortaa Academic Year-ka active.
       { name: 'dob_sp',            label: 'students.registerForm.fields.dob',          type: 'date',   required: true,  rowKey: 'dob',          param: 'dob_sp',            default: () => new Date().toISOString().slice(0, 10) },
-      { name: 'a_y_id_sp',         label: 'students.registerForm.fields.academicYear', type: 'select', required: true,  rowKey: 'a_y_id',       param: 'a_y_id_sp',
-        optionsKey: 'academic_options', value: 'a_y_id', nameKey: 'academic_name', placeholder: 'students.registerForm.ph.academicYear', default: '' },
       { name: 'res_id_sp',         label: 'students.registerForm.fields.responsible',  type: 'select', required: true,  rowKey: 'res_id',       param: 'res_id_sp',
         optionsKey: 'responsible_options', value: 'res_id', nameKey: 'p_name', placeholder: 'students.registerForm.ph.responsible', default: '',
         // When the searched responsible is not found, show "+ Add New" — opens
@@ -634,14 +634,9 @@ const ENTITIES = [
       { name: 'reg_date_sp',       label: 'students.registerForm.fields.regDate',      type: 'date',                    rowKey: 'reg_date',     param: 'reg_date_sp',       default: () => new Date().toISOString().slice(0, 10) },
 
       // ===== Hidden defaults (function/database fills the rest) =====
-      // p_type/state/sc_state/u_br_id are session/system values.
-      // resident_type: SP COALESCE handles default.
-      // (Academic Year is now visible in the form, not hidden.)
-      { name: 'p_type_sp',         type: 'hidden', param: 'p_type_sp',     default: 'Student' },
-      { name: 'state_p_sp',        type: 'hidden', param: 'state_p_sp',    default: 'Active' },
-      { name: 'std_state_sp',      type: 'hidden', param: 'std_state_sp',  default: 'Active' },
-      { name: 'sc_state_sp',       type: 'hidden', param: 'sc_state_sp',   default: 'Continue' },
-      { name: 'resident_type_sp',  type: 'hidden', param: 'resident_type_sp', default: '' },
+      // SP-ga cusub wuxuu gudaha ka maamulayaa: p_type, state, std_state,
+      // sc_state, resident_type, iyo a_y_id (active academic year). Sidaas
+      // darteed kaliya u_br_id ayaa weli loo dirayaa session-ka.
       { name: 'u_br_id_sp',        type: 'hidden', param: 'u_br_id_sp',    default: getSessionUBrId },
     ],
   },
@@ -688,9 +683,8 @@ const ENTITIES = [
       { name: 'student_sp',   type: 'hidden', param: 'student_sp',   default: '' },
       { name: 'teacher_sp',   type: 'hidden', param: 'teacher_sp',   default: '' },
       { name: 'u_br_id_sp',   type: 'hidden', param: 'u_br_id_sp',   default: getSessionUBrId },
-  // Manage Result → Result tab. Delete-only entry: row.id maps to r_id (set as p_id),
-  // p_user_id = session u_br_id; p_student/p_exam/p_subject/p_mark are required by the
-  // SP signature but unused by the delete branch, so we send 0/''.
+    ],
+  },
   {
     key: 'Result',
     title: 'Result',

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   X,
@@ -10,7 +10,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import Card from '../../../components/ui/Card';
-import { fetchDataPaginated } from '../../../services/api';
+import { dedupeRequest, fetchDataPaginated } from '../../../services/api';
 import { swalError } from '../../../utils/swal';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
@@ -32,7 +32,13 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
   const [loading, setLoading] = useState(false);
   const [uploads, setUploads] = useState({}); // { stdId: { previewUrl } } — active in-flight uploads
   const [search, setSearch] = useState('');
+  // Windowed rendering: kaliya N row la xayuubiyo DOM-ka mar walba — si rows
+  // 16k+ ah aanay browser-ka u qabowin. La kordhinayaa marka scroll bottom-ka
+  // la gaadho.
+  const PAGE_CHUNK = 200;
+  const [displayLimit, setDisplayLimit] = useState(PAGE_CHUNK);
   const uploadsRef = useRef({});
+  const inFlightRef = useRef(false);
 
   const filtersReady = !!(cl_id && b_id && a_y_id);
 
@@ -44,21 +50,26 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
   const loadRows = useMemo(
     () => async () => {
       if (!filtersReady) return;
+      // Hal request keliya kii hore wuxuu socdo, kuwa kale ka leexso.
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setLoading(true);
       try {
-        const res = await fetchDataPaginated({
+        const key = `StudentImages:${cl_id}:${b_id}:${a_y_id}`;
+        const res = await dedupeRequest(key, () => fetchDataPaginated({
           queryName: 'StudentImages',
           page: 1,
           limit: 1000,
           cl_id,
           b_id,
           a_y_id,
-        });
+        }));
         const list = (res?.data ?? []).filter((r) => r.id != null);
         setRows(list);
       } catch (err) {
         swalError(t('swal.titles.error'), err.message);
       } finally {
+        inFlightRef.current = false;
         setLoading(false);
       }
     },
@@ -66,7 +77,12 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
   );
 
   useEffect(() => {
-    loadRows();
+    let cancelled = false;
+    (async () => {
+      await loadRows();
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
   }, [loadRows]);
 
   const beginUpload = (stdId, previewUrl) => {
@@ -128,6 +144,23 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
       String(r.student_name || '').toLowerCase().includes(q)
     ));
   }, [rows, search]);
+
+  // Marka rows ama search-ku bedelo, dib u dhig limit-ka displayed-ka.
+  useEffect(() => { setDisplayLimit(PAGE_CHUNK); }, [search, rows]);
+
+  const visibleRows = useMemo(
+    () => filteredRows.slice(0, displayLimit),
+    [filteredRows, displayLimit]
+  );
+
+  // Scroll handler: marka user-ku gaadho 80%-ka container-ka, kordhi limit-ka
+  // si soo-shubid-bilow-ah loo helo (infinite-scroll fudud, ma jiraan deps cusub).
+  const handleScroll = useCallback((e) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight * 0.8) {
+      setDisplayLimit((prev) => (prev < filteredRows.length ? prev + PAGE_CHUNK : prev));
+    }
+  }, [filteredRows.length]);
 
   return (
     <Card className="overflow-hidden rounded-2xl shadow-lg ring-1 ring-slate-200/80 dark:ring-slate-700/70 bg-white dark:bg-slate-900/90">
@@ -218,7 +251,7 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
       </div>
 
       {/* List body */}
-      <div className="overflow-auto max-h-[60vh]">
+      <div className="overflow-auto max-h-[60vh]" onScroll={handleScroll}>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
             <RefreshCw className="w-6 h-6 animate-spin text-[#1a6296]" />
@@ -233,7 +266,7 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
           </div>
         ) : (
           <ul className="divide-y divide-slate-200/60 dark:divide-slate-700/50">
-            {filteredRows.map((r) => {
+            {visibleRows.map((r) => {
               const inputId = `student-image-file-${r.id}`;
               const upload = uploads[r.id];
               const isUploading = !!upload;
