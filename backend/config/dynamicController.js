@@ -29,6 +29,7 @@ const PROCEDURE_PARAM_ORDER = {
   responsible_sp: ['res_id_sp', 'p_id_sp', 'p_name_sp', 'tel_sp', 'phone_sp', 'sex_sp', 'ad_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
   bus_sp: ['bus_id_sp', 'bus_name_sp', 'emp_id_sp', 'targo_sp', 'u_br_id_sp', 'oper'],
   complain_sp: ['com_id_sp', 'comp_type_sp', 'student_sp', 'teacher_sp', 'name_sp', 'phone_sp', 'cabasho_sp', 'reg_date_sp', 'u_br_id_sp', 'oper'],
+  meeting_agenda_sp: ['m_ag_id_sp', 'agenda_sp', 'participance_sp', 'comments_sp', 'decisions_sp', 'meet_date_sp', 'u_br_id_sp', 'reg_date_sp', 'language_sp', 'oper'],
   // The 3rd SQL arg is `p_oper`; the FE sends `oper: 'out' | 'done'`
   // via crud(). Order is positional, so we read from the body's `oper` key.
   complain_done_sp: ['p_com_id', 'p_u_br_id', 'oper'],

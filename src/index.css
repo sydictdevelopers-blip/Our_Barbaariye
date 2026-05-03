@@ -166,3 +166,257 @@ body {
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MEETING MINUTES REPORT — modal + A4 print layout
+   ═══════════════════════════════════════════════════════════════════ */
+.mm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  animation: mm-fade-in 180ms ease-out;
+}
+@keyframes mm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes mm-rise-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mm-toolbar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0 0.85rem;
+}
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 100ms ease, box-shadow 150ms ease;
+  border: 1px solid transparent;
+}
+.mm-btn:active { transform: translateY(1px); }
+.mm-btn-primary {
+  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
+  color: #fff;
+  border-color: #0d9488;
+  box-shadow: 0 4px 14px -4px rgba(13, 148, 136, 0.55);
+}
+.mm-btn-primary:hover {
+  background: linear-gradient(180deg, #0d9488 0%, #0a7269 100%);
+  box-shadow: 0 6px 18px -4px rgba(13, 148, 136, 0.65);
+}
+.mm-btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fecaca;
+  border-color: rgba(254, 202, 202, 0.25);
+}
+.mm-btn-ghost:hover {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fff;
+}
+
+.mm-scroll {
+  flex: 1;
+  width: 100%;
+  max-width: 880px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 1rem;
+}
+
+/* The page itself — sized to A4 at 96dpi (210mm × 297mm ≈ 794 × 1123px). */
+.mm-page {
+  position: relative;
+  background: #ffffff;
+  color: #0f172a;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  padding: 0 20mm 20mm;
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, 'Segoe UI', Inter, sans-serif;
+  font-size: 13.5pt;
+  line-height: 1.55;
+  box-sizing: border-box;
+  overflow: hidden;
+  animation: mm-rise-in 220ms ease-out;
+}
+.mm-page::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0B3C5D 0%, #0f4a6f 50%, #0D9488 100%);
+}
+.mm-header {
+  display: block;
+  margin: 0 -20mm 0.75rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+.mm-banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  max-height: 130px;
+}
+.mm-title {
+  text-align: center;
+  font-size: 1.7rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  margin: 1rem 0 0.25rem;
+  color: #0B3C5D;
+  letter-spacing: 0.01em;
+}
+.mm-meta {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 1rem;
+  color: #334155;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.mm-date {
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 0.25rem 0.7rem;
+  border-radius: 0.4rem;
+  color: #0f172a;
+}
+
+.mm-section {
+  margin-top: 1.2rem;
+}
+.mm-section-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #0B3C5D;
+  margin: 0 0 0.5rem;
+  position: relative;
+  padding-left: 0.7rem;
+}
+.mm-section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  bottom: 0.35em;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #14b8a6 0%, #0B3C5D 100%);
+}
+.mm-section-body {
+  padding-left: 0.4rem;
+}
+.mm-paragraph {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mm-muted { color: #94a3b8; }
+.mm-list {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+.mm-list li {
+  padding: 0.1rem 0;
+}
+.mm-list-2col {
+  column-count: 2;
+  column-gap: 1.5rem;
+}
+
+.mm-footer {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+}
+.mm-signature {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+}
+.mm-signature-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mm-signature-line {
+  flex: 1;
+  height: 0;
+  border-top: 1px dotted #475569;
+}
+
+/* ─── Print rules ─── */
+@page {
+  size: A4;
+  margin: 12mm 15mm;
+}
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+  /* Restore the report and its children */
+  #mm-print-area, #mm-print-area * {
+    visibility: visible !important;
+  }
+  /* Anchor the report to the page top-left */
+  #mm-print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 0 8mm 0 8mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    font-size: 12pt !important;
+    overflow: visible !important;
+  }
+  #mm-print-area::before { display: none !important; }
+  /* Banner full-bleed in print: cancel the negative margin so it lines up to
+     the @page margin edge (12mm × 15mm) instead of going off-page. */
+  .mm-header {
+    margin: 0 -8mm 0.5rem !important;
+  }
+  .mm-banner {
+    max-height: 110px !important;
+  }
+  .no-print, .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  /* Avoid awkward breaks inside sections */
+  .mm-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .mm-title { break-after: avoid; }
+}
+
