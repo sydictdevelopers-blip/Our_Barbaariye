@@ -22,6 +22,37 @@ module.exports = {
     prePaginated: true,
   }),
   ExamSchedule: (p) => `SELECT s.*, sch.d_id, sch.pr_id, sch.sub_cl_id, sch.sh_id, sch.cl_id, sch.ex_r_id FROM exam_schedule_show(${Number(p?.br_id) || 0}) s JOIN exam_schedule sch ON sch.ex_s_id = s.ex_s_id`,
+  // Show Data button-ka tab-ka Exam Schedule — academic+exam+level filter ah.
+  ExamSceduleShow: (p) => ({
+    sql: `SELECT * FROM exam_sceduale_show(${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.lev_id) || 0}, ${Number(p?.br_id) || 0})`,
+    prePaginated: true,
+  }),
+  // Subject-class options ee bulk form-ka Add New — soo celiya sub_cl_id +
+  // label "Class - Subject" + cl_id + sh_id (loo isticmaalo exam_schedule_sp
+  // insert). Filter ku xidh level + academic + branch.
+  subject_class_by_level_options: (p) => `SELECT sc.sub_cl_id,
+                                                 CONCAT(c.class, ' - ', s.name) AS label,
+                                                 c.cl_id,
+                                                 c.sh_id
+                                            FROM subject_class sc
+                                            JOIN class    c ON c.cl_id  = sc.cl_id
+                                            JOIN subjects s ON s.sub_id = sc.sub_id
+                                           WHERE c.lev_id = ${Number(p?.lev_id) || 0}
+                                             AND sc.a_y_id = ${Number(p?.academicYearId) || 0}
+                                             AND ((SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all'
+                                                  OR c.br_id = ${Number(p?.br_id) || 0})
+                                           ORDER BY c.class, s.name`,
+  // Lookup ex_reg_id-ka u dhigma (academic, exam, branch) — bulk form-ka ayaa
+  // ku xidha exam_schedule.ex_r_id. Haddii multiple exam_regs, hal ayaa la
+  // dooraa (waa la kakala saaraa start_date desc).
+  exam_reg_lookup: (p) => `SELECT er.ex_reg_id, er.ex_id, er.a_y_id, er.br_id, er.exam_type
+                             FROM exam_reg er
+                            WHERE er.a_y_id = ${Number(p?.academicYearId) || 0}
+                              AND er.ex_id  = ${Number(p?.ex_id) || 0}
+                              AND ((SELECT TRIM(br_name) FROM branch WHERE br_id = ${Number(p?.br_id) || 0}) ILIKE 'all'
+                                   OR er.br_id = ${Number(p?.br_id) || 0})
+                            ORDER BY er.start_date DESC NULLS LAST
+                            LIMIT 1`,
 
   // Exams DISTINCT ee la xidhay class+batch+academic la doortay — loo isticmaalo
   // dropdown-ka "Remove By Class". Soo celiyaa ex_id (oo lala socdaa SP-ga

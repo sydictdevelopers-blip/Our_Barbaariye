@@ -101,11 +101,13 @@ function EntityTab({
   const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
   const [activeExtra, setActiveExtra] = useState({});
   // Filter selections persist per-tab via sessionStorage (key prefixed with entityKey).
+  // Student is intentionally NOT persisted — it represents a per-action target, not a
+  // long-lived filter, so it should clear on F5/refresh.
   const fkey = (f) => `filters:${entityKey}:${f}`;
   const [selectedResponsibleId, setSelectedResponsibleId] = usePersistedState(fkey('respId'), '');
   const [selectedResponsibleLabel, setSelectedResponsibleLabel] = usePersistedState(fkey('respLabel'), '');
-  const [selectedStudentId, setSelectedStudentId] = usePersistedState(fkey('studentId'), '');
-  const [selectedStudentLabel, setSelectedStudentLabel] = usePersistedState(fkey('studentLabel'), '');
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
@@ -238,7 +240,7 @@ function EntityTab({
   const examOptQuery = examOptionsQuery ?? 'exam_options';
   const subOptionsQuery = subjectOptionsQuery ?? 'result_subject_options';
   const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
-  const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_select';
+  const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_option';
 
   // Lazy loaders — dropdown opens / user types → server fetches first 25 (search beyond that).
   // Loaders that depend on other selects (batch→class, subject→class+academic, exam→class+academic)
@@ -742,7 +744,6 @@ function EntityTab({
             variant="primary"
             leftIcon={<BtnIcon className="w-4 h-4" />}
             onClick={handleClick}
-            disabled={!isAddNew && entity.isLoading}
           >
             { tr(btn) }
           </Button>

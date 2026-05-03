@@ -69,6 +69,12 @@ function generateCrudConfig(schema) {
         const v = (val == null || val === '') ? dflt : val;
         out[key] = (v ?? '').toString().trim();
       }
+      else if (f.type === 'select') {
+        // Selects carry integer FK ids — empty must serialize to 0, not '',
+        // so SP integer params don't crash on delete (where the form is empty).
+        const trimmed = (val ?? '').toString().trim();
+        out[key] = trimmed === '' ? 0 : trimmed;
+      }
       else out[key] = (val ?? '').toString().trim();
     });
     return out;
@@ -381,7 +387,7 @@ const ENTITIES = [
     omitPUsrId: true,
     idParam: 'st_per_id_sp',
     fields: [
-      { name: 'std_cl_id_sp', label: 'Student', type: 'select', required: true, optionsKey: 'student_performance_option', rowKey: 'std_cl_id', param: 'std_cl_id_sp', default: '' },
+      { name: 'std_cl_id_sp', label: 'Student', type: 'select', required: true, optionsKey: 'student_performance_option', rowKey: 'std_cl_id', value: 'std_cl_id', nameKey: 'student_name', param: 'std_cl_id_sp', default: '' },
       { name: 'per_id_sp', label: 'Performance', type: 'select', required: true, optionsKey: 'performance_options', rowKey: 'per_id', value: 'per_id', nameKey: 'performance_name', param: 'per_id_sp', default: '' },
       { name: 'rate_id_sp', label: 'Rate', type: 'select', required: true, optionsKey: 'rate_options', rowKey: 'rate_id', value: 'rate_id', nameKey: 'rate', param: 'rate_id_sp', default: '' },
       { name: 'reason_sp', label: 'Reason', type: 'textarea', rows: 3, rowKey: 'reason', param: 'reason_sp' },

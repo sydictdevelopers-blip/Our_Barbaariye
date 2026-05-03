@@ -42,6 +42,8 @@ const PROCEDURE_PARAM_ORDER = {
   assign_class_exam_sp: ['a_c_e_id_sp', 'er_id_sp', 'cl_id_sp', 'b_id_sp', 'u_br_id_sp', 'oper'],
   remove_assign_class_byclass_sp: ['cl_id_sp', 'b_id_sp', 'a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
   remove_assign_class_byexam_sp: ['a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
+  remove_exam_scheduale_by_exam: ['a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
+  copy_exam_scheduale_sp: ['src_a_y_sp', 'dst_a_y_sp', 'u_br_id_sp', 'br_id_sp'],
   exam_schedule_sp: ['ex_s_id_sp', 'day_id_sp', 'per_id_sp', 'sub_cl_id_sp', 'sh_id_sp', 'cl_id_sp', 'ex_r_id_sp', 'start_time_sp', 'end_time_sp', 'exam_date_sp', 'u_br_id_sp', 'oper'],
   exam_siting_sp: ['ex_set_id_sp', 'a_y_id_sp', 'percentage_fail_pass_sp', 'attendance_marks_sp', 'activity_marks_sp', 'u_br_id_sp', 'oper'],
   student_marge_sp: ['std_frm', 'std_to'],
