@@ -12,6 +12,7 @@ import CrudModal from '../../../modals/CrudModal';
 import StudentImagesPanel from './StudentImagesPanel';
 import StudentResponsiblesPanel from './StudentResponsiblesPanel';
 import StudentEmisPanel from './StudentEmisPanel';
+import StudentProfileModal from './StudentProfileModal';
 
 export default function StudentsTab() {
   const { t } = useTranslation();
@@ -184,10 +185,13 @@ export default function StudentsTab() {
   };
   const handleImportExcel = placeholder(t('students.importExcelLabel'));
 
+  const [profileStdId, setProfileStdId] = useState(null);
   const handleView = useCallback((row) => {
     if (row.id === '__no_data__') return;
-    swalSuccess(t('action.view'), String(row.student_name ?? ''));
-  }, [t]);
+    const id = Number(row.std_id ?? row.id);
+    if (!id) return;
+    setProfileStdId(id);
+  }, []);
 
   const handleEdit = useCallback((row) => {
     if (row.id === '__no_data__') return;
@@ -351,6 +355,11 @@ export default function StudentsTab() {
         />
         </>
       )}
+      <StudentProfileModal
+        isOpen={!!profileStdId}
+        onClose={() => setProfileStdId(null)}
+        stdId={profileStdId}
+      />
     </div>
   );
 }
