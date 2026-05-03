@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, Plus, Database, Image, Users, Mail, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import Button from '../../../components/ui/Button';
@@ -12,6 +12,7 @@ import CrudModal from '../../../modals/CrudModal';
 import StudentImagesPanel from './StudentImagesPanel';
 import StudentResponsiblesPanel from './StudentResponsiblesPanel';
 import StudentEmisPanel from './StudentEmisPanel';
+import StudentProfileModal from './StudentProfileModal';
 
 export default function StudentsTab() {
   const { t } = useTranslation();
@@ -41,6 +42,9 @@ export default function StudentsTab() {
   const [filterBatchLabel, setFilterBatchLabel] = useState('');
   const [filterAcademic, setFilterAcademic] = useState('');
   const [filterAcademicLabel, setFilterAcademicLabel] = useState('');
+  // Batch options laga keenay markii hore class la doortay — si looga hortago in
+  // dropdown-ka batch DB-ga loo dhageysto markasta uu user fureyo.
+  const [batchOptionsCache, setBatchOptionsCache] = useState([]);
 
   const [tableData, setTableData] = useState([]);
   const [tableLoaded, setTableLoaded] = useState(false);
@@ -52,12 +56,42 @@ export default function StudentsTab() {
 
   // Lazy loaders (server-side: 25 default + search beyond).
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
-  // Batch loader is class-aware: when filterClass set, returns only batches present in that class for active academic year.
-  const batchLoader    = useMemo(
-    () => makeOptionLoader('batch_options', () => ({ cl_id: filterClass })),
-    [filterClass]
-  );
+  // NOTE: batch dropdown-ku ma isticmaalo loadOptions — wuxuu si toos ah u qaataa
+  // `batchOptionsCache` (la buuxiyey marka class la doortay). Sidaas darteed DB
+  // lagu wici maayo marka dropdown-ka la furo.
   const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
+
+  // Marka class la doorto → hal mar ka soo qaad batch options-ka, cache-garey,
+  // oo si toos ah u dooro option-ka kowaad. Kadib dropdown-ka cache-ka ayuu
+  // isticmaali doonaa (DB lagu wacayo mar kale).
+  useEffect(() => {
+    if (!filterClass) {
+      setBatchOptionsCache([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchSelectOptions('batch_options', 25, '', { cl_id: filterClass });
+        if (cancelled) return;
+        const rows = res?.data || [];
+        const cols = res?.columns || (rows[0] ? Object.keys(rows[0]).map((k) => ({ key: k })) : []);
+        const valueKey = cols[0]?.key;
+        const labelKey = cols[1]?.key || valueKey;
+        const opts = rows.map((r) => ({
+          value: String(r[valueKey] ?? ''),
+          label: String(r[labelKey] ?? r[valueKey] ?? ''),
+          ...(r.state != null && { state: String(r.state) }),
+        }));
+        setBatchOptionsCache(opts);
+        if (opts.length > 0) {
+          setFilterBatch(opts[0].value);
+          setFilterBatchLabel(opts[0].label);
+        }
+      } catch { /* silent — user can still pick manually */ }
+    })();
+    return () => { cancelled = true; };
+  }, [filterClass]);
 
   const fetchRows = useCallback(async () => {
     const res = await fetchDataPaginated({
@@ -105,24 +139,11 @@ export default function StudentsTab() {
   const [registerInitial, setRegisterInitial] = useState({});
   const registerConfig = CRUD_CONFIG['StudentRegister'];
 
-  const handleAddNew = async () => {
-    // Academic Year + Batch are hidden in the form — supply them now.
-    // Prefer the toolbar filter; fall back to the active academic year from the DB.
-    let academicId = filterAcademic ? String(filterAcademic) : '';
-    if (!academicId) {
-      try {
-        const res = await fetchSelectOptions('academic_options', 25);
-        const rows = res?.data || [];
-        const active = rows.find((r) => String(r.state || '').toLowerCase() === 'active') || rows[0];
-        if (active?.a_y_id != null) academicId = String(active.a_y_id);
-      } catch { /* fall through — guard below shows error */ }
-    }
-    if (!academicId) {
-      swalError(t('students.errAcademicYearMissing'));
-      return;
-    }
+  const handleAddNew = () => {
+    // SP-ga cusub wuxuu si automatic ah u doortaa Academic Year-ka active —
+    // sidaas darteed wax la gudbiyaa kuma jirto. Class iyo Batch waa preset
+    // haddii toolbar-ka laga doortay.
     const preset = {
-      a_y_id_sp: academicId,
       ...(filterClass       && { cl_id_sp: String(filterClass) }),
       ...(filterClassLabel  && { cl_id_sp_label: filterClassLabel }),
       ...(filterBatch       && { b_id_sp: String(filterBatch) }),
@@ -164,10 +185,13 @@ export default function StudentsTab() {
   };
   const handleImportExcel = placeholder(t('students.importExcelLabel'));
 
+  const [profileStdId, setProfileStdId] = useState(null);
   const handleView = useCallback((row) => {
     if (row.id === '__no_data__') return;
-    swalSuccess(t('action.view'), String(row.student_name ?? ''));
-  }, [t]);
+    const id = Number(row.std_id ?? row.id);
+    if (!id) return;
+    setProfileStdId(id);
+  }, []);
 
   const handleEdit = useCallback((row) => {
     if (row.id === '__no_data__') return;
@@ -211,9 +235,6 @@ export default function StudentsTab() {
           onChange={(e) => {
             setFilterClass(e.target.value);
             setFilterClassLabel(e.target.label || '');
-            // Class beddelay → tirtir batch (in la sii dooro batch sax ah ee class-ka cusub).
-            setFilterBatch('');
-            setFilterBatchLabel('');
           }}
           loadOptions={classLoader}
           placeholder={t('students.cols.class')}
@@ -223,12 +244,11 @@ export default function StudentsTab() {
       </div>
       <div className="w-36 shrink-0">
         <Select2
-          key={`fb-${filterClass}`}
           name="filterBatch"
           value={filterBatch}
           selectedLabel={filterBatchLabel}
           onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }}
-          loadOptions={batchLoader}
+          options={batchOptionsCache}
           isDisabled={!filterClass}
           placeholder={t('students.cols.batch')}
           isClearable={false}
@@ -335,6 +355,11 @@ export default function StudentsTab() {
         />
         </>
       )}
+      <StudentProfileModal
+        isOpen={!!profileStdId}
+        onClose={() => setProfileStdId(null)}
+        stdId={profileStdId}
+      />
     </div>
   );
 }

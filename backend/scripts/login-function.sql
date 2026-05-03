@@ -1,25 +1,37 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- LOGIN VERIFICATION FUNCTION — login_check(username, password)
 -- ═══════════════════════════════════════════════════════════════════
--- Returns one row with:
---   success = TRUE  + user/branch info   → login OK
---   success = FALSE + message            → login blocked (and reason)
+-- Schema (verified — db-schema-columns.txt):
+--   users        (usr_id int, p_id int, username varchar, password varchar,
+--                 authkey varchar, lock_user varchar, state varchar, ...)
+--   user_branch  (u_br_id int, usr_id int, br_id int, lock_user varchar,
+--                 state varchar, user_type varchar, privalage jsonb, ...)
 --
--- Checks performed in order:
+-- Conventions (FIXED — confirmed by schema owner):
+--   state      ∈ {'Active', 'Inactive'}
+--   lock_user  ∈ {'Locked', 'Unlocked'}
+--   Comparisons are case-insensitive for safety, but only these two
+--   canonical values are accepted by the rest of the system.
+--
+-- Checks (in order):
 --   1. Username exists
 --   2. Password matches
 --   3. users.state       = 'Active'
---   4. users.lock_user   is unlocked/false
+--   4. users.lock_user   = 'Unlocked'
 --   5. user_branch.state     = 'Active'
---   6. user_branch.lock_user is unlocked/false
+--   6. user_branch.lock_user = 'Unlocked'
 --
--- NOTE: lock_user is stored as VARCHAR in both tables; accepted
---       "unlocked" forms are: 'unlocked', 'unloked', 'false', 'f', '0'.
+-- Performance:
+--   STABLE          → no DB writes; planner may cache within a query
+--   PARALLEL SAFE   → multiple concurrent logins can use parallel workers
+--   SET search_path → no per-call schema resolution overhead
+--   COST/ROWS       → realistic estimates so the planner doesn't over-budget
+--   Pre-normalised  username/password → avoid per-row work in WHERE clauses
 -- ═══════════════════════════════════════════════════════════════════
 
-DROP FUNCTION IF EXISTS login_check(VARCHAR, VARCHAR);
+DROP FUNCTION IF EXISTS public.login_check(VARCHAR, VARCHAR);
 
-CREATE OR REPLACE FUNCTION login_check(
+CREATE OR REPLACE FUNCTION public.login_check(
   p_username VARCHAR,
   p_password VARCHAR
 )
@@ -36,20 +48,24 @@ RETURNS TABLE(
   privalage   JSONB
 )
 LANGUAGE plpgsql
+STABLE
+PARALLEL SAFE
+COST 25
+ROWS 1
+SET search_path = public, pg_catalog
 AS $BODY$
 DECLARE
-  v_user   RECORD;
-  v_branch RECORD;
-  v_unlocked_values TEXT[] := ARRAY['unlocked', 'unloked', 'false', 'f', '0', ''];
+  v_user           public.users%ROWTYPE;
+  v_branch         public.user_branch%ROWTYPE;
+  v_username_norm  TEXT := LOWER(TRIM(COALESCE(p_username, '')));
 BEGIN
   -------------------------------------------------------------------
   -- 1. Find user by username (case-insensitive + trimmed)
   -------------------------------------------------------------------
-  SELECT u.usr_id, u.p_id, u.username, u.password, u.authkey,
-         u.lock_user, u.state
+  SELECT *
     INTO v_user
-    FROM users u
-   WHERE LOWER(TRIM(u.username)) = LOWER(TRIM(p_username))
+    FROM public.users u
+   WHERE LOWER(TRIM(u.username)) = v_username_norm
    LIMIT 1;
 
   IF v_user.usr_id IS NULL THEN
@@ -74,7 +90,7 @@ BEGIN
   -------------------------------------------------------------------
   -- 3. users.state must be 'Active'
   -------------------------------------------------------------------
-  IF LOWER(COALESCE(v_user.state, '')) <> 'active' THEN
+  IF LOWER(TRIM(COALESCE(v_user.state, ''))) <> 'active' THEN
     RETURN QUERY
       SELECT FALSE, 'Isticmaalahu ma active-ee aha'::VARCHAR,
              NULL::INT, NULL::INT, NULL::VARCHAR, NULL::VARCHAR,
@@ -83,9 +99,9 @@ BEGIN
   END IF;
 
   -------------------------------------------------------------------
-  -- 4. users.lock_user must be unlocked
+  -- 4. users.lock_user must be 'Unlocked'
   -------------------------------------------------------------------
-  IF LOWER(TRIM(COALESCE(v_user.lock_user, ''))) <> ALL (v_unlocked_values) THEN
+  IF LOWER(TRIM(COALESCE(v_user.lock_user, ''))) <> 'unlocked' THEN
     RETURN QUERY
       SELECT FALSE, 'Isticmaalahu waa xidhan yahay'::VARCHAR,
              NULL::INT, NULL::INT, NULL::VARCHAR, NULL::VARCHAR,
@@ -94,15 +110,14 @@ BEGIN
   END IF;
 
   -------------------------------------------------------------------
-  -- 5 & 6. user_branch: state = Active AND lock_user unlocked
+  -- 5 & 6. user_branch: state = 'Active' AND lock_user = 'Unlocked'
   -------------------------------------------------------------------
-  SELECT ub.u_br_id, ub.br_id, ub.user_type, ub.privalage,
-         ub.lock_user, ub.state
+  SELECT *
     INTO v_branch
-    FROM user_branch ub
+    FROM public.user_branch ub
    WHERE ub.usr_id = v_user.usr_id
-     AND LOWER(COALESCE(ub.state, '')) = 'active'
-     AND LOWER(TRIM(COALESCE(ub.lock_user, ''))) = ANY (v_unlocked_values)
+     AND LOWER(TRIM(COALESCE(ub.state, '')))     = 'active'
+     AND LOWER(TRIM(COALESCE(ub.lock_user, ''))) = 'unlocked'
    ORDER BY ub.u_br_id
    LIMIT 1;
 
@@ -129,6 +144,18 @@ BEGIN
            v_branch.privalage;
 END;
 $BODY$;
+
+ALTER FUNCTION public.login_check(VARCHAR, VARCHAR) OWNER TO postgres;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- OPTIONAL — Functional indexes for sub-millisecond login latency
+-- ═══════════════════════════════════════════════════════════════════
+-- CREATE INDEX IF NOT EXISTS idx_users_username_lower
+--   ON public.users (LOWER(TRIM(username)));
+--
+-- CREATE INDEX IF NOT EXISTS idx_user_branch_usr_id
+--   ON public.user_branch (usr_id);
+-- ═══════════════════════════════════════════════════════════════════
 
 -- ═══════════════════════════════════════════════════════════════════
 -- USAGE EXAMPLES

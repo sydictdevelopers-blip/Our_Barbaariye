@@ -21,6 +21,7 @@ const activity  = require('./queries/activity');
 const exam      = require('./queries/exam');
 const users     = require('./queries/users');
 const complain  = require('./queries/complain');
+const meeting   = require('./queries/meeting');
 
 const QUERIES = {
   ...dropdowns,
@@ -30,6 +31,7 @@ const QUERIES = {
   ...exam,
   ...users,
   ...complain,
+  ...meeting,
 };
 
 /**

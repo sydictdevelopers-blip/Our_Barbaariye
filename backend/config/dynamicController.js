@@ -29,6 +29,7 @@ const PROCEDURE_PARAM_ORDER = {
   responsible_sp: ['res_id_sp', 'p_id_sp', 'p_name_sp', 'tel_sp', 'phone_sp', 'sex_sp', 'ad_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
   bus_sp: ['bus_id_sp', 'bus_name_sp', 'emp_id_sp', 'targo_sp', 'u_br_id_sp', 'oper'],
   complain_sp: ['com_id_sp', 'comp_type_sp', 'student_sp', 'teacher_sp', 'name_sp', 'phone_sp', 'cabasho_sp', 'reg_date_sp', 'u_br_id_sp', 'oper'],
+  meeting_agenda_sp: ['m_ag_id_sp', 'agenda_sp', 'participance_sp', 'comments_sp', 'decisions_sp', 'meet_date_sp', 'u_br_id_sp', 'reg_date_sp', 'language_sp', 'oper'],
   // The 3rd SQL arg is `p_oper`; the FE sends `oper: 'out' | 'done'`
   // via crud(). Order is positional, so we read from the body's `oper` key.
   complain_done_sp: ['p_com_id', 'p_u_br_id', 'oper'],
@@ -50,19 +51,18 @@ const PROCEDURE_PARAM_ORDER = {
   update_emis_student_id_sp: ['p_std_id', 'p_id_card', 'p_u_br_id'],
 
   // Full student registration: people + student + student_class (+ optional charge).
-  // Conditional revision — std_ty_f_id_sp (real student_type_fee.st_ty_id) is back.
-  // SP applies defaults for email/b_id/bar_bilaw/into_xidisanyahay/fee/food internally
-  // and forces transfer_school='0' / free_description='None' / bus_fee=0 based on
-  // the selected sentinel rows (Transfer / Free / None).
+  // SP picks active academic_year internally, so a_y_id_sp is not sent.
+  // Removed legacy params: p_type_sp, state_p_sp, std_state_sp, resident_type_sp,
+  // sc_state_sp, a_y_id_sp (SP defaults / handles them).
   student_master_sp: [
     'std_id_sp', 'p_name_sp', 'tel_sp', 'sex_sp', 'ad_id_sp',
-    'p_type_sp', 'state_p_sp', 'emis_id_sp', 'id_card_sp', 'res_id_sp', 'r_r_id_sp',
+    'emis_id_sp', 'id_card_sp', 'res_id_sp', 'r_r_id_sp',
     'mothername_sp', 'mother_phone_sp', 'pob_sp', 'dob_sp', 'en_ty_id_sp',
-    'transfer_school_sp', 'std_state_sp', 'image_sp', 'orphan_status_sp',
+    'transfer_school_sp', 'image_sp', 'orphan_status_sp',
     'disability_status_sp', 'refugee_sp', 'register_fee_sp', 'u_br_id_sp',
-    'cl_id_sp', 'a_y_id_sp', 'academic_fee_sp', 'discount_sp',
+    'cl_id_sp', 'academic_fee_sp', 'discount_sp',
     'bus_id_sp', 'bus_fee_sp', 'std_ty_f_id_sp', 'free_description_sp',
-    'resident_type_sp', 'sc_state_sp', 'reg_date_sp', 'oper',
+    'reg_date_sp', 'oper',
   ],
   result_sp: ['p_id', 'p_student', 'p_exam', 'p_subject', 'p_mark', 'p_user_id', 'oper'],
   class_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_user_id', 'oper'],

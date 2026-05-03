@@ -54,7 +54,7 @@ export default function StudentInfoTab() {
   const [pageSize, setPageSize] = useState(10);
 
   const loadStudentOptions = useMemo(
-    () => makeOptionLoader('std_admin_all_options', null, { valueKey: 'std_id', labelKey: 'name' }),
+    () => makeOptionLoader('std_admin_all_options', null, { valueKey: 'std_id', labelKey: 'p_name' }),
     []
   );
 
