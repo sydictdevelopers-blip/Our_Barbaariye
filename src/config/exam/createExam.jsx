@@ -78,11 +78,11 @@ export const createExamSection = {
       "showExamSelect": true,
       "hiddenColumns": ["ex_s_id", "d_id", "pr_id", "sub_cl_id", "sh_id", "cl_id", "ex_r_id"],
       "loadButtons": [
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamSchedule" },
-        { "id": "ExamSchedule", "label": "Show Data", "icon": "Database" },
-        { "id": "RemoveExamSchedule", "label": "Remove Exam Schedule", "icon": "Database", "inDevelopment": true },
-        { "id": "CopyExamSchedule", "label": "Copy", "icon": "Database", "inDevelopment": true },
-        { "id": "PrintExamSchedule", "label": "Print Exam Schedule", "icon": "Database", "inDevelopment": true }
+        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamSchedule", "isBulkAction": true, "requiresAcademic": true },
+        { "id": "ExamSceduleShow", "label": "Show Data", "icon": "Database", "requires": ["academic", "exam", "level"] },
+        { "id": "RemoveExamSchedule", "label": "Remove Exam Schedule", "icon": "Database", "actionModal": "ExamScheduleRemove", "requires": ["academic", "exam"] },
+        { "id": "CopyExamSchedule", "label": "Copy", "icon": "Database", "actionModal": "CopyExamSchedule" },
+        { "id": "PrintExamSchedule", "label": "Print Exam Schedule", "icon": "Database", "actionModal": "PrintExamSchedule" }
       ]
     }
   ],

@@ -10,8 +10,8 @@
 --   2. Password matches
 --   3. users.state       = 'Active'
 --   4. users.lock_user   is unlocked/false
---   5. users_branch.state     = 'Active'
---   6. users_branch.lock_user is unlocked/false
+--   5. user_branch.state     = 'Active'
+--   6. user_branch.lock_user is unlocked/false
 --
 -- NOTE: lock_user is stored as VARCHAR in both tables; accepted
 --       "unlocked" forms are: 'unlocked', 'unloked', 'false', 'f', '0'.
@@ -94,12 +94,12 @@ BEGIN
   END IF;
 
   -------------------------------------------------------------------
-  -- 5 & 6. users_branch: state = Active AND lock_user unlocked
+  -- 5 & 6. user_branch: state = Active AND lock_user unlocked
   -------------------------------------------------------------------
   SELECT ub.u_br_id, ub.br_id, ub.user_type, ub.privalage,
          ub.lock_user, ub.state
     INTO v_branch
-    FROM users_branch ub
+    FROM user_branch ub
    WHERE ub.usr_id = v_user.usr_id
      AND LOWER(COALESCE(ub.state, '')) = 'active'
      AND LOWER(TRIM(COALESCE(ub.lock_user, ''))) = ANY (v_unlocked_values)

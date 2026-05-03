@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
@@ -101,11 +100,13 @@ function EntityTab({
   const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
   const [activeExtra, setActiveExtra] = useState({});
   // Filter selections persist per-tab via sessionStorage (key prefixed with entityKey).
+  // Student is intentionally NOT persisted — it represents a per-action target, not a
+  // long-lived filter, so it should clear on F5/refresh.
   const fkey = (f) => `filters:${entityKey}:${f}`;
   const [selectedResponsibleId, setSelectedResponsibleId] = usePersistedState(fkey('respId'), '');
   const [selectedResponsibleLabel, setSelectedResponsibleLabel] = usePersistedState(fkey('respLabel'), '');
-  const [selectedStudentId, setSelectedStudentId] = usePersistedState(fkey('studentId'), '');
-  const [selectedStudentLabel, setSelectedStudentLabel] = usePersistedState(fkey('studentLabel'), '');
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
@@ -238,7 +239,7 @@ function EntityTab({
   const examOptQuery = examOptionsQuery ?? 'exam_options';
   const subOptionsQuery = subjectOptionsQuery ?? 'result_subject_options';
   const resOptionsQuery = responsibleOptionsQuery ?? 'responsible_options';
-  const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_select';
+  const stuOptionsQuery = studentOptionsQuery ?? 'student_performance_option';
 
   // Lazy loaders — dropdown opens / user types → server fetches first 25 (search beyond that).
   // Loaders that depend on other selects (batch→class, subject→class+academic, exam→class+academic)
@@ -700,7 +701,6 @@ function EntityTab({
             variant="primary"
             leftIcon={<BtnIcon className="w-4 h-4" />}
             onClick={handleClick}
-            disabled={!isAddNew && entity.isLoading}
           >
             { tr(btn) }
           </Button>
@@ -746,15 +746,13 @@ function EntityTab({
     (showStudentSelect && !String(selectedStudentId || '').trim())
   );
 
-  useEffect(() => {
-    if (!showDataPanel) return;
-    if (requiredFilterMissing) return;
   // Search debouncer: re-runs when entity/limit/filters change too, but those paths
   // (onShowData, handlePageSizeChange, doDelete) already dispatch loadData directly —
   // so on context change we just sync the ref and skip, only firing on real searchQuery edits.
   const lastContextRef = useRef('');
   useEffect(() => {
     if (!showDataPanel) return;
+    if (requiredFilterMissing) return;
     const currentContext = `${activeEntityKey}|${limit}|${JSON.stringify(activeExtra)}`;
     if (lastContextRef.current !== currentContext) {
       lastContextRef.current = currentContext;

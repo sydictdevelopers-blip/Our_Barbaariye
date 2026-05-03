@@ -4,7 +4,10 @@
 const { sqlText, offsetOf } = require('./_utils');
 
 module.exports = {
-  Students: (p) => `SELECT * FROM vw_student(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}, ${Number(p?.b_id) || 0}, 'show')`,
+  // SP signature: vw_student(p_cl_id, p_b_id, p_a_y_id) — note order: cl, b, a_y.
+  // No total_count column → leave prePaginated off so dynamicController wraps
+  // with COUNT + LIMIT for proper pagination.
+  Students: (p) => `SELECT * FROM vw_student(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   StudentImages: (p) => `SELECT * FROM vw_student_image(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   ResponsiblesOneClass: (p) => `SELECT * FROM update_all_responsibles_one_class(${Number(p?.cl_id) || 0}, ${Number(p?.br_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   EmisIdCardList: (p) => `SELECT * FROM update_emis_idcardlist(${Number(p?.cl_id) || 0}, ${Number(p?.br_id) || 0}, ${Number(p?.a_y_id) || 0})`,

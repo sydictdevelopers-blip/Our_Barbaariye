@@ -9,12 +9,19 @@ import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
 import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
 import AssignClassExamBulkForm from '../../../modals/AssignClassExamBulkForm';
+import ExamScheduleBulkForm from '../../../modals/ExamScheduleBulkForm';
 import {
   GenerateExamFormModal,
   ExamStateFormModal,
   RemoveByClassModal,
   RemoveByExamModal,
 } from '../../../modals/AssignClassExamActionModals';
+import {
+  CopyExamFormModal,
+  PrintExamScheduleModal,
+} from '../../../modals/ExamScheduleActionModals';
+import { crud, getSessionUBrIdNum, getSessionBrIdNum } from '../../../services/api';
+import { swalConfirmAction } from '../../../utils/swal';
 import BranchTransferTab from './BranchTransferTab';
 import AcademicTransferTab from './AcademicTransferTab';
 import ClassTransferTab from './ClassTransferTab';
@@ -214,9 +221,46 @@ export default function AccountsPage() {
                 ? ({ context, onSuccess }) => (
                     <AssignClassExamBulkForm context={context} onSuccess={onSuccess} />
                   )
+                : cfg.entityKey === 'ExamSchedule'
+                ? ({ context, onSuccess }) => (
+                    <ExamScheduleBulkForm context={context} onSuccess={onSuccess} />
+                  )
                 : undefined
             }
-            onCustomAction={(kind, ctx) => setActionModal({ kind, context: ctx })}
+            onCustomAction={(kind, ctx) => {
+              // Remove Exam Schedule: hal alert, ma jiro modal — toos u tirtir.
+              if (kind === 'ExamScheduleRemove') {
+                swalConfirmAction({
+                  title: 'Remove Exam Scheduale',
+                  text: 'Are You Sure You Went To Remove This?',
+                  confirmText: 'REMOVE BY EXAM',
+                  cancelText: 'CANCELACTION',
+                  confirmColor: '#0B3C5D',
+                  onConfirm: async () => {
+                    const result = await crud({
+                      operation: 'delete',
+                      fn: 'remove_exam_scheduale_by_exam',
+                      params: {
+                        a_y_id_sp: Number(ctx?.academicYearId) || 0,
+                        ex_id_sp: Number(ctx?.ex_id) || 0,
+                        u_br_id_sp: getSessionUBrIdNum(),
+                        br_id_sp: getSessionBrIdNum(),
+                      },
+                    });
+                    if (ctx?.academicYearId && ctx?.ex_id) {
+                      entityTabRef.current?.showAs('ExamSceduleShow', {
+                        academicYearId: ctx.academicYearId,
+                        ex_id: ctx.ex_id,
+                        lev_id: ctx.lev_id || 0,
+                      });
+                    }
+                    return { message: result?.message };
+                  },
+                });
+                return;
+              }
+              setActionModal({ kind, context: ctx });
+            }}
           />
         </motion.div>
       );
@@ -253,7 +297,7 @@ export default function AccountsPage() {
         // SubjectClassSetup & AssignClassExam: insert-ka waxaa qaabilsan inline
         // bulk form-ka, sidaas darteed CrudModal kaliya waxaa loo furaa edit
         // mode (editRow jiro).
-        const isBulkEntity = entityKey === 'SubjectClassSetup' || entityKey === 'AssignClassExam';
+        const isBulkEntity = entityKey === 'SubjectClassSetup' || entityKey === 'AssignClassExam' || entityKey === 'ExamSchedule';
         const editRow = modal.editRow;
         const isOpen = modal.entityKey === entityKey && (isBulkEntity ? !!editRow : true);
         return (
@@ -264,7 +308,13 @@ export default function AccountsPage() {
             config={config}
             initialForm={editRow || {}}
             mode={editRow ? 'update' : 'insert'}
-            onSuccess={() => reloadEntity(entityKey)}
+            onSuccess={() => {
+              // StudentPerformance is gated on a Student selection; auto-reload
+              // after save would re-run the SP with stale/missing context. The
+              // user wants to click "Show Data" themselves to refresh.
+              if (entityKey === 'StudentPerformance') return;
+              reloadEntity(entityKey);
+            }}
           />
         );
       })}
@@ -316,6 +366,25 @@ export default function AccountsPage() {
             });
           }
         }}
+        context={actionModal.context}
+      />
+      <CopyExamFormModal
+        isOpen={actionModal.kind === 'CopyExamSchedule'}
+        onClose={() => setActionModal({ kind: null, context: null })}
+        onSuccess={(ctx) => {
+          if (ctx?.academicYearId) {
+            entityTabRef.current?.showAs('ExamSceduleShow', {
+              academicYearId: ctx.academicYearId,
+              ex_id: ctx.ex_id,
+              lev_id: ctx.lev_id || 0,
+            });
+          }
+        }}
+        context={actionModal.context}
+      />
+      <PrintExamScheduleModal
+        isOpen={actionModal.kind === 'PrintExamSchedule'}
+        onClose={() => setActionModal({ kind: null, context: null })}
         context={actionModal.context}
       />
     </div>

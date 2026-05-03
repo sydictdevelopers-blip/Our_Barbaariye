@@ -1,24 +1,20 @@
 -- ============================================================================
 -- performance_show — returns all rows from `performance` table
 -- Usage: SELECT * FROM performance_show();
--- Raises a NOT_FOUND notice/exception when the table is empty so the
--- frontend can render an alert.
+-- Returns columns (per_id, performance_name) so the frontend's `rowKey`
+-- matches the underlying column name and update forms pre-fill correctly.
 -- ============================================================================
 DROP FUNCTION IF EXISTS public.performance_show();
-CREATE OR REPLACE FUNCTION public.performance_show()
-RETURNS TABLE(per_id integer, performance character varying)
-LANGUAGE plpgsql
-AS $function$
-BEGIN
-  RETURN QUERY
-  SELECT p.per_id AS id, p.performance_name AS performance
-  FROM performance p
-  ORDER BY p.per_id;
 
-  -- not-found alert: raise when the performance table has no rows
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'No data found in performance table'
-      USING ERRCODE = 'no_data_found';
-  END IF;
-END;
+CREATE OR REPLACE FUNCTION public.performance_show()
+RETURNS TABLE(per_id integer, performance_name character varying)
+LANGUAGE sql
+STABLE
+PARALLEL SAFE
+AS $function$
+    SELECT p.per_id, p.performance_name::character varying
+    FROM performance p
+    ORDER BY p.per_id;
 $function$;
+
+ALTER FUNCTION public.performance_show() OWNER TO postgres;

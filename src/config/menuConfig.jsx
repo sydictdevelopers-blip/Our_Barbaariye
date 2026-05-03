@@ -353,7 +353,7 @@ export const defaultMenuItems = [
             "icon": "Database",
             "queryName": "StudentPerformance",
             "showStudentSelect": true,
-            "studentOptionsQuery": "student_performance",
+            "studentOptionsQuery": "StudentPerformance_body_query",
             "hideEdit": true,
             "loadButtons": [
               { "id": "StudentPerformance", "label": "Show Data", "icon": "Database" },
