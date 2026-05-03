@@ -404,34 +404,24 @@ export default function CrudModal({
       const hasDeps = !!f.dependsOn;
       const depsUnmet = hasDeps && Object.values(extra).some((v) => v === '' || v == null);
       const depSig = hasDeps ? Object.values(extra).join('|') : '';
-      // Inline "+ Add New" support — when the dropdown's search has no matches and
-      // f.addNewConfigKey is set, render an Add-New button. Click opens a nested
-      // CrudModal pre-filled with the search text.
-      const noMatchMsg = f.addNewConfigKey
-        ? ({ inputValue }) => {
-            const q = (inputValue ?? '').trim();
-            if (!q) return t('crudModal.noResults', { defaultValue: 'Xogtaad raadisay ma jirto' });
-            return (
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() =>
-                  setSubModal({
-                    open: true,
-                    configKey: f.addNewConfigKey,
-                    returnField: f,
-                    searchText: q,
-                    seedField: f.addNewSearchKey || 'p_name_sp',
-                  })
-                }
-                className="inline-flex items-center gap-1.5 text-[#0f3d5e] dark:text-teal-400 font-medium hover:underline"
-              >
-                <Plus className="w-4 h-4" />
-                {t('crudModal.addNew', { defaultValue: '+ Add New' })} "{q}"
-              </button>
-            );
+      // Inline "+ Add New" — when f.addNewConfigKey is set we hand Select2 an
+      // `onCreate` callback. Internally Select2 swaps to AsyncCreatableSelect,
+      // which renders a "+ Add New 'X'" affordance whenever the typed text
+      // doesn't match an existing option. Clicking it opens a nested CrudModal
+      // pre-filled with the search text via the SubModal flow below.
+      const noResultsMsg = () => t('crudModal.noResults', { defaultValue: 'Xogtaad raadisay ma jirto' });
+      const handleCreate = f.addNewConfigKey
+        ? (q) => {
+            if (!q) return;
+            setSubModal({
+              open: true,
+              configKey: f.addNewConfigKey,
+              returnField: f,
+              searchText: q,
+              seedField: f.addNewSearchKey || 'p_name_sp',
+            });
           }
-        : () => t('crudModal.noResults', { defaultValue: 'Xogtaad raadisay ma jirto' });
+        : undefined;
       return (
         <FieldWrapper key={f.name} label={fLabel} error={errors[f.name]} formatError={trError}>
           <Select2
@@ -444,7 +434,9 @@ export default function CrudModal({
             loadOptions={useAsync ? createLoadOptions(key, () => extraParamsFor(f, form)) : undefined}
             placeholder={depsUnmet ? t('crudModal.selectFirst', { defaultValue: 'Marka hore dooro kala xiriirka...' }) : (fPh ?? t('crudModal.search', { defaultValue: 'Raadi...' }))}
             isDisabled={depsUnmet}
-            noOptionsMessage={noMatchMsg}
+            noOptionsMessage={noResultsMsg}
+            onCreate={handleCreate}
+            createLabel={(input) => `${t('crudModal.addNew', { defaultValue: '+ Add New' })} "${input}"`}
             loadingMessage={() => t('crudModal.loading', { defaultValue: 'Waa la baarayaa...' })}
             isOptionDisabled={(opt) => opt?.isHint}
             formatOptionLabel={(opt) =>
