@@ -8,6 +8,10 @@ module.exports = {
     sql: `SELECT * FROM vw_student(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}, ${Number(p?.b_id) || 0})`,
     prePaginated: true,
   }),
+  StudentProfile: (p) => ({
+    sql: `SELECT * FROM student_profile_show(${Number(p?.std_id) || 0})`,
+    prePaginated: true,
+  }),
   StudentImages: (p) => ({
     sql: `SELECT * FROM vw_student_image(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
     prePaginated: true,

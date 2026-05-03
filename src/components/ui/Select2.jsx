@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Select from 'react-select';
 import AsyncSelect from 'react-select/async';
 import { tDb } from '../../i18n/i18n';
+
+const ADD_NEW_VALUE = '__add_new__';
 
 /**
  * Renders an option label with an Active/Inactive badge when the option carries
@@ -96,6 +98,8 @@ export default function Select2({
   isLoading = false,
   isDisabled = false,
   onMenuOpen,
+  onCreate,
+  createLabel,
   className = '',
   styles: stylesOverride,
   ...props
@@ -127,23 +131,50 @@ export default function Select2({
     setDefaultOpts(false);
   }, [sessionBrId]);
 
+  // Wraps loadOptions to inject a synthetic "+ Add New" option whenever the
+  // typed text doesn't match any existing item. We bypass react-select-creatable
+  // entirely — its create affordance has reliability issues with our async +
+  // cached setup. Returning a sentinel option (value = ADD_NEW_VALUE) is simpler
+  // and lets us intercept the click in onChange to open the sub-modal instead
+  // of selecting it as a value.
+  const wrappedLoadOptions = useMemo(() => {
+    if (!loadOptions) return undefined;
+    if (!onCreate) return loadOptions;
+    return async (inputValue) => {
+      const opts = (await loadOptions(inputValue)) || [];
+      const trimmed = String(inputValue ?? '').trim();
+      if (!trimmed) return opts;
+      const lc = trimmed.toLowerCase();
+      const exists = opts.some((o) => String(o.label ?? '').toLowerCase() === lc);
+      if (exists) return opts;
+      const label = createLabel ? createLabel(trimmed) : `+ Add New "${trimmed}"`;
+      return [{ value: ADD_NEW_VALUE, label, __addNew__: true, __searchText: trimmed }, ...opts];
+    };
+  }, [loadOptions, onCreate, createLabel]);
+
   const handleMenuOpen = useCallback(async () => {
     onMenuOpen?.();
     if (defaultOpts !== false) return; // already loaded once
-    if (!loadOptions) return;
+    if (!wrappedLoadOptions) return;
     try {
-      const opts = await loadOptions('');
+      const opts = await wrappedLoadOptions('');
       setDefaultOpts(Array.isArray(opts) ? opts : []);
     } catch {
       setDefaultOpts([]);
     }
-  }, [defaultOpts, loadOptions, onMenuOpen]);
+  }, [defaultOpts, wrappedLoadOptions, onMenuOpen]);
 
   const common = {
     ...props,
     value: displayValue,
     onChange: (v) => {
       if (v?.isHint || v?.value === '__hint__') return;
+      // Sentinel "+ Add New" option — open the caller's create flow instead of
+      // selecting it as a value.
+      if (v?.__addNew__ || v?.value === ADD_NEW_VALUE) {
+        onCreate?.(String(v?.__searchText ?? '').trim());
+        return;
+      }
       onChange?.({ target: { name: props.name, value: v?.value ?? '', label: v?.label } });
     },
     placeholder,
@@ -166,13 +197,18 @@ export default function Select2({
         <AsyncSelect
           // Remount when the session branch changes — drops react-select's
           // internal cacheOptions cache so the next open hits the backend
-          // with the new branch context.
-          key={`brh-${sessionBrId}`}
+          // with the new branch context. Also include the creatable-mode flag
+          // so switching between modes doesn't reuse a stale cache that
+          // pre-dates the synthetic "+ Add New" option injection.
+          key={`brh-${sessionBrId}-${onCreate ? 'create' : 'plain'}`}
           {...common}
-          loadOptions={loadOptions}
+          loadOptions={wrappedLoadOptions}
           defaultOptions={defaultOpts}
           onMenuOpen={handleMenuOpen}
-          cacheOptions
+          // cacheOptions is disabled in creatable mode so the synthetic
+          // "+ Add New 'X'" option gets recomputed for every keystroke
+          // (otherwise an earlier empty cache entry hides the affordance).
+          cacheOptions={!onCreate}
           getOptionLabel={(opt) => {
             const raw = opt?.label != null ? String(opt.label) : opt?.value != null ? String(opt.value) : '';
             return tDb(raw);
