@@ -96,6 +96,7 @@ module.exports = {
 
   // Manage Result → Result tab (chained dropdowns: class → batch → academic → subject → exam)
   result_academic_options: (p) => `SELECT * FROM result_academic_options(${Number(p?.cl_id) || 0})`,
+  category_options: (p) => `SELECT q_cat_id, category FROM question_category ORDER BY category`,
   result_subject_options: (p) => `SELECT * FROM result_subject_options(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0})`,
   result_exam_options: (p) => `SELECT * FROM vw_exam_res_all(${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}, ${Number(p?.br_id) || 0})`,
   // Result → ADD NEW: ardayda diyaarka u ah marks-galin (operation='std')
@@ -137,8 +138,22 @@ module.exports = {
   },
   ResultMaximum: (p) => `SELECT * FROM btn_insert_exam(${Number(p?.cl_id) || 0}, ${Number(p?.academicYearId) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.sub_id) || 0}, ${Number(p?.b_id) || 0}, 'maximum')`,
 
-  // Question bank — SHOW DATA listing for QuestionsTableTab (joins lookup tables for readable labels).
-  // All filters are optional; if a filter is 0/missing, that constraint is skipped.
+  // Question bank — SHOW DATA listing via vw_question_bank() PG function.
+  //   oper='Direct'   -> id, question, username, reg_date           (no answers)
+  //   oper='Multiple' -> + answer, state                            (one row per answer)
+  // When zero rows match, the function emits a single (id=0, message=alert.body) row;
+  // the caller renders the message and treats results as empty.
+  question_bank_view: (p) => {
+    const ec   = Number(p?.ex_c_id) || 0;
+    const ch   = Number(p?.chap_id) || 0;
+    const su   = Number(p?.su_id)   || 0;
+    const gr   = Number(p?.gr_id)   || 0;
+    const br   = Number(p?.br_id)   || 0;
+    const oper = p?.oper === 'Multiple' ? 'Multiple' : 'Direct';
+    return `SELECT * FROM vw_question_bank(${ec}, ${ch}, ${su}, ${gr}, '${oper}', ${br})`;
+  },
+
+  // Legacy shape (kept for any caller still relying on the LEFT-JOIN listing).
   question_bank_show: (p) => {
     const filters = [];
     if (Number(p?.gr_id))   filters.push(`qb.gr_id   = ${Number(p.gr_id)}`);

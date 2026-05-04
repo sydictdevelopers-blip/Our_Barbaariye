@@ -13,6 +13,7 @@ import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
 import MeetingAgendaModal from '../../../modals/MeetingAgendaModal';
 import MeetingMinutesReportModal from '../../../modals/MeetingMinutesReportModal';
+import MeetingMinutesReportListModal from '../../../modals/MeetingMinutesReportListModal';
 import { getTabsForPath } from '../../../config/menuConfig';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { fetchDataPaginated, crud, getSessionUBrIdNum } from '../../../services/api';
@@ -59,15 +60,15 @@ const INPUT_CLS =
   'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLS = 'block text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1';
 
-const COLUMNS = [
-  { key: 'id', label: 'ID' },
-  { key: 'agenda', label: 'Agenda' },
-  { key: 'participance', label: 'Participance' },
-  { key: 'comments', label: 'Comments' },
-  { key: 'decisions', label: 'Decisions' },
-  { key: 'meet_date', label: 'Meeting Date' },
-  { key: 'username', label: 'User' },
-  { key: 'reg_date', label: 'Registered' },
+const buildColumns = (t) => [
+  { key: 'id',           label: t('meeting.headers.id', 'ID') },
+  { key: 'agenda',       label: t('meeting.headers.agenda', 'Agenda') },
+  { key: 'participance', label: t('meeting.headers.participance', 'Participants') },
+  { key: 'comments',     label: t('meeting.headers.comments', 'Comments') },
+  { key: 'decisions',    label: t('meeting.headers.decisions', 'Decisions') },
+  { key: 'meet_date',    label: t('meeting.headers.meetDate', 'Meeting Date') },
+  { key: 'username',     label: t('meeting.headers.username', 'User') },
+  { key: 'reg_date',     label: t('meeting.headers.regDate', 'Registered') },
 ];
 
 function mapTab(tab, t) {
@@ -92,6 +93,7 @@ function dropFallback(rows) {
 
 function MeetingMinutesTab() {
   const { t } = useTranslation();
+  const COLUMNS = useMemo(() => buildColumns(t), [t]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -104,6 +106,7 @@ function MeetingMinutesTab() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [reportRow, setReportRow] = useState(null);
+  const [reportListOpen, setReportListOpen] = useState(false);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -275,7 +278,12 @@ function MeetingMinutesTab() {
               className={INPUT_CLS}
             />
           </div>
-          <Button size="sm" variant="primary" leftIcon={<Printer className="w-4 h-4" />}>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<Printer className="w-4 h-4" />}
+            onClick={() => setReportListOpen(true)}
+          >
             {t('action.print', 'PRINT')}
           </Button>
         </div>
@@ -359,6 +367,13 @@ function MeetingMinutesTab() {
         isOpen={!!reportRow}
         onClose={() => setReportRow(null)}
         row={reportRow}
+      />
+
+      <MeetingMinutesReportListModal
+        isOpen={reportListOpen}
+        onClose={() => setReportListOpen(false)}
+        dateFrom={from}
+        dateTo={to}
       />
     </div>
   );
