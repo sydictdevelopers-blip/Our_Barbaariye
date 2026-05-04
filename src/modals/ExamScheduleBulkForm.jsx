@@ -21,7 +21,8 @@ import { swalSuccess, swalError } from '../utils/swal';
 
 const emptyRow = () => ({
   d_id: '', d_label: '',
-  sub_cl_id: '', sub_cl_label: '',
+  sub_id: '',                       // Select2 value (always present)
+  sub_cl_id: '', sub_cl_label: '',  // resolved on selection from subject_class link
   cl_id: '', sh_id: '',
   pr_id: '', pr_label: '',
   start_time: '',
@@ -39,6 +40,20 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
   const academicYearId = context?.academicYearId || '';
   const exId = context?.ex_id || '';
   const levId = context?.lev_id || '';
+
+  // Cache-bust counter: marka level/academic uu beddelo, kor u qaad si
+  // Select2 inta jira la dumiyo (cache + defaultOpts → fresh fetch ee SP-ka
+  // subject_by_level_academic_show). Tani waa xaq u-fasaxa user-ka:
+  // "Function ka dib u run gareey marka level/academic la badalo".
+  const [loaderKey, setLoaderKey] = useState(0);
+
+  // Marka context-ka filter (level / academic / exam) uu beddelo, dib u dhig
+  // rows-ka + cache-bust si Subject dropdown-ku uu fresh data uga soo qaado
+  // SP-ga subject_by_level_academic_show.
+  useEffect(() => {
+    setRows([emptyRow()]);
+    setLoaderKey((k) => k + 1);
+  }, [levId, academicYearId, exId]);
 
   // Lookup ex_reg_id ee u dhigma (academic, exam, branch) — exam_schedule
   // wuxuu kaydiyaa ex_r_id, sidaas darteed waa in la helo hal mar.
@@ -68,6 +83,9 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
   // Loaders
   const dayLoader = useMemo(() => makeOptionLoader('day_options'), []);
   const periodLoader = useMemo(() => makeOptionLoader('period_options'), []);
+  // Subjects come from subjects_show() — ALL subjects show even without
+  // a subject_class link for the chosen level/academic. Value is sub_id;
+  // sub_cl_id (+ cl_id, sh_id) is looked up on selection via the same query.
   const subjectLoader = useMemo(
     () =>
       makeOptionLoader(
@@ -76,7 +94,7 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
           ...(levId && { lev_id: levId }),
           ...(academicYearId && { academicYearId }),
         }),
-        { valueKey: 'sub_cl_id', labelKey: 'label' }
+        { valueKey: 'sub_id', labelKey: 'label' }
       ),
     [levId, academicYearId]
   );
@@ -91,10 +109,11 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
   const removeRow = (i) =>
     setRows((prev) => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)));
 
-  // Marka subject_class la doorto, ka soo qaad cl_id + sh_id si toos ah loogu
-  // gudbiyo SP (exam_schedule_sp wuxuu u baahan yahay labadaba).
+  // Marka subject la doorto (value = sub_id), ka soo qaad sub_cl_id + cl_id +
+  // sh_id ee subject_class link-ka u dhigma level/academic. Haddii link uusan
+  // jirin → sub_cl_id stays empty; save-ku waxuu keenayaa fariin cad.
   const handleSubjectChange = async (i, value, label) => {
-    setFields(i, { sub_cl_id: value, sub_cl_label: label, cl_id: '', sh_id: '' });
+    setFields(i, { sub_id: value, sub_cl_label: label, sub_cl_id: '', cl_id: '', sh_id: '' });
     if (!value) return;
     try {
       const res = await fetchSelectOptions(
@@ -103,12 +122,16 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
         '',
         { lev_id: levId, academicYearId }
       );
-      const match = (res?.data || []).find((r) => String(r.sub_cl_id) === String(value));
-      if (match) {
-        setFields(i, { cl_id: match.cl_id, sh_id: match.sh_id });
+      const match = (res?.data || []).find((r) => String(r.sub_id) === String(value));
+      if (match && match.sub_cl_id) {
+        setFields(i, {
+          sub_cl_id: match.sub_cl_id,
+          cl_id: match.cl_id,
+          sh_id: match.sh_id,
+        });
       }
     } catch (e) {
-      // ignore — user can still try save; backend will error if cl_id missing
+      // ignore — save will surface the missing-link error
     }
   };
 
@@ -121,6 +144,18 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
     }
     if (!erId) {
       swalError('Exam Register ma helin', 'Academic + Exam-kaas exam_reg uma jirin. Hubi tab-ka Exam Register.');
+      return;
+    }
+    // Subject-yo la doortay laakiin aan lahayn subject_class link
+    // level/academic-kan: filter-ka su'aal in aan u sheego user-ka.
+    const unlinked = rows.filter(
+      (r) => r.sub_cl_label && !r.sub_cl_id
+    );
+    if (unlinked.length) {
+      swalError(
+        'Subject ma laha class link',
+        `Subject(s): ${unlinked.map((r) => r.sub_cl_label).join(', ')} — fadlan abuur subject_class entry level/academic-kan ka hor schedule-ka.`
+      );
       return;
     }
     const valid = rows.filter(
@@ -153,6 +188,7 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
               end_time_sp: row.end_time,
               exam_date_sp: row.exam_date,
               u_br_id_sp: u_br_id,
+              language_sp: 0,
             },
           });
           ok += 1;
@@ -237,9 +273,9 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
                 </td>
                 <td className="p-2 align-top min-w-[200px]">
                   <Select2
-                    key={`sub-${levId}-${academicYearId}`}
+                    key={`sub-${levId}-${academicYearId}-${loaderKey}`}
                     name={`sub_${i}`}
-                    value={row.sub_cl_id}
+                    value={row.sub_id}
                     selectedLabel={row.sub_cl_label}
                     onChange={(e) => handleSubjectChange(i, e.target.value, e.target.label || '')}
                     loadOptions={subjectLoader}
