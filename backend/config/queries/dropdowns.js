@@ -107,4 +107,21 @@ module.exports = {
     ORDER BY t.sort_key, t.bus_name
   `,
   student_type_fee_options: 'SELECT st_ty_id, type_fee AS type_fee_name FROM student_type_fee ORDER BY type_fee',
+
+  // Exam Service — room options (Exam Attendence + Assign Student Room).
+  // Source: SP rooms_combobox() — returns ("ID", "Room", "No of Students",
+  // "No of Teachers", username). The wrapper renames the first two columns
+  // to (r_id, room_name) so Select2's default value/label keys still work,
+  // and exposes no_of_students for the Room By Class auto-fill.
+  room_options: () => `SELECT "ID"             AS r_id,
+                              "Room"           AS room_name,
+                              "No of Students" AS no_of_students
+                         FROM rooms_combobox()`,
+
+  // Exam Service — teacher options (Assign Teacher Room). Reuse the standard
+  // employee_options_show SP for the teacher dropdown.
+  teacher_options: (p) => ({
+    sql: `SELECT * FROM employee_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
+    prePaginated: true,
+  }),
 };

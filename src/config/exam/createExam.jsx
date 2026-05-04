@@ -14,6 +14,7 @@ export const createExamSection = {
       "modalKey": "ExamSetting",
       "icon": "Database",
       "queryName": "ExamSetting",
+      "hiddenColumns": ["a_y_id"],
       "loadButtons": [
         { "id": "ExamSetting", "label": "Show Data", "icon": "Database" },
         { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamSetting" }

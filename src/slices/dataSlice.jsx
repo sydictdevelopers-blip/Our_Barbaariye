@@ -152,10 +152,11 @@ const dataSlice = createSlice({
           originalData: [...normalized],
           currentPage: pagination.page ?? prev.currentPage,
           itemsPerPage: pagination.limit ?? prev.itemsPerPage,
-          totalRows: Math.min(
-            pagination.total ?? normalized.length,
-            normalized.length
-          ),
+          // For server-paginated responses use the backend's total directly
+          // (the page only carries `limit` rows). Capping it at normalized.length
+          // would hide additional pages — e.g. SubjectsSetup returns 20 total
+          // but limit=10, so the user would only ever see one page of 10.
+          totalRows: pagination.total ?? normalized.length,
           isLoading: false,
           error: null,
         };

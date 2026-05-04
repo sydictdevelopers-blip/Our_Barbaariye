@@ -647,6 +647,23 @@ const ENTITIES = [
     ],
   },
   {
+    key: 'Room',
+    title: 'Room',
+    fn: 'rooms_sp',
+    idKey: 'r_id',
+    omitPId: true,
+    omitPUsrId: true,
+    idParam: 'r_id_sp',
+    gridCols: 2,
+    fields: [
+      { name: 'room_name_sp', label: 'Room Name', type: 'text', required: true, rowKey: 'room_name', param: 'room_name_sp' },
+      { name: 'no_of_students_sp', label: 'No of Students', type: 'number', required: true, rowKey: 'no_of_students', param: 'no_of_students_sp', default: 0, props: { min: 0 } },
+      { name: 'no_of_teachers_sp', label: 'No of Teachers', type: 'number', required: true, rowKey: 'no_of_teachers', param: 'no_of_teachers_sp', default: 0, props: { min: 0 } },
+      { name: 'state_sp', label: 'State', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active', showOnMode: 'update' },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+  {
     key: 'ExamSchedule',
     title: 'Exam Schedule',
     fn: 'exam_schedule_sp',

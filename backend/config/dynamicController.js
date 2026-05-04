@@ -44,8 +44,12 @@ const PROCEDURE_PARAM_ORDER = {
   remove_assign_class_byexam_sp: ['a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
   remove_exam_scheduale_by_exam: ['a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
   copy_exam_scheduale_sp: ['src_a_y_sp', 'dst_a_y_sp', 'u_br_id_sp', 'br_id_sp'],
-  exam_schedule_sp: ['ex_s_id_sp', 'day_id_sp', 'per_id_sp', 'sub_cl_id_sp', 'sh_id_sp', 'cl_id_sp', 'ex_r_id_sp', 'start_time_sp', 'end_time_sp', 'exam_date_sp', 'u_br_id_sp', 'oper'],
+  exam_schedule_sp: ['ex_s_id_sp', 'day_id_sp', 'per_id_sp', 'sub_cl_id_sp', 'sh_id_sp', 'cl_id_sp', 'ex_r_id_sp', 'start_time_sp', 'end_time_sp', 'exam_date_sp', 'u_br_id_sp', 'language_sp', 'oper'],
   exam_siting_sp: ['ex_set_id_sp', 'a_y_id_sp', 'percentage_fail_pass_sp', 'attendance_marks_sp', 'activity_marks_sp', 'u_br_id_sp', 'oper'],
+  // Exam Service — Room CRUD. Signature (7 params):
+  //   rooms_sp(r_id_sp, room_name_sp, no_of_students_sp, no_of_teachers_sp,
+  //            state_sp, u_br_id_sp, oper)
+  rooms_sp: ['r_id_sp', 'room_name_sp', 'no_of_students_sp', 'no_of_teachers_sp', 'state_sp', 'u_br_id_sp', 'oper'],
   student_marge_sp: ['std_frm', 'std_to'],
   update_all_responsibles_one_class_sp: ['p_res_id', 'p_full_name', 'p_phone_one', 'p_phone_two', 'p_u_br_id'],
   update_emis_student_id_sp: ['p_std_id', 'p_id_card', 'p_u_br_id'],

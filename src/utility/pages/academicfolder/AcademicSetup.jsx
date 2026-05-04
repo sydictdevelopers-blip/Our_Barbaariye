@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Database, Plus } from 'lucide-react';
+import { Database, Plus, Users, Timer, PenTool, FolderPlus, ClipboardCheck, Hourglass } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
@@ -34,6 +34,9 @@ import ExamInstructionTab from '../exam/ExamInstructionTab';
 import GenerateExamTab from '../exam/GenerateExamTab';
 import CreateOnlineExamTab from '../exam/CreateOnlineExamTab';
 import ExamCopyTab from '../exam/ExamCopyTab';
+import AssignStudentRoomTab from '../exam/AssignStudentRoomTab';
+import ExamAttendenceTab from '../exam/ExamAttendanceTab';
+import AssignTeacherRoomTab from '../exam/AssignTeacherRoomTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { getTabsForPath } from '../../../config/menuConfig';
@@ -43,7 +46,7 @@ import { setActiveTab } from '../../../slices/uiSlice';
 import { store } from '../../../store/store';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
-const iconMap = { Database, Plus };
+const iconMap = { Database, Plus, Users, Timer, PenTool, FolderPlus, ClipboardCheck, Hourglass };
 
 function mapTab(tab) {
   return {
@@ -189,6 +192,27 @@ export default function AccountsPage() {
       return (
         <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
           <ExamCopyTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'AssignStudentRoom' && location.pathname === '/ExamService') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <AssignStudentRoomTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'ExamAttendence' && location.pathname === '/ExamService') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <ExamAttendenceTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'AssignTeacherRoom' && location.pathname === '/ExamService') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <AssignTeacherRoomTab />
         </motion.div>
       );
     }

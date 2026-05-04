@@ -830,6 +830,36 @@ function EntityTab({
     return () => clearTimeout(t);
   }, [entity.searchQuery, showDataPanel, activeEntityKey, limit, dispatch, activeExtra, requiredFilterMissing, isFullyLoaded]);
 
+  // Reactive filter sync: marka user-ku beddelo Level/Class/Academic/etc.
+  // ka dib markii data-da la soo bandhigay, sync activeExtra + re-dispatch
+  // loadData si table-ka iyo dropdown-yada ku-tiirsan u cusboonaadaan
+  // automatically (ee user-ku uusan u baahan in uu mar kale tabto Show Data).
+  // First run waa la skip-gareeyaa si aanu uusan u dhicin double-fetch
+  // markii onShowData hore loo dispatch-gareeyay.
+  const filterSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!showDataPanel) return;
+    if (requiredFilterMissing) return;
+    if (!filterSyncedRef.current) {
+      filterSyncedRef.current = true;
+      return;
+    }
+    const newExtra = buildExtra(
+      academicYearIdForLoad,
+      classIdForLoad,
+      batchIdForLoad,
+      levelIdForLoad,
+      examIdForLoad,
+      responsibleIdForLoad,
+      studentIdForLoad,
+      subjectIdForLoad,
+    );
+    setActiveExtra(newExtra);
+    dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
+    dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, newExtra)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, subjectIdForLoad, responsibleIdForLoad, studentIdForLoad]);
+
 
   if (bulkForm && viewMode === 'form') {
     return (
