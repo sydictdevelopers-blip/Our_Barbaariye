@@ -671,7 +671,7 @@ const ENTITIES = [
   },
   {
     key: 'Complain',
-    title: 'Complain',
+    title: 'complain.title',
     fn: 'complain_sp',
     idKey: 'id',
     omitPId: true,
