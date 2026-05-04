@@ -28,6 +28,7 @@ import ClassTransferTab from './ClassTransferTab';
 import TeacherSyllabusTab from './TeacherSyllabusTab';
 import LessonActivityMarksTab from './LessonActivityMarksTab';
 import LessonActivityResultsTab from './LessonActivityResultsTab';
+import StudentPerformanceEditTab from './StudentPerformanceEditTab';
 import QuestionsTableTab from '../exam/QuestionsTableTab';
 import ExamInstructionTab from '../exam/ExamInstructionTab';
 import GenerateExamTab from '../exam/GenerateExamTab';
@@ -149,6 +150,13 @@ export default function AccountsPage() {
       return (
         <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
           <LessonActivityResultsTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'StudentPerformanceEdit' && location.pathname === '/ActivityManagement') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentPerformanceEditTab />
         </motion.div>
       );
     }

@@ -436,7 +436,11 @@ export default function CrudModal({
             isDisabled={depsUnmet}
             noOptionsMessage={noResultsMsg}
             onCreate={handleCreate}
-            createLabel={(input) => `${t('crudModal.addNew', { defaultValue: '+ Add New' })} "${input}"`}
+            createLabel={() => {
+              const prefix = t('crudModal.addNew', { defaultValue: '+ Add New' });
+              const entity = f.addNewConfigKey ? tr(CRUD_CONFIG[f.addNewConfigKey]?.title) : '';
+              return entity ? `${prefix} ${entity}` : prefix;
+            }}
             loadingMessage={() => t('crudModal.loading', { defaultValue: 'Waa la baarayaa...' })}
             isOptionDisabled={(opt) => opt?.isHint}
             formatOptionLabel={(opt) =>

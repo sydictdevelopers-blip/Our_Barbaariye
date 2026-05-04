@@ -363,14 +363,8 @@ export const defaultMenuItems = [
           {
             "id": "StudentPerformanceEdit",
             "label": "Student Performance Edit",
-            "entityKey": "StudentPerformanceEdit",
-            "modalKey": "StudentPerformanceEdit",
-            "icon": "Database",
-            "queryName": "StudentPerformanceEdit",
-            "loadButtons": [
-              { "id": "StudentPerformanceEdit", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentPerformanceEdit" }
-            ]
+            "labelKey": "tabs.studentPerformanceEdit",
+            "icon": "Database"
           }
         ],
       },

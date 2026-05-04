@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Timer, Database, Plus, Eye, Undo2 } from 'lucide-react';
+import { Users, Timer, Database, Plus, Eye, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import ActionButton from '../../../components/ui/ActionButton';
@@ -47,13 +47,13 @@ function mapTab(tab, t) {
      • JOB DONE    → ComplianDone        (state='Inactive')
    Action column flips state via complain_done_sp(id, u_br_id, oper).
 */
-const COLUMNS = [
-  { key: 'id',        label: 'ID' },
-  { key: 'complian',  label: 'Complian' },
-  { key: 'type',      label: 'Type' },
-  { key: 'comments',  label: 'Comments' },
-  { key: 'date',      label: 'Date' },
-  { key: 'user',      label: 'User' },
+const buildColumns = (t) => [
+  { key: 'id',        label: t('complain.columns.id',       'ID') },
+  { key: 'complian',  label: t('complain.columns.complian', 'Complaint') },
+  { key: 'type',      label: t('complain.columns.type',     'Type') },
+  { key: 'comments',  label: t('complain.columns.comments', 'Comments') },
+  { key: 'date',      label: t('complain.columns.date',     'Date') },
+  { key: 'user',      label: t('complain.columns.user',     'User') },
 ];
 
 // Treat the SP "notfound" sentinel row (id=0, blank name) as an empty result.
@@ -65,6 +65,7 @@ function dropFallback(rows) {
 
 function ComplainDoneTab() {
   const { t } = useTranslation();
+  const COLUMNS = useMemo(() => buildColumns(t), [t]);
   const [view, setView] = useState('outstanding');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -139,7 +140,7 @@ function ComplainDoneTab() {
     view === 'outstanding' ? (
       <ActionButton
         variant="success"
-        aria-label="Mark as done"
+        aria-label={t('complain.markAsDone', 'Mark as done')}
         onClick={() => flipState(row, 'out')}
       >
         <Eye className="w-4 h-4" />
@@ -147,7 +148,7 @@ function ComplainDoneTab() {
     ) : (
       <ActionButton
         variant="warning"
-        aria-label="Return to outstanding"
+        aria-label={t('complain.returnToOutstanding', 'Return to outstanding')}
         onClick={() => flipState(row, 'done')}
       >
         <Undo2 className="w-4 h-4" />
@@ -155,29 +156,90 @@ function ComplainDoneTab() {
     )
   ), [view, flipState]);
 
-  const ToggleButton = ({ id, labelKey, fallback }) => {
+  // Click to (re)load. Switching view triggers a fetch via the queryName
+  // dependency on fetchRows; clicking the active button calls fetchRows()
+  // directly so the user can manually refresh.
+  const handleViewChange = (next) => {
+    setPage(1);
+    setSearch('');
+    if (view === next) {
+      fetchRows();
+    } else {
+      setView(next);
+    }
+  };
+
+  const StatusButton = ({
+    id, labelKey, fallback, icon: Icon,
+    activeClass, idleTextClass, idleBorderClass, idleHoverClass,
+    idleIconBgClass, idleIconTextClass,
+  }) => {
     const isActive = view === id;
     return (
       <button
         type="button"
-        onClick={() => { setView(id); setPage(1); setSearch(''); }}
-        className={`flex-1 min-w-[160px] py-3 px-5 text-sm font-semibold rounded-xl transition-colors duration-200 border ${
-          isActive
-            ? 'bg-[#0f3d5e] text-white border-[#0f3d5e] shadow-sm'
-            : 'bg-white text-[#0f3d5e] border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700'
-        }`}
+        onClick={() => handleViewChange(id)}
         aria-pressed={isActive}
+        className={`group flex-1 min-w-[200px] flex items-center gap-3 py-3.5 px-5 text-sm font-bold rounded-xl border-2 transition-all duration-200 hover:-translate-y-0.5 ${
+          isActive
+            ? `${activeClass} text-white border-transparent shadow-lg ring-2 ring-white/20`
+            : `bg-white ${idleTextClass} ${idleBorderClass} ${idleHoverClass} dark:bg-slate-800 dark:border-slate-700`
+        }`}
       >
-        {t(labelKey, fallback)}
+        <span
+          className={`flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
+            isActive ? 'bg-white/25' : `${idleIconBgClass} ${idleIconTextClass}`
+          }`}
+        >
+          <Icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} />
+        </span>
+        <span className="tracking-wide flex-1 text-left uppercase">
+          {t(labelKey, fallback)}
+        </span>
+        {isActive && total > 0 && (
+          <span className="px-2.5 py-1 rounded-lg bg-white/25 text-xs font-extrabold tabular-nums">
+            {total}
+          </span>
+        )}
+        {isActive && (
+          <RefreshCw
+            className={`w-4 h-4 text-white/80 transition-transform group-hover:rotate-180 ${
+              loading ? 'animate-spin' : ''
+            }`}
+            aria-hidden
+          />
+        )}
       </button>
     );
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 px-3 py-3 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200/70 dark:border-slate-700/70">
-        <ToggleButton id="outstanding" labelKey="complain.outstanding" fallback="OUTSTANDING" />
-        <ToggleButton id="done"        labelKey="complain.jobDone"     fallback="JOB DONE" />
+      <div className="flex flex-wrap items-center gap-3 px-3 py-3 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200/70 dark:border-slate-700/70 shadow-sm">
+        <StatusButton
+          id="outstanding"
+          labelKey="complain.outstanding"
+          fallback="OUTSTANDING"
+          icon={Timer}
+          activeClass="bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-300/50"
+          idleTextClass="text-amber-700 dark:text-amber-300"
+          idleBorderClass="border-amber-200 dark:border-amber-700/40"
+          idleHoverClass="hover:bg-amber-50 hover:border-amber-300"
+          idleIconBgClass="bg-amber-100 dark:bg-amber-900/30"
+          idleIconTextClass="text-amber-700 dark:text-amber-300"
+        />
+        <StatusButton
+          id="done"
+          labelKey="complain.jobDone"
+          fallback="JOB DONE"
+          icon={CheckCircle2}
+          activeClass="bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-300/50"
+          idleTextClass="text-emerald-700 dark:text-emerald-300"
+          idleBorderClass="border-emerald-200 dark:border-emerald-700/40"
+          idleHoverClass="hover:bg-emerald-50 hover:border-emerald-300"
+          idleIconBgClass="bg-emerald-100 dark:bg-emerald-900/30"
+          idleIconTextClass="text-emerald-700 dark:text-emerald-300"
+        />
       </div>
 
       {!loading && !errorMsg && filtered.length === 0 && (

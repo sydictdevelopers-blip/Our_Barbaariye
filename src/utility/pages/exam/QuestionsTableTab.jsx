@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Plus, Database, X, Save, Pencil, Trash2 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
+import ActionButton from '../../../components/ui/ActionButton';
+import DataTableCard from '../../../components/DataTableCard';
 import { makeOptionLoader, fetchSelectOptions } from '../../../services/api';
 import { swalSuccess, swalError, swalConfirm } from '../../../utils/swal';
 
@@ -38,6 +40,7 @@ const emptySel = { id: '', label: '' };
 export default function QuestionsTableTab() {
   const user = useSelector((state) => state.ui.user);
   const uBrId = user?.u_br_id ?? user?.br_id ?? 0;
+  const brId  = user?.br_id ?? 0;
 
   const [grade, setGrade] = useState(emptySel);
   const [subject, setSubject] = useState(emptySel);
@@ -63,6 +66,40 @@ export default function QuestionsTableTab() {
 
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsRows, setResultsRows] = useState([]);
+  const [resultsMessage, setResultsMessage] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Search/pagination operate on the in-memory result set: filter first, then slice.
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return resultsRows;
+    return resultsRows.filter((r) =>
+      Object.values(r).some((v) => String(v ?? '').toLowerCase().includes(q))
+    );
+  }, [resultsRows, search]);
+  const total = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
+
+  // Snap back to page 1 whenever the underlying result set or page size changes,
+  // so users don't end up stranded on an out-of-range page after a refresh.
+  useEffect(() => { setPage(1); }, [resultsRows, pageSize]);
+
+  const COLUMNS = useMemo(() => {
+    const cols = [{ key: 'question', label: 'Question' }];
+    if (mode === 'circle') {
+      cols.push({ key: 'answer', label: 'Answer' });
+      cols.push({ key: 'state',  label: 'State' });
+    }
+    cols.push({ key: 'username', label: 'User' });
+    cols.push({ key: 'reg_date', label: 'Reg Date' });
+    return cols;
+  }, [mode]);
 
   const addDirectRow = () => setDirectRows((rows) => [...rows, '']);
   const removeDirectRow = (i) =>
@@ -173,14 +210,26 @@ export default function QuestionsTableTab() {
 
   const refreshResults = async () => {
     setResultsLoading(true);
+    setResultsMessage('');
     try {
-      const resp = await fetchSelectOptions('question_bank_show', 200, '', {
-        gr_id: grade.id || 0,
-        su_id: subject.id || 0,
-        chap_id: chapter.id || 0,
+      const oper = mode === 'direct' ? 'Direct' : 'Multiple';
+      const resp = await fetchSelectOptions('question_bank_view', 200, '', {
+        gr_id:   grade.id    || 0,
+        su_id:   subject.id  || 0,
+        chap_id: chapter.id  || 0,
         ex_c_id: category.id || 0,
+        br_id:   brId        || 0,
+        oper,
       });
-      setResultsRows(Array.isArray(resp?.data) ? resp.data : []);
+      const rows = Array.isArray(resp?.data) ? resp.data : [];
+      // vw_question_bank emits a single (id=0, message=alert.body) row when
+      // the filter set returns nothing — surface that text and clear the table.
+      if (rows.length === 1 && Number(rows[0]?.id) === 0) {
+        setResultsMessage(rows[0]?.message || '');
+        setResultsRows([]);
+      } else {
+        setResultsRows(rows);
+      }
     } catch (e) {
       swalError('Khalad', e?.message || 'Show failed');
       setResultsRows([]);
@@ -189,23 +238,45 @@ export default function QuestionsTableTab() {
     }
   };
 
-  const handleShow = async () => { setView('data'); await refreshResults(); };
+  const handleShow = async () => {
+    const err = validateBaseSelections();
+    if (err) { swalError('Khalad', err); return; }
+    if (!mode) {
+      swalError('Khalad', 'Category-ga lama aqoonsan (waa inuu noqdaa Direct, Fill, Circle, ama True/False).');
+      return;
+    }
+    setView('data');
+    await refreshResults();
+  };
 
+  const renderActions = useCallback((row) => (
+    <div className="inline-flex gap-2">
+      <ActionButton variant="edit" aria-label="Edit" onClick={() => handleEdit(row)}>
+        <Pencil className="w-4 h-4" />
+      </ActionButton>
+      <ActionButton variant="delete" aria-label="Delete" onClick={() => handleDelete(row)}>
+        <Trash2 className="w-4 h-4" />
+      </ActionButton>
+    </div>
+    // handleEdit/handleDelete close over `mode` (current category dropdown);
+    // declared below — fine because callbacks resolve them at click time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [mode]);
+
+  // vw_question_bank rows only carry: id, question, answer, state, username, reg_date.
+  // The grade/subject/chapter/category dropdowns are already set (filters), so we
+  // reuse them for both edit-prefill and delete-mode dispatch.
   const handleEdit = async (row) => {
-    setGrade({ id: row.gr_id, label: row.grade || '' });
-    setSubject({ id: row.su_id, label: row.subject || '' });
-    setChapter({ id: row.chap_id, label: row.chapter || '' });
-    setCategory({ id: row.ex_c_id, label: row.category || '' });
-    const m = getCategoryMode(row.category);
-    if (m === 'direct') {
+    const qbId = row.id;
+    if (mode === 'direct') {
       setDirectRows([row.question || '']);
       setQuestionText('');
       setCircleRows([{ answer: '', state: '' }]);
-    } else if (m === 'circle') {
+    } else if (mode === 'circle') {
       setQuestionText(row.question || '');
       setDirectRows(['']);
       try {
-        const resp = await fetchSelectOptions('question_answers_by_qbid', 100, '', { q_b_id: row.q_b_id });
+        const resp = await fetchSelectOptions('question_answers_by_qbid', 100, '', { q_b_id: qbId });
         const list = (resp?.data || []).map((a) => ({ answer: a.answer || '', state: a.state || '' }));
         setCircleRows(list.length ? list : [{ answer: '', state: '' }]);
       } catch (e) {
@@ -213,28 +284,28 @@ export default function QuestionsTableTab() {
         setCircleRows([{ answer: '', state: '' }]);
       }
     }
-    setEditingId(row.q_b_id);
+    setEditingId(qbId);
     setView('form');
   };
 
   const handleDelete = async (row) => {
     const ok = await swalConfirm();
     if (!ok) return;
-    const m = getCategoryMode(row.category);
-    const steps = m === 'circle'
+    const qbId = row.id;
+    const steps = mode === 'circle'
       ? [
           { type: 'select', query: 'question_answers_by_qbid',
-            queryParams: { q_b_id: row.q_b_id }, saveAs: 'old' },
+            queryParams: { q_b_id: qbId }, saveAs: 'old' },
           { type: 'forEach', source: { ref: 'old' }, step: {
               type: 'sp', fn: 'question_answers_sp',
-              params: [{ refIter: 'qu_a_id' }, row.q_b_id, '', 'X', uBrId, LANGUAGE_ID, 'delete'],
+              params: [{ refIter: 'qu_a_id' }, qbId, '', 'X', uBrId, LANGUAGE_ID, 'delete'],
           }},
           { type: 'sp', fn: 'question_bank_sp',
-            params: [row.q_b_id, 0, 0, 0, 0, '', 0, LANGUAGE_ID, 'delete'] },
+            params: [qbId, 0, 0, 0, 0, '', 0, LANGUAGE_ID, 'delete'] },
         ]
       : [
           { type: 'sp', fn: 'question_bank_sp',
-            params: [row.q_b_id, 0, 0, 0, 0, '', 0, LANGUAGE_ID, 'delete'] },
+            params: [qbId, 0, 0, 0, 0, '', 0, LANGUAGE_ID, 'delete'] },
         ];
     try {
       await postBulk(steps);
@@ -346,52 +417,26 @@ export default function QuestionsTableTab() {
       )}
 
       {view === 'data' && (
-        <div className="border border-slate-200 rounded-md overflow-hidden">
-          <div className="flex items-center bg-[#0B3C5D] text-white px-4 py-2">
-            <span className="font-semibold flex-1">Saved Questions ({resultsRows.length})</span>
-          </div>
-          {resultsLoading ? (
-            <div className="p-4 text-center text-slate-500">Loading…</div>
-          ) : resultsRows.length === 0 ? (
-            <div className="p-4 text-center text-slate-500">No questions found.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-100 text-slate-700">
-                  <tr>
-                    <th className="text-left px-4 py-2">Grade</th>
-                    <th className="text-left px-4 py-2">Subject</th>
-                    <th className="text-left px-4 py-2">Chapter</th>
-                    <th className="text-left px-4 py-2">Category</th>
-                    <th className="text-left px-4 py-2">Question</th>
-                    <th className="text-center px-4 py-2 w-32">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {resultsRows.map((r) => (
-                    <tr key={r.q_b_id}>
-                      <td className="px-4 py-2">{r.grade}</td>
-                      <td className="px-4 py-2">{r.subject}</td>
-                      <td className="px-4 py-2">{r.chapter}</td>
-                      <td className="px-4 py-2">{r.category}</td>
-                      <td className="px-4 py-2">{r.question}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex justify-center gap-2">
-                          <button type="button" onClick={() => handleEdit(r)} className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label="Edit">
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button type="button" onClick={() => handleDelete(r)} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label="Delete">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <DataTableCard
+          columns={COLUMNS}
+          data={pagedRows}
+          isLoading={resultsLoading}
+          total={total}
+          currentPage={page}
+          totalPages={totalPages}
+          itemsPerPage={pageSize}
+          onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onPageClick={(p) => setPage(p)}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          searchValue={search}
+          onSearchChange={(e) => { setSearch(e?.target?.value ?? ''); setPage(1); }}
+          searchPlaceholder="Search questions…"
+          emptyTitle="No questions found"
+          emptyDescription={resultsMessage || 'Wax su’aalo ah lama helin filter-yadan.'}
+          renderActions={renderActions}
+          rowKey={(row) => row.id}
+        />
       )}
     </div>
   );
