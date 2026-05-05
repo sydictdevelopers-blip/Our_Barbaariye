@@ -99,7 +99,7 @@ export default function Navbar({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute top-full left-0 mt-2 py-1.5 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50"
+                  className="absolute top-full start-0 mt-2 py-1.5 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50"
                 >
                   {userBranches.map((br) => {
                     const isActive = Number(br.br_id) === Number(user?.br_id);
@@ -110,7 +110,7 @@ export default function Navbar({
                           dispatch(setBranch(br.br_id));
                           setBranchOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-sm transition-colors ${
                           isActive
                             ? 'bg-[#0f3d5e]/10 text-[#0f3d5e] dark:text-teal-400 font-semibold'
                             : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -119,7 +119,7 @@ export default function Navbar({
                         <Building2 className="w-4 h-4 flex-shrink-0 opacity-60" />
                         <span className="truncate">{br.br_name}</span>
                         {isActive && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#0f3d5e] dark:bg-teal-400 flex-shrink-0" />
+                          <span className="ms-auto w-1.5 h-1.5 rounded-full bg-[#0f3d5e] dark:bg-teal-400 flex-shrink-0" />
                         )}
                       </button>
                     );
@@ -142,7 +142,7 @@ export default function Navbar({
         )}
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ms-2">
         {/* Language switcher */}
         <div className="relative" ref={langRef}>
           <button
@@ -160,7 +160,7 @@ export default function Navbar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="absolute right-0 top-full mt-2 py-1.5 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50 overflow-hidden"
+                className="absolute end-0 top-full mt-2 py-1.5 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50 overflow-hidden"
               >
                 {LANGUAGES.map((lng) => (
                   <button
@@ -170,7 +170,7 @@ export default function Navbar({
                       i18n.changeLanguage(lng.code);
                       setLangOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors ${
+                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-start transition-colors ${
                       i18n.language === lng.code
                         ? 'bg-slate-100 dark:bg-slate-700 text-[#0f3d5e] dark:text-white font-semibold'
                         : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/70'
@@ -196,7 +196,7 @@ export default function Navbar({
         <button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-200">
           <Bell className="w-5 h-5" />
           {notificationCount != null && notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">
+            <span className="absolute top-1 end-1 w-4 h-4 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">
               {notificationCount}
             </span>
           )}
@@ -226,7 +226,7 @@ export default function Navbar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="absolute right-0 top-full mt-2 py-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50 overflow-hidden"
+                className="absolute end-0 top-full mt-2 py-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 border border-slate-200/90 dark:border-slate-600/80 z-50 overflow-hidden"
               >
                 <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-600">
                   <p className="font-medium text-slate-700 dark:text-slate-200">
@@ -236,7 +236,7 @@ export default function Navbar({
                 </div>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                  className="w-full px-4 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
                 >
                   {t('navbar.profile')}
                 </button>
@@ -246,7 +246,7 @@ export default function Navbar({
                     dispatch(logout());
                     navigate('/login', { replace: true });
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600"
+                  className="w-full px-4 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600"
                 >
                   {t('navbar.logout')}
                 </button>

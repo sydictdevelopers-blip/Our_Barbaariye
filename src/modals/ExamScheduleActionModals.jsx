@@ -412,15 +412,15 @@ export function PrintExamScheduleModal({ isOpen, onClose, context }) {
                   <table className="w-full border-collapse text-[13px]">
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-200">
-                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
+                        <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
                           Day & Date
                         </th>
                         {periods.map((p) => (
                           <Fragment key={p}>
-                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap border-l border-slate-200">
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap border-l border-slate-200">
                               {`Period ${p}`}
                             </th>
-                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                               Duration
                             </th>
                           </Fragment>

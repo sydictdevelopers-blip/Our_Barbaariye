@@ -36,14 +36,14 @@ const MESSAGE_MAP = [
   { re: /already\s*exists?|duplicate|horey u jira|hore u jira/i, key: 'swal.titles.alreadyExists' },
 
   // English sentences ka yimaada SP-yada DB-ga (delete)
-  { re: /this (information|record|data) (has been|is) (correctly )?deleted( correctly)?\.?/i, key: 'swal.texts.deleted' },
-  { re: /(record|data|row) deleted( successfully| correctly)?\.?/i, key: 'swal.texts.deleted' },
-  // (update)
-  { re: /this (information|record|data) (has been|is) (correctly )?updated( correctly)?\.?/i, key: 'swal.texts.updated' },
-  { re: /(record|data|row) updated( successfully| correctly)?\.?/i, key: 'swal.texts.updated' },
-  // (insert / register / save)
-  { re: /this (information|record|data) (has been|is) (correctly )?(registered|inserted|saved|added)( correctly)?\.?/i, key: 'swal.texts.saved' },
-  { re: /(record|data|row) (registered|inserted|saved)( successfully| correctly)?\.?/i, key: 'swal.texts.saved' },
+  { re: /this (information|record|data) (has been|is) (correctly )?(deleted|removed)( correctly)?\.?/i, key: 'swal.texts.deleted' },
+  { re: /(record|data|row) (deleted|removed)( successfully| correctly)?\.?/i, key: 'swal.texts.deleted' },
+  // (update / modify / change / edit)
+  { re: /this (information|record|data) (has been|is) (correctly )?(updated|modified|changed|edited)( correctly)?\.?/i, key: 'swal.texts.updated' },
+  { re: /(record|data|row) (updated|modified|changed|edited)( successfully| correctly)?\.?/i, key: 'swal.texts.updated' },
+  // (insert / register / save / create / add)
+  { re: /this (information|record|data) (has been|is) (correctly )?(registered|inserted|saved|added|created)( correctly)?\.?/i, key: 'swal.texts.saved' },
+  { re: /(record|data|row) (registered|inserted|saved|created)( successfully| correctly)?\.?/i, key: 'swal.texts.saved' },
 
   // hardcoded Somali-ga oo callers isticmaalaan
   { re: /^\s*(wa la guulaystey|guul)\s*$/i, key: 'swal.titles.success' },
@@ -99,6 +99,36 @@ const MESSAGE_MAP = [
   { re: /^\s*tani\s+waxay\s+tirtirtaa\s+(?:DHAMMAAN|dhammaan)\s+saxnaaynta\s+sugaya\b.*$/i, key: 'entity.confirmCancelAll' },
 ];
 
+/**
+ * Replace any known DB value (Active, Inactive, Male, Refugee, etc.) embedded
+ * in a free-form message with its translation in the active language. Longer
+ * keys are tried first so "No Disability" wins over "No". Used as the fallback
+ * pass for swal messages that don't match a regex template.
+ */
+function tDbInline(text) {
+  if (text == null || text === '') return text;
+  let result = String(text);
+  // Pull dbValues for the active language (with fallback). i18next exposes
+  // resource bundles via getResourceBundle.
+  const lng = i18n.language || 'so';
+  const bundle = i18n.getResourceBundle(lng, 'translation') || {};
+  const fallback = i18n.getResourceBundle('so', 'translation') || {};
+  const dbValues = { ...(fallback.dbValues || {}), ...(bundle.dbValues || {}) };
+  const keys = Object.keys(dbValues).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    const translated = dbValues[key];
+    if (!translated || translated === key) continue;
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // \b only behaves well for ASCII — for keys with spaces or non-ASCII chars
+    // (Arabic/Somali) fall back to lookahead/lookbehind on whitespace/punct.
+    const re = /^[\w]/.test(key) && /[\w]$/.test(key)
+      ? new RegExp(`\\b${escaped}\\b`, 'g')
+      : new RegExp(`(^|[\\s,.;:!?()\\[\\]"'])${escaped}(?=$|[\\s,.;:!?()\\[\\]"'])`, 'g');
+    result = result.replace(re, (match, prefix) => (prefix != null ? `${prefix}${translated}` : translated));
+  }
+  return result;
+}
+
 /** U rog fariinta la soo diray i18n haddii ay la mid tahay pattern aan aqoono. */
 function translateMessage(msg) {
   if (msg == null) return '';
@@ -121,7 +151,9 @@ function translateMessage(msg) {
       return t(entry.key);
     }
   }
-  return str;
+  // No template match — best-effort: translate any DB value embedded in the
+  // raw message (e.g. SP returns "Status changed to Active" → "...Firfircoon").
+  return tDbInline(str);
 }
 
 function isAlreadyExists(text) {

@@ -239,12 +239,12 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gradient-to-b from-[#0B3C5D] to-[#072b44] text-white">
-              <th className="px-3 py-3 text-left font-semibold rounded-tl-lg">Day</th>
-              <th className="px-3 py-3 text-left font-semibold">Subject</th>
-              <th className="px-3 py-3 text-left font-semibold">Period</th>
-              <th className="px-3 py-3 text-left font-semibold">Start Time</th>
-              <th className="px-3 py-3 text-left font-semibold">End Time</th>
-              <th className="px-3 py-3 text-left font-semibold">Exam Date</th>
+              <th className="px-3 py-3 text-start font-semibold rounded-tl-lg">Day</th>
+              <th className="px-3 py-3 text-start font-semibold">Subject</th>
+              <th className="px-3 py-3 text-start font-semibold">Period</th>
+              <th className="px-3 py-3 text-start font-semibold">Start Time</th>
+              <th className="px-3 py-3 text-start font-semibold">End Time</th>
+              <th className="px-3 py-3 text-start font-semibold">Exam Date</th>
               <th className="px-2 py-3 w-12 rounded-tr-lg text-center">
                 <button
                   type="button"

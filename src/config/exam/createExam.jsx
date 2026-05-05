@@ -10,31 +10,34 @@ export const createExamSection = {
     {
       "id": "ExamSetting",
       "label": "Exam Setting",
+      "labelKey": "tabs.examSetting",
       "entityKey": "ExamSetting",
       "modalKey": "ExamSetting",
       "icon": "Database",
       "queryName": "ExamSetting",
       "hiddenColumns": ["a_y_id"],
       "loadButtons": [
-        { "id": "ExamSetting", "label": "Show Data", "icon": "Database" },
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamSetting" }
+        { "id": "ExamSetting", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamSetting" }
       ]
     },
     {
       "id": "Exam",
       "label": "Exam",
+      "labelKey": "tabs.exam",
       "entityKey": "Exam",
       "modalKey": "Exam",
       "icon": "Database",
       "queryName": "Exam",
       "loadButtons": [
-        { "id": "Exam", "label": "Show Data", "icon": "Database" },
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "Exam" }
+        { "id": "Exam", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "Exam" }
       ]
     },
     {
       "id": "ExamRegister",
       "label": "Exam Register",
+      "labelKey": "tabs.examRegister",
       "entityKey": "ExamRegister",
       "modalKey": "ExamRegister",
       "icon": "Database",
@@ -42,13 +45,14 @@ export const createExamSection = {
       "showAcademicYearSelect": true,
       "hiddenColumns": ["a_y_id", "ex_id"],
       "loadButtons": [
-        { "id": "ExamRegister", "label": "Show", "icon": "Database" },
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamRegister" }
+        { "id": "ExamRegister", "label": "Show", "labelKey": "action.show", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamRegister" }
       ]
     },
     {
       "id": "AssignClassExam",
       "label": "Assign Class Exam",
+      "labelKey": "tabs.assignClassExam",
       "entityKey": "AssignClassExam",
       "modalKey": "AssignClassExam",
       "icon": "Database",
@@ -58,18 +62,19 @@ export const createExamSection = {
       "showAcademicYearSelect": true,
       "hiddenColumns": ["ID", "Result", "er_id", "cl_id", "b_id"],
       "loadButtons": [
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "AssignClassExam", "isBulkAction": true, "requiresAcademic": true },
-        { "id": "GenerateAssignClassExam", "label": "Generate", "icon": "Database", "actionModal": "GenerateExam" },
-        { "id": "AssignClassExamState", "label": "Exam State", "icon": "Database", "actionModal": "ExamState" },
-        { "id": "AssignClassExam", "label": "Show", "icon": "Database" },
-        { "id": "AssignClassExamShowAll", "label": "Show All", "icon": "Database", "requires": ["academic"] },
-        { "id": "RemoveAssignByClass", "label": "Remove By Class", "icon": "Database", "actionModal": "RemoveByClass" },
-        { "id": "RemoveAssignByExam", "label": "Remove By Exam", "icon": "Database", "actionModal": "RemoveByExam" }
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "AssignClassExam", "isBulkAction": true, "requiresAcademic": true },
+        { "id": "GenerateAssignClassExam", "label": "Generate", "labelKey": "examCopy.generate", "icon": "Database", "actionModal": "GenerateExam" },
+        { "id": "AssignClassExamState", "label": "Exam State", "labelKey": "tabs.examState", "icon": "Database", "actionModal": "ExamState" },
+        { "id": "AssignClassExam", "label": "Show", "labelKey": "action.show", "icon": "Database" },
+        { "id": "AssignClassExamShowAll", "label": "Show All", "labelKey": "action.showAll", "icon": "Database", "requires": ["academic"] },
+        { "id": "RemoveAssignByClass", "label": "Remove By Class", "labelKey": "tabs.removeByClass", "icon": "Database", "actionModal": "RemoveByClass" },
+        { "id": "RemoveAssignByExam", "label": "Remove By Exam", "labelKey": "tabs.removeByExam", "icon": "Database", "actionModal": "RemoveByExam" }
       ]
     },
     {
       "id": "ExamSchedule",
       "label": "Exam Schedule",
+      "labelKey": "tabs.examSchedule",
       "entityKey": "ExamSchedule",
       "modalKey": "ExamSchedule",
       "icon": "Database",
@@ -79,11 +84,11 @@ export const createExamSection = {
       "showExamSelect": true,
       "hiddenColumns": ["ex_s_id", "d_id", "pr_id", "sub_cl_id", "sh_id", "cl_id", "ex_r_id"],
       "loadButtons": [
-        { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "ExamSchedule", "isBulkAction": true, "requiresAcademic": true },
-        { "id": "ExamSceduleShow", "label": "Show Data", "icon": "Database", "requires": ["academic", "exam", "level"] },
-        { "id": "RemoveExamSchedule", "label": "Remove Exam Schedule", "icon": "Database", "actionModal": "ExamScheduleRemove", "requires": ["academic", "exam"] },
-        { "id": "CopyExamSchedule", "label": "Copy", "icon": "Database", "actionModal": "CopyExamSchedule" },
-        { "id": "PrintExamSchedule", "label": "Print Exam Schedule", "icon": "Database", "actionModal": "PrintExamSchedule" }
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamSchedule", "isBulkAction": true, "requiresAcademic": true },
+        { "id": "ExamSceduleShow", "label": "Show Data", "labelKey": "action.showData", "icon": "Database", "requires": ["academic", "exam", "level"] },
+        { "id": "RemoveExamSchedule", "label": "Remove Exam Schedule", "labelKey": "tabs.removeExamSchedule", "icon": "Database", "actionModal": "ExamScheduleRemove", "requires": ["academic", "exam"] },
+        { "id": "CopyExamSchedule", "label": "Copy", "labelKey": "action.copy", "icon": "Database", "actionModal": "CopyExamSchedule" },
+        { "id": "PrintExamSchedule", "label": "Print Exam Schedule", "labelKey": "tabs.printExamSchedule", "icon": "Database", "actionModal": "PrintExamSchedule" }
       ]
     }
   ],

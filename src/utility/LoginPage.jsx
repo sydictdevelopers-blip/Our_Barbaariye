@@ -128,7 +128,7 @@ export default function LoginPage() {
                       i18n.changeLanguage(lng.code);
                       setLangOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-start transition-colors ${
                       i18n.language === lng.code
                         ? 'bg-[#0f3d5e]/10 text-[#0f3d5e] font-semibold'
                         : 'text-slate-700 hover:bg-slate-50'
@@ -305,7 +305,7 @@ export default function LoginPage() {
                         key={br.br_id}
                         type="button"
                         onClick={() => handleBranchSelect(br.br_id)}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 hover:border-[#0f3d5e] hover:bg-[#0f3d5e]/5 text-left transition-colors group"
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 hover:border-[#0f3d5e] hover:bg-[#0f3d5e]/5 text-start transition-colors group"
                       >
                         <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-[#0f3d5e]/10 flex items-center justify-center group-hover:bg-[#0f3d5e]/20 transition-colors">
                           <Building2 className="w-4 h-4 text-[#0f3d5e]" />

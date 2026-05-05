@@ -193,7 +193,7 @@ function ComplainDoneTab() {
         >
           <Icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} />
         </span>
-        <span className="tracking-wide flex-1 text-left uppercase">
+        <span className="tracking-wide flex-1 text-start uppercase">
           {t(labelKey, fallback)}
         </span>
         {isActive && total > 0 && (
@@ -353,7 +353,7 @@ export default function ComplainManagementPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
-      <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/60">
+      <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm shadow-slate-200/60 dark:shadow-slate-900/40">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
         <div className="relative px-5 py-5 bg-white border-b border-slate-200/70">
           <Tabs

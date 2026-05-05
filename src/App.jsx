@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Provider, useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { store } from './store/store';
 import Layout from './components/layout/Layout';
 import Dashboard from './utility/Dashboard';
@@ -11,7 +12,7 @@ import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
 import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
-import { setBranch } from './slices/uiSlice';
+import { setBranch, setUserBranches } from './slices/uiSlice';
 import { fetchUserBranches } from './services/api';
 function DarkModeInit() {
   const darkMode = useSelector((state) => state.ui.darkMode);
@@ -25,22 +26,48 @@ function DarkModeInit() {
   return null;
 }
 
-/** Guarantee user has a br_id; if missing, fetch first branch and persist. */
+// Mirrors the active i18n language onto <html dir>/<html lang> so the whole
+// document flips to RTL for Arabic and LTR for Latin scripts (so/en).
+// Tailwind's dir-aware utilities (and any author CSS that reads dir=rtl) react
+// to this single attribute, so layout flipping requires no per-component work.
+const RTL_LANGS = new Set(['ar', 'fa', 'he', 'ur']);
+function LangDirInit() {
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    const apply = (lng) => {
+      const code = String(lng || 'so').toLowerCase().split('-')[0];
+      const dir = RTL_LANGS.has(code) ? 'rtl' : 'ltr';
+      document.documentElement.setAttribute('lang', code);
+      document.documentElement.setAttribute('dir', dir);
+    };
+    apply(i18n.language);
+    i18n.on('languageChanged', apply);
+    return () => i18n.off('languageChanged', apply);
+  }, [i18n]);
+  return null;
+}
+
+/** Guarantee user has a br_id; if missing, fetch first branch and persist.
+ *  Also caches the full branch list in Redux so other components (e.g.
+ *  read-only "All branch" gating) can resolve br_name without re-fetching. */
 function BranchGuard() {
   const user = useSelector((state) => state.ui.user);
   const dispatch = useDispatch();
   useEffect(() => {
-    if (!user || user.br_id != null) return;
-    if (!user.usr_id) return;
+    if (!user?.usr_id) return;
     fetchUserBranches(user.usr_id).then((resp) => {
-      const first = resp?.branches?.[0];
-      if (first?.br_id != null) {
-        // eslint-disable-next-line no-console
-        console.warn('[BranchGuard] user logged in without br_id — auto-assigning', first.br_id);
-        dispatch(setBranch(first.br_id));
+      const branches = resp?.branches || [];
+      if (branches.length) dispatch(setUserBranches(branches));
+      if (user.br_id == null) {
+        const first = branches[0];
+        if (first?.br_id != null) {
+          // eslint-disable-next-line no-console
+          console.warn('[BranchGuard] user logged in without br_id — auto-assigning', first.br_id);
+          dispatch(setBranch(first.br_id));
+        }
       }
     });
-  }, [user, dispatch]);
+  }, [user?.usr_id, user?.br_id, dispatch]);
   return null;
 }
 
@@ -65,6 +92,7 @@ function AppContent() {
   return (
     <>
       <DarkModeInit />
+      <LangDirInit />
       <BranchGuard />
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />

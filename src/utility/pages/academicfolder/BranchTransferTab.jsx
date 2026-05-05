@@ -1,11 +1,28 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, CheckCheck, ArrowRightLeft, XCircle, Send } from 'lucide-react';
+import { Eye, CheckCheck, ArrowRightLeft, XCircle, Send, GraduationCap, Layers, Building2, ArrowRight, Filter } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
 import EmptyState from '../../../components/ui/EmptyState';
 import { makeOptionLoader } from '../../../services/api';
+
+/**
+ * Labeled filter field — small icon + caption above each Select2 so the
+ * toolbar reads as a group of clearly-grouped controls instead of a row of
+ * floating dropdowns. Used for all four selects in the toolbar card below.
+ */
+function FieldGroup({ icon: Icon, label, children }) {
+  return (
+    <div>
+      <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400" />}
+        <span>{label}</span>
+      </label>
+      {children}
+    </div>
+  );
+}
 
 /** Hook helper: pair of [id,label] state with a setter that takes a Select2 onChange event. */
 function useSelect(initial = '') {
@@ -76,74 +93,93 @@ export default function BranchTransferTab() {
 
   return (
     <div className="space-y-4">
-      {/* ── Toolbar: 4 selects + 3 buttons ── */}
-      <div className="flex flex-wrap items-end gap-2 px-3 py-3 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200/70 dark:border-slate-700/70">
-        <div className="min-w-[160px] flex-1">
-          <Select2
-            name="classFrom"
-            value={classFromId}
-            selectedLabel={classFromLabel}
-            onChange={setClassFrom}
-            loadOptions={classLoader}
-            placeholder={t('select.class')}
-          />
-        </div>
-        <div className="min-w-[160px] flex-1">
-          <Select2
-            name="batch"
-            value={batchId}
-            selectedLabel={batchLabel}
-            onChange={setBatch}
-            loadOptions={batchLoader}
-            placeholder={t('select.batch')}
-          />
-        </div>
-        <div className="min-w-[160px] flex-1">
-          <Select2
-            name="branchTo"
-            value={branchToId}
-            selectedLabel={branchToLabel}
-            onChange={setBranchTo}
-            loadOptions={branchLoader}
-            placeholder={t('select.branch')}
-          />
-        </div>
-        <div className="min-w-[160px] flex-1">
-          <Select2
-            name="classTo"
-            value={classToId}
-            selectedLabel={classToLabel}
-            onChange={setClassTo}
-            loadOptions={classLoader}
-            placeholder={t('select.classTo')}
-          />
+      {/* ── Filter card: header + grouped selects + actions row ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        {/* Subtle accent bar */}
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+
+        {/* Filters header */}
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Filter className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('branchTransfer.filtersTitle', { defaultValue: 'Filters' })}
+          </span>
         </div>
 
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<Eye className="w-4 h-4" />}
-          onClick={handleShow}
-          disabled={loadingStudents}
-        >
-          {t('action.show')}
-        </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<CheckCheck className="w-4 h-4" />}
-          onClick={handleAcceptTransfered}
-        >
-          {t('branchTransfer.accept')}
-        </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<ArrowRightLeft className="w-4 h-4" />}
-          onClick={openTransferModal}
-        >
-          {t('branchTransfer.branchTransfer')}
-        </Button>
+        {/* Selects grid — labelled fields, responsive 1→4 columns */}
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <FieldGroup icon={GraduationCap} label={t('select.classFrom', { defaultValue: 'Class (from)' })}>
+            <Select2
+              name="classFrom"
+              value={classFromId}
+              selectedLabel={classFromLabel}
+              onChange={setClassFrom}
+              loadOptions={classLoader}
+              placeholder={t('select.class')}
+            />
+          </FieldGroup>
+          <FieldGroup icon={Layers} label={t('select.batch', { defaultValue: 'Batch' })}>
+            <Select2
+              name="batch"
+              value={batchId}
+              selectedLabel={batchLabel}
+              onChange={setBatch}
+              loadOptions={batchLoader}
+              placeholder={t('select.batch')}
+            />
+          </FieldGroup>
+          <FieldGroup icon={Building2} label={t('select.branchTo', { defaultValue: 'Branch (to)' })}>
+            <Select2
+              name="branchTo"
+              value={branchToId}
+              selectedLabel={branchToLabel}
+              onChange={setBranchTo}
+              loadOptions={branchLoader}
+              placeholder={t('select.branch')}
+            />
+          </FieldGroup>
+          <FieldGroup icon={ArrowRight} label={t('select.classTo', { defaultValue: 'Class (to)' })}>
+            <Select2
+              name="classTo"
+              value={classToId}
+              selectedLabel={classToLabel}
+              onChange={setClassTo}
+              loadOptions={classLoader}
+              placeholder={t('select.classTo')}
+            />
+          </FieldGroup>
+        </div>
+
+        {/* Actions row */}
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/30">
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<Eye className="w-4 h-4" />}
+            onClick={handleShow}
+            disabled={loadingStudents}
+          >
+            {t('action.show')}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<CheckCheck className="w-4 h-4" />}
+            onClick={handleAcceptTransfered}
+          >
+            {t('branchTransfer.accept')}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<ArrowRightLeft className="w-4 h-4" />}
+            onClick={openTransferModal}
+          >
+            {t('branchTransfer.branchTransfer')}
+          </Button>
+        </div>
       </div>
 
       {/* ── Students table ── */}
@@ -159,10 +195,10 @@ export default function BranchTransferTab() {
           <table className="w-full text-sm">
             <thead className="bg-[#0B3C5D] text-white">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.studentName')}</th>
-                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.phone')}</th>
-                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.gender')}</th>
-                <th className="px-4 py-3 text-left font-semibold">{t('branchTransfer.cols.balance')}</th>
+                <th className="px-4 py-3 text-start font-semibold">{t('branchTransfer.cols.studentName')}</th>
+                <th className="px-4 py-3 text-start font-semibold">{t('branchTransfer.cols.phone')}</th>
+                <th className="px-4 py-3 text-start font-semibold">{t('branchTransfer.cols.gender')}</th>
+                <th className="px-4 py-3 text-start font-semibold">{t('branchTransfer.cols.balance')}</th>
               </tr>
             </thead>
             <tbody>

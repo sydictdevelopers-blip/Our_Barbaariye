@@ -68,9 +68,9 @@ export default function AccountsPage() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       {tabs.length > 0 && (
-        <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/60">
+        <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm shadow-slate-200/60 dark:shadow-slate-900/40">
           <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] to-[#0D9488]" />
-          <div className="flex items-center justify-between flex-wrap gap-4 px-5 py-4 min-h-[58px] bg-gradient-to-r from-[#F8FAFC] to-[#EEF2F7] border-b border-slate-200/80">
+          <div className="flex items-center justify-between flex-wrap gap-4 px-5 py-4 min-h-[58px] bg-gradient-to-r from-[#F8FAFC] to-[#EEF2F7] dark:from-slate-800/70 dark:to-slate-800/50 border-b border-slate-200/80 dark:border-slate-700/80">
             <Tabs
               tabs={tabs}
               activeTab={activeTab}

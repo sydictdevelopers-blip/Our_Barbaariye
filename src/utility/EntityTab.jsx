@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImper
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
-import { Plus, Pencil, Trash2, Save, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, Check, X, Filter } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ActionButton from '../components/ui/ActionButton';
 import Select2 from '../components/ui/Select2';
@@ -22,6 +22,7 @@ import {
   selectTotalPages,
   selectTotalRows,
 } from '../slices/dataSlice';
+import { selectIsReadOnlyBranch } from '../slices/uiSlice';
 import { deleteRow } from '../utils/crud';
 
 const toLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1, -1);
@@ -98,6 +99,7 @@ function EntityTab({
     if (btn.id === 'addNew') return t('entity.addNew');
     return btn.label;
   };
+  const isReadOnly = useSelector(selectIsReadOnlyBranch);
   const [activeEntityKey, setActiveEntityKey] = useState(entityKey);
   const [activeExtra, setActiveExtra] = useState({});
   // Filter selections persist per-tab via sessionStorage (key prefixed with entityKey).
@@ -445,6 +447,16 @@ function EntityTab({
 
   const renderActions = useCallback(
     (row) => {
+      // "All" branch is read-only — keep extra row actions (e.g. View/Eye)
+      // visible but suppress every mutating control. If nothing remains the
+      // table still gets the column but it just renders empty.
+      if (isReadOnly) {
+        return (
+          <div className="flex justify-center gap-1">
+            {extraRowActions && extraRowActions(row)}
+          </div>
+        );
+      }
       if (isApproveExam) {
         return (
           <div className="flex justify-center gap-1">
@@ -485,7 +497,7 @@ function EntityTab({
         </div>
       );
     },
-    [isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit]
+    [isReadOnly, isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit]
   );
 
   const headerActions = (
@@ -612,6 +624,12 @@ function EntityTab({
         const isAddNew = !!btn.modalKey;
         const isDeleteAction = !!btn.deleteAction;
         const isBulkApproveAction = btn.bulkAction === 'approve' || btn.bulkAction === 'cancel';
+        // "All" branch is global read-only — hide every mutating load button.
+        // Plain Show/Load buttons (no modalKey, isBulkAction, deleteAction or
+        // bulkAction) stay visible so the user can still browse data.
+        if (isReadOnly && (isAddNew || isBulkAction || isDeleteAction || isBulkApproveAction)) {
+          return null;
+        }
         const handleClick = () => {
           if (btn.inDevelopment) {
             swalError('Function-ka diyaar uma ahan', `${btn.label} weli lama dhammaystirin.`);
@@ -749,7 +767,7 @@ function EntityTab({
           </Button>
         );
       })}
-      {!hideAddNew && !loadBtns.some((b) => b.modalKey) && modalKey && (
+      {!hideAddNew && !isReadOnly && !loadBtns.some((b) => b.modalKey) && modalKey && (
         <Button
           size="sm"
           variant="primary"
@@ -885,15 +903,44 @@ function EntityTab({
     );
   }
 
+  // Polished filter card: matches the visual language used by the standalone
+  // tab pages (gradient accent + header strip + body of selects/buttons). Renders
+  // only when there's at least one control to show — otherwise the card is
+  // skipped and the table sits flush at the top.
+  const hasFilterContent = (
+    showAcademicYearSelect || showClassSelect || showBatchSelect || showLevelSelect
+    || showExamSelect || showSubjectSelect || showResponsibleSelect || showStudentSelect
+    || (loadBtns && loadBtns.length > 0)
+    || (!hideAddNew && !loadBtns.some((b) => b.modalKey) && modalKey)
+    || extraHeaderActions
+  );
+  const filterCard = hasFilterContent ? (
+    <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden mb-3">
+      <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+          <Filter className="w-3.5 h-3.5" />
+        </span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {t('entity.filtersTitle', { defaultValue: 'Filters' })}
+        </span>
+      </div>
+      <div className="p-3 flex flex-wrap items-end gap-2">
+        {headerActions}
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
+    {filterCard}
     <DataTableCard
       showDataPanel={showDataPanel}
       searchPlaceholder={t('entity.search')}
       searchValue={entity.searchQuery}
       onSearchChange={(e) => dispatch(setSearchQuery({ entityKey: activeEntityKey, value: e.target.value }))}
       onSearchSubmit={handleSearchSubmit}
-      headerActions={headerActions}
+      headerActions={null}
       emptyTitleClickToLoad={t('entity.noLoaded')}
       emptyDescClickToLoad={t('entity.loadHint')}
       emptyIconClickToLoad={Icon}
@@ -906,7 +953,13 @@ function EntityTab({
       emptyTitle={fallbackMessage || t('entity.notFound')}
       emptyDescription=""
       hasActions
-      renderActions={isMarksEntry ? undefined : renderActions}
+      renderActions={
+        isMarksEntry
+          ? undefined
+          // Read-only "All" branch: drop the Actions column entirely unless the
+          // host tab still wants to show row-level extras (e.g. View/Eye).
+          : (isReadOnly && !extraRowActions ? undefined : renderActions)
+      }
       editableColumns={editableColumns}
       editableMaxField={editableMaxField}
       editValues={editValues}

@@ -128,6 +128,7 @@ export const defaultMenuItems = [
           {
             "id": "BranchTransfer",
             "label": "Branch Transfer",
+            "labelKey": "tabs.branchTransfer",
             "entityKey": "BranchTransfer",
             "modalKey": "BranchTransfer",
             "icon": "Database",
@@ -140,6 +141,7 @@ export const defaultMenuItems = [
           {
             "id": "AcademicTransfer",
             "label": "Academic Transfer",
+            "labelKey": "tabs.academicTransfer",
             "entityKey": "AcademicTransfer",
             "modalKey": "AcademicTransfer",
             "icon": "Database",
@@ -152,6 +154,7 @@ export const defaultMenuItems = [
           {
             "id": "ClassTransfer",
             "label": "Class Transfer",
+            "labelKey": "tabs.classTransfer",
             "entityKey": "ClassTransfer",
             "modalKey": "ClassTransfer",
             "icon": "Database",
@@ -174,6 +177,7 @@ export const defaultMenuItems = [
           {
             "id": "TeacherSyllabus",
             "label": "Teacher Syllabus",
+            "labelKey": "tabs.teacherSyllabus",
             "icon": "Database"
           }
         ]
@@ -189,6 +193,7 @@ export const defaultMenuItems = [
           {
             "id": "LessonActivityMarks",
             "label": "Lesson Activity Mark",
+            "labelKey": "tabs.lessonActivityMarks",
             "entityKey": "LessonActivityMark",
             "modalKey": "LessonActivityMark",
             "icon": "Database",
@@ -201,6 +206,7 @@ export const defaultMenuItems = [
           {
             "id": "LessonActivityResults",
             "label": "Lesson Activity Results",
+            "labelKey": "tabs.lessonActivityResults",
             "entityKey": "LessonActivityResults",
             "modalKey": "LessonActivityResults",
             "icon": "Database",
@@ -230,7 +236,8 @@ export const defaultMenuItems = [
         tabs: [
           {
             "id": "Students",
-            "label": "Students",      
+            "label": "Students",
+            "labelKey": "tabs.students",
             "entityKey": "Students",
             "modalKey": "Students",
             "icon": "Database",
@@ -248,6 +255,7 @@ export const defaultMenuItems = [
           {
             "id": "Responsible",
             "label": "Responsible",
+            "labelKey": "tabs.responsible",
             "entityKey": "Responsible",
             "modalKey": "ResponsibleModal",
             "icon": "Database",
@@ -255,17 +263,18 @@ export const defaultMenuItems = [
             "showResponsibleSelect": true,
             "hiddenColumns": ["state"],
             "loadButtons": [
-              { "id": "StudentResponsible", "label": "SHOW DATA", "icon": "Database" },
-              { "id": "allResponsible", "label": "ALL", "icon": "Database" },
-              { "id": "change_Responsible", "label": "CHANGE", "icon": "Plus", "isBulkAction": true },
-              { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "icon": "Database" },
-              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "icon": "Plus", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
-              { "id": "Add_new_responsible", "label": "ADD NEW", "icon": "Plus", "modalKey": "ResponsibleModal" }
+              { "id": "StudentResponsible", "label": "SHOW DATA", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "allResponsible", "label": "ALL", "labelKey": "responsible.all", "icon": "Database" },
+              { "id": "change_Responsible", "label": "CHANGE", "labelKey": "responsible.change", "icon": "Plus", "isBulkAction": true },
+              { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "labelKey": "responsible.showParentWithNoStudents", "icon": "Database" },
+              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "labelKey": "responsible.deleteParentWithNoStudents", "icon": "Plus", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
+              { "id": "Add_new_responsible", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ResponsibleModal" }
             ]
           },
           {
             "id": "studentstate",
             "label": "Student State",
+            "labelKey": "tabs.studentState",
             "entityKey": "studentstate",
             "modalKey": "studentstate",
             "icon": "Database",
@@ -280,6 +289,7 @@ export const defaultMenuItems = [
           {
             "id": "bus",
             "label": "Bus",
+            "labelKey": "tabs.bus",
             "entityKey": "bus",
             "modalKey": "bus",
             "icon": "Database",
@@ -293,6 +303,7 @@ export const defaultMenuItems = [
           {
             "id": "update school",
             "label": "Update School",
+            "labelKey": "tabs.updateSchool",
             "entityKey": "update school",
             "modalKey": "update school",
             "icon": "Database",
@@ -306,6 +317,7 @@ export const defaultMenuItems = [
           {
             "id": "Studentinfo",
             "label": "Student info",
+            "labelKey": "tabs.studentInfo",
             "entityKey": "Studentinfo",
             "modalKey": "Studentinfo",
             "icon": "Database",
@@ -336,18 +348,20 @@ export const defaultMenuItems = [
           {
             "id": "Performance",
             "label": "Performance",
+            "labelKey": "tabs.performance",
             "entityKey": "Performance",
             "modalKey": "Performance",
             "icon": "Database",
             "queryName": "Performance",
             "loadButtons": [
-              { "id": "Performance", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "Performance" }
+              { "id": "Performance", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "Performance" }
             ]
           },
           {
             "id": "StudentPerformance",
             "label": "Student Performance",
+            "labelKey": "tabs.studentPerformance",
             "entityKey": "StudentPerformance",
             "modalKey": "StudentPerformance",
             "icon": "Database",
@@ -356,8 +370,8 @@ export const defaultMenuItems = [
             "studentOptionsQuery": "StudentPerformance_body_query",
             "hideEdit": true,
             "loadButtons": [
-              { "id": "StudentPerformance", "label": "Show Data", "icon": "Database" },
-              { "id": "addNew", "label": "Add New", "icon": "Plus", "modalKey": "StudentPerformance" }
+              { "id": "StudentPerformance", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "StudentPerformance" }
             ]
           },
           {

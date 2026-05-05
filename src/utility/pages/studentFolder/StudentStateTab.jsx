@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Database, RefreshCw, Plus, GitMerge } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Database, RefreshCw, Plus, GitMerge, Filter } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated } from '../../../services/api';
@@ -19,6 +20,7 @@ const STATE_COLUMNS = [
 const NO_DATA_ROW = [{ id: '__no_data__', student: 'This Information Was Not Found!' }];
 
 export default function StudentStateTab() {
+  const { t } = useTranslation();
   const sessionUser = useSelector((state) => state.ui.user);
   const sessionBrId = sessionUser?.br_id != null ? String(sessionUser.br_id) : '';
 
@@ -81,17 +83,27 @@ export default function StudentStateTab() {
   const compactBtn = 'px-3 py-2 text-sm rounded-lg gap-2';
 
   const filterToolbar = (
-    <div className="rounded-xl border border-slate-200/70 dark:border-slate-700/70 bg-white dark:bg-slate-900/40 shadow-sm px-3 py-2.5 flex flex-nowrap items-center gap-2.5 overflow-x-auto">
-      <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShowData} disabled={loadingTable} className={`${compactBtn} shrink-0`}>
-        {loadingTable ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Show Data'}
-      </Button>
-      <span className="h-7 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0" aria-hidden />
-      <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddNew} className={`${compactBtn} shrink-0`}>
-        Add New
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<GitMerge className="w-4 h-4" />} onClick={handleMergeStudent} className={`${compactBtn} shrink-0`}>
-        Merge Student
-      </Button>
+    <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+      <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+          <Filter className="w-3.5 h-3.5" />
+        </span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {t('entity.filtersTitle', { defaultValue: 'Filters' })}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 bg-slate-50/60 dark:bg-slate-800/30">
+        <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShowData} disabled={loadingTable} className={`${compactBtn} shrink-0`}>
+          {loadingTable ? <RefreshCw className="w-4 h-4 animate-spin" /> : t('action.showData', { defaultValue: 'Show Data' })}
+        </Button>
+        <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddNew} className={`${compactBtn} shrink-0`}>
+          {t('entity.addNew', { defaultValue: 'Add New' })}
+        </Button>
+        <Button size="sm" variant="primary" leftIcon={<GitMerge className="w-4 h-4" />} onClick={handleMergeStudent} className={`${compactBtn} shrink-0`}>
+          {t('studentState.mergeStudent', { defaultValue: 'Merge Student' })}
+        </Button>
+      </div>
     </div>
   );
 

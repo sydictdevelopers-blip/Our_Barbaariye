@@ -1,8 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Plus, X, Save, Database, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Plus, X, Save, Database, ArrowRight, Filter, GraduationCap, Layers } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import { makeOptionLoader } from '../../../services/api';
+
+/** Labelled filter field — uniform with the other tabs' toolbars. */
+function FieldGroup({ icon: Icon, label, children }) {
+  return (
+    <div>
+      <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400" />}
+        <span>{label}</span>
+      </label>
+      {children}
+    </div>
+  );
+}
 
 const emptySel = { id: '', label: '' };
 const emptyRow = () => ({
@@ -16,6 +30,7 @@ const emptyRow = () => ({
 });
 
 export default function CreateOnlineExamTab() {
+  const { t } = useTranslation();
   const [classSel, setClassSel] = useState(emptySel);
   const [batchSel, setBatchSel] = useState(emptySel);
   const onSelChange = (setter) => (e) => setter({ id: e.target.value, label: e.target.label || '' });
@@ -35,19 +50,31 @@ export default function CreateOnlineExamTab() {
 
   return (
     <div className="space-y-4 px-2 py-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[220px] flex-1">
-          <Select2 name="classSel" value={classSel.id} selectedLabel={classSel.label} onChange={onSelChange(setClassSel)} loadOptions={classLoader} placeholder="Select Class" isClearable={false} />
+      {/* ── Filter card ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Filter className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('createOnlineExam.filtersTitle', { defaultValue: 'Filters' })}
+          </span>
         </div>
-        <div className="min-w-[220px] flex-1">
-          <Select2 name="batchSel" value={batchSel.id} selectedLabel={batchSel.label} onChange={onSelChange(setBatchSel)} loadOptions={batchLoader} placeholder="Select Batch" isClearable={false} />
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FieldGroup icon={GraduationCap} label={t('select.class')}>
+            <Select2 name="classSel" value={classSel.id} selectedLabel={classSel.label} onChange={onSelChange(setClassSel)} loadOptions={classLoader} placeholder={t('select.class')} isClearable={false} />
+          </FieldGroup>
+          <FieldGroup icon={Layers} label={t('select.batch')}>
+            <Select2 name="batchSel" value={batchSel.id} selectedLabel={batchSel.label} onChange={onSelChange(setBatchSel)} loadOptions={batchLoader} placeholder={t('select.batch')} isClearable={false} />
+          </FieldGroup>
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/30">
           <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={() => {}}>
-            GO TABLE
+            {t('createOnlineExam.goTable', { defaultValue: 'Go Table' })}
           </Button>
           <Button size="sm" variant="primary" leftIcon={<ArrowRight className="w-4 h-4" />} onClick={() => {}}>
-            GO
+            {t('action.go')}
           </Button>
         </div>
       </div>
@@ -103,7 +130,7 @@ export default function CreateOnlineExamTab() {
 
       <div className="flex justify-center">
         <Button size="md" variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={() => {}} className="px-12">
-          SAVE
+          {t('common.save')}
         </Button>
       </div>
     </div>

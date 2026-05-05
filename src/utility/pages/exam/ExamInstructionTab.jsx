@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Database } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -23,6 +24,7 @@ async function postBulk(steps) {
 const emptyBodies = { a: '', b: '', c: '', d: '' };
 
 export default function ExamInstructionTab() {
+  const { t } = useTranslation();
   const user = useSelector((state) => state.ui.user);
   const uBrId = user?.u_br_id ?? user?.br_id ?? 0;
 
@@ -132,33 +134,41 @@ export default function ExamInstructionTab() {
 
   return (
     <div className="space-y-4 px-2 py-3">
-      <div className="flex items-center gap-2 justify-end">
-        <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow} disabled={loading}>
-          {loading ? 'Loading…' : 'SHOW DATA'}
-        </Button>
-        <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={openInsert}>
-          ADD NEW
-        </Button>
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center justify-between gap-2 px-4 py-3 bg-slate-50/60 dark:bg-slate-800/30">
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('examInstruction.title', { defaultValue: 'Exam Instructions' })}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow} disabled={loading}>
+              {loading ? t('action.loading') : t('action.showData')}
+            </Button>
+            <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={openInsert}>
+              {t('entity.addNew')}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {showResults && (
-      <div className="border border-slate-200 rounded-md overflow-hidden">
+      <div className="border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
         <div className="flex items-center bg-[#0B3C5D] text-white px-4 py-2">
-          <span className="font-semibold flex-1">Exam Instructions ({rows.length})</span>
+          <span className="font-semibold flex-1">{t('examInstruction.title', { defaultValue: 'Exam Instructions' })} ({rows.length})</span>
         </div>
         {loading ? (
-          <div className="p-4 text-center text-slate-500">Loading…</div>
+          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('action.loading')}</div>
         ) : rows.length === 0 ? (
-          <div className="p-4 text-center text-slate-500">No instructions yet.</div>
+          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.empty', { defaultValue: 'No instructions yet.' })}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
-                  <th className="text-left px-4 py-2 w-16">ID</th>
-                  <th className="text-left px-4 py-2">Instruction</th>
-                  <th className="text-left px-4 py-2 w-32">Date</th>
-                  <th className="text-left px-4 py-2 w-32">Username</th>
+                  <th className="text-start px-4 py-2 w-16">ID</th>
+                  <th className="text-start px-4 py-2">Instruction</th>
+                  <th className="text-start px-4 py-2 w-32">Date</th>
+                  <th className="text-start px-4 py-2 w-32">Username</th>
                   <th className="text-center px-4 py-2 w-32">Actions</th>
                 </tr>
               </thead>

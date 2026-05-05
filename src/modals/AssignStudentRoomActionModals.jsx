@@ -236,10 +236,10 @@ export function RoomByClassModal({ isOpen, onClose, onSuccess, context }) {
           </colgroup>
           <thead>
             <tr className="text-white" style={{ background: 'linear-gradient(180deg, #0B3C5D, #082c45)' }}>
-              <th className="px-4 py-3 text-left font-semibold uppercase text-[11px] tracking-wider">Class</th>
+              <th className="px-4 py-3 text-start font-semibold uppercase text-[11px] tracking-wider">Class</th>
               <th className="px-3 py-3 text-center font-semibold uppercase text-[11px] tracking-wider">No of Seat</th>
               <th className="px-3 py-3 text-center font-semibold uppercase text-[11px] tracking-wider">No. STD</th>
-              <th className="px-3 py-3 text-left font-semibold uppercase text-[11px] tracking-wider">Gender</th>
+              <th className="px-3 py-3 text-start font-semibold uppercase text-[11px] tracking-wider">Gender</th>
               <th className="px-2 py-2 text-center">
                 <button
                   type="button"
@@ -520,10 +520,10 @@ export function ClassByRoomModal({ isOpen, onClose, onSuccess, context }) {
           </colgroup>
           <thead>
             <tr className="text-white" style={{ background: 'linear-gradient(180deg, #0B3C5D, #082c45)' }}>
-              <th className="px-4 py-3 text-left font-semibold uppercase text-[11px] tracking-wider">Room</th>
+              <th className="px-4 py-3 text-start font-semibold uppercase text-[11px] tracking-wider">Room</th>
               <th className="px-3 py-3 text-center font-semibold uppercase text-[11px] tracking-wider">No. Seats</th>
               <th className="px-3 py-3 text-center font-semibold uppercase text-[11px] tracking-wider">No. STD</th>
-              <th className="px-3 py-3 text-left font-semibold uppercase text-[11px] tracking-wider">Gender</th>
+              <th className="px-3 py-3 text-start font-semibold uppercase text-[11px] tracking-wider">Gender</th>
               <th className="px-2 py-2 text-center">
                 <button
                   type="button"
