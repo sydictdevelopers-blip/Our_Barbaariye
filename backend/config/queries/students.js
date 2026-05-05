@@ -12,6 +12,13 @@ module.exports = {
     sql: `SELECT * FROM student_profile_show(${Number(p?.std_id) || 0})`,
     prePaginated: true,
   }),
+  // Single-row fetch for the StudentRegister edit form. Column names match the
+  // field.rowKey / field.nameKey of CRUD_CONFIG.StudentRegister so generic
+  // fromRow() can populate the modal with no custom mapping.
+  StudentEdit: (p) => ({
+    sql: `SELECT * FROM student_edit_show(${Number(p?.std_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0})`,
+    prePaginated: true,
+  }),
   StudentImages: (p) => ({
     sql: `SELECT * FROM vw_student_image(${Number(p?.cl_id) || 0}, ${Number(p?.b_id) || 0}, ${Number(p?.a_y_id) || 0})`,
     prePaginated: true,

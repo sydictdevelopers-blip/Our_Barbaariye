@@ -193,10 +193,34 @@ export default function StudentsTab() {
     setProfileStdId(id);
   }, []);
 
-  const handleEdit = useCallback((row) => {
+  const handleEdit = useCallback(async (row) => {
     if (row.id === '__no_data__') return;
-    swalSuccess(t('action.edit'), String(row.student_name ?? ''));
-  }, [t]);
+    const stdId = Number(row.std_id ?? row.id);
+    if (!stdId) return;
+    if (!filterClass || !filterAcademic) {
+      swalError(t('students.errFiltersRequired'));
+      return;
+    }
+    try {
+      const res = await fetchDataPaginated({
+        queryName: 'StudentEdit',
+        std_id: stdId,
+        cl_id: filterClass,
+        a_y_id: filterAcademic,
+      });
+      const editRow = res?.data?.[0];
+      if (!editRow) {
+        swalError(t('students.notFound'));
+        return;
+      }
+      const initial = registerConfig?.fromRow ? registerConfig.fromRow(editRow) : editRow;
+      setRegisterInitial(initial);
+      setRegisterMode('update');
+      setRegisterOpen(true);
+    } catch (e) {
+      swalError(e?.message || t('swal.titles.error'));
+    }
+  }, [filterClass, filterAcademic, registerConfig, t]);
 
   const filteredRows = useMemo(() => {
     const list = tableLoaded && tableData.length === 0 ? NO_DATA_ROW : tableData;
