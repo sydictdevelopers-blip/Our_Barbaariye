@@ -242,9 +242,9 @@ export function GenerateExamFormModal({ isOpen, onClose, onSuccess, context }) {
 
 /* ─────────────────── Exam State Form ─────────────────── */
 // Cusbooneysiinta state-ka (Active/Inactive) ee dhammaan assign-yada exam-ka
-// la doortay ee academic-kaas. Backend-ka wuxuu u baahan yahay SP cusub
-// (assign_class_exam_state_sp) — haatan waxa la sameeyaa fetch + loop update
-// loo isticmaalo assign_class_exam_sp(id, er_id, cl_id, b_id, u_br_id, 'update').
+// la doortay. Backend SP: update_one_exam_assign_class_state(p_er_id, p_state)
+//   → UPDATE assign_class_exam.state WHERE er_id = p_er_id
+//   → RETURN QUERY SELECT body FROM alerts WHERE title = 'Update'
 export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
   const { t } = useTranslation();
   const [ay, setAy] = useState({ id: '', label: '' });
@@ -269,10 +269,26 @@ export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
     if (!ay.id) return swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
     if (!er.id) return swalError('Fadlan dooro Exam', '');
     if (!state) return swalError('Fadlan dooro State', '');
-    swalError(
-      'Backend SP ma jiro',
-      'Si state-ka loogu cusbooneysiiyo, abuur "assign_class_exam_state_sp(a_y_id, er_id, state, u_br_id)" oo ku xidh frontend-kan.'
-    );
+    setBusy(true);
+    try {
+      const br_id = getSessionBrIdNum();
+      const result = await crud({
+        operation: 'update',
+        fn: 'update_one_exam_assign_class_state',
+        params: {
+          p_er_id_sp: Number(er.id) || 0,
+          br_id_sp:   br_id,
+          p_state_sp: state,
+        },
+      });
+      await swalSuccess('Waa la guulaystey', result?.message || '');
+      onSuccess?.({ academicYearId: ay.id, academicYearLabel: ay.label });
+      onClose?.();
+    } catch (err) {
+      swalError(err?.message || 'Khalad ayaa dhacay', '');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
