@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, Plus, Trash2, RefreshCw, ArrowLeftRight, Copy, User, Layers, GraduationCap } from 'lucide-react';
+import { Database, Plus, Trash2, RefreshCw, ArrowLeftRight, Copy, User, Layers, GraduationCap, Filter, FileText } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import DataTableCard from '../../../components/DataTableCard';
@@ -127,91 +127,111 @@ export default function AssignTeacherRoomTab() {
     ? columns
     : [{ key: 'message', label: t('common.message', 'Message') }];
 
-  const headerActions = (
-    <>
-      <div className="min-w-[260px] flex-1">
-        <Select2
-          name="teacher"
-          value={teacher.id}
-          selectedLabel={teacher.label}
-          onChange={(e) => setTeacher({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={teacherLoader}
-          placeholder={t('select.teacher', 'Select Teacher')}
-          isClearable
-        />
-      </div>
-      <div className="min-w-[200px] flex-1">
-        <Select2
-          name="exam"
-          value={exam.id}
-          selectedLabel={exam.label}
-          onChange={(e) => setExam({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={examLoader}
-          placeholder={t('select.exam', 'Select Exam')}
-          isClearable
-        />
-      </div>
-      <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow}>
-        {t('entity.show', 'SHOW')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onSingleDeleteTeacher}>
-        {t('assignTeacherRoom.singleDeleteTeacher', 'SINGLE DELETE TEACHER')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onExamTeacherDelete}>
-        {t('assignTeacherRoom.examTeacherDelete', 'EXAM TEACHER DELETE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onDeleteAllTeachers}>
-        {t('assignTeacherRoom.deleteAllTeachers', 'DELETE ALL TEACHERS')}
-      </Button>
-      <div className="basis-full" />
-      <Button size="sm" variant="primary" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.generateAll', 'Generate All'))}>
-        {t('assignTeacherRoom.generateAll', 'GENERATE ALL')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.addByShift', 'Add By Shift'))}>
-        {t('assignTeacherRoom.addByShift', 'ADD BY SHIFT')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Layers className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.addByLevel', 'Add By Level'))}>
-        {t('assignTeacherRoom.addByLevel', 'ADD BY LEVEL')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<User className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.singleTeacher', 'Single Teacher'))}>
-        {t('assignTeacherRoom.singleTeacher', 'SINGLE TEACHER')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<ArrowLeftRight className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.roomExchange', 'Room Exchange'))}>
-        {t('assignTeacherRoom.roomExchange', 'ROOM EXCHANGE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Copy className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.copyExamToExam', 'Copy Exam To Exam'))}>
-        {t('assignTeacherRoom.copyExamToExam', 'COPY EXAM TO EXAM')}
-      </Button>
-    </>
-  );
-
   return (
-    <DataTableCard
+    <div className="space-y-4">
+      {/* ── Filter card: header + grouped selects + actions row ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Filter className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('assignTeacherRoom.filtersTitle', { defaultValue: 'Filters' })}
+          </span>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+              <User className="w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400" />
+              <span>{t('select.teacher')}</span>
+            </label>
+            <Select2
+              name="teacher"
+              value={teacher.id}
+              selectedLabel={teacher.label}
+              onChange={(e) => setTeacher({ id: e.target.value, label: e.target.label || '' })}
+              loadOptions={teacherLoader}
+              placeholder={t('select.teacher', 'Select Teacher')}
+              isClearable
+            />
+          </div>
+          <div>
+            <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+              <FileText className="w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400" />
+              <span>{t('select.exam')}</span>
+            </label>
+            <Select2
+              name="exam"
+              value={exam.id}
+              selectedLabel={exam.label}
+              onChange={(e) => setExam({ id: e.target.value, label: e.target.label || '' })}
+              loadOptions={examLoader}
+              placeholder={t('select.exam', 'Select Exam')}
+              isClearable
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/30">
+          <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow}>
+            {t('entity.show', 'SHOW')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onSingleDeleteTeacher}>
+            {t('assignTeacherRoom.singleDeleteTeacher', 'Single Delete Teacher')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onExamTeacherDelete}>
+            {t('assignTeacherRoom.examTeacherDelete', 'Exam Teacher Delete')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onDeleteAllTeachers}>
+            {t('assignTeacherRoom.deleteAllTeachers', 'Delete All')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.generateAll', 'Generate All'))}>
+            {t('assignTeacherRoom.generateAll', 'Generate All')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.addByShift', 'Add By Shift'))}>
+            {t('assignTeacherRoom.addByShift', 'Add By Shift')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Layers className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.addByLevel', 'Add By Level'))}>
+            {t('assignTeacherRoom.addByLevel', 'Add By Level')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<User className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.singleTeacher', 'Single Teacher'))}>
+            {t('assignTeacherRoom.singleTeacher', 'Single Teacher')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<ArrowLeftRight className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.roomExchange', 'Room Exchange'))}>
+            {t('assignTeacherRoom.roomExchange', 'Room Exchange')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Copy className="w-4 h-4" />} onClick={notReady(t('assignTeacherRoom.copyExamToExam', 'Copy Exam To Exam'))}>
+            {t('assignTeacherRoom.copyExamToExam', 'Copy Exam To Exam')}
+          </Button>
+        </div>
+      </div>
+
+      <DataTableCard
       showDataPanel={loaded}
       searchPlaceholder={t('entity.search', 'Search')}
       searchValue={searchQuery}
       onSearchChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-      onSearchSubmit={() => {}}
-      headerActions={headerActions}
-      emptyTitleClickToLoad={t('entity.noLoaded', 'No data loaded')}
-      emptyDescClickToLoad={t('entity.loadHint', 'Click SHOW to load data')}
-      emptyIconClickToLoad={GraduationCap}
-      columns={tableColumns}
-      data={pagedRows}
-      isLoading={loading}
-      emptyIcon={GraduationCap}
-      emptyTitle={t('entity.notFound', 'Not Found')}
-      emptyDescription=""
-      hasActions={false}
-      total={total}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      itemsPerPage={pageSize}
-      onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
-      onNextPage={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-      onPageClick={(p) => setCurrentPage(p)}
-      onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-      rowKey="id"
-    />
+        onSearchSubmit={() => {}}
+        emptyTitleClickToLoad={t('entity.noLoaded', 'No data loaded')}
+        emptyDescClickToLoad={t('entity.loadHint', 'Click SHOW to load data')}
+        emptyIconClickToLoad={GraduationCap}
+        columns={tableColumns}
+        data={pagedRows}
+        isLoading={loading}
+        emptyIcon={GraduationCap}
+        emptyTitle={t('entity.notFound', 'Not Found')}
+        emptyDescription=""
+        hasActions={false}
+        total={total}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        itemsPerPage={pageSize}
+        onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        onNextPage={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+        onPageClick={(p) => setCurrentPage(p)}
+        onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
+        rowKey="id"
+      />
+    </div>
   );
 }

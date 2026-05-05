@@ -1,8 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Plus, X, Save, FileText, Database, Printer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Plus, X, Save, FileText, Database, Printer, Filter, GraduationCap, Layers, BookOpen, CalendarDays } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import { makeOptionLoader } from '../../../services/api';
+
+/** Labelled filter field — uniform with the other tabs' toolbars. */
+function FieldGroup({ icon: Icon, label, children }) {
+  return (
+    <div>
+      <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400" />}
+        <span>{label}</span>
+      </label>
+      {children}
+    </div>
+  );
+}
 
 const emptySel = { id: '', label: '' };
 const emptyRow = () => ({
@@ -15,6 +29,7 @@ const emptyRow = () => ({
 });
 
 export default function GenerateExamTab() {
+  const { t } = useTranslation();
   const [classSel, setClassSel] = useState(emptySel);
   const [batchSel, setBatchSel] = useState(emptySel);
   const [examReg, setExamReg] = useState(emptySel);
@@ -40,37 +55,50 @@ export default function GenerateExamTab() {
 
   return (
     <div className="space-y-4 px-2 py-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-[180px]">
-          <Select2 name="classSel" value={classSel.id} selectedLabel={classSel.label} onChange={onSelChange(setClassSel)} loadOptions={classLoader} placeholder="Select Class" isClearable={false} />
+      {/* ── Filter card ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Filter className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('generateExam.filtersTitle', { defaultValue: 'Filters' })}
+          </span>
         </div>
-        <div className="min-w-[180px]">
-          <Select2 name="batchSel" value={batchSel.id} selectedLabel={batchSel.label} onChange={onSelChange(setBatchSel)} loadOptions={batchLoader} placeholder="Select Batch" isClearable={false} />
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <FieldGroup icon={GraduationCap} label={t('select.class')}>
+            <Select2 name="classSel" value={classSel.id} selectedLabel={classSel.label} onChange={onSelChange(setClassSel)} loadOptions={classLoader} placeholder={t('select.class')} isClearable={false} />
+          </FieldGroup>
+          <FieldGroup icon={Layers} label={t('select.batch')}>
+            <Select2 name="batchSel" value={batchSel.id} selectedLabel={batchSel.label} onChange={onSelChange(setBatchSel)} loadOptions={batchLoader} placeholder={t('select.batch')} isClearable={false} />
+          </FieldGroup>
+          <FieldGroup icon={FileText} label={t('select.exam')}>
+            <Select2 name="examRegSel" value={examReg.id} selectedLabel={examReg.label} onChange={onSelChange(setExamReg)} loadOptions={examRegLoader} placeholder={t('select.exam')} isClearable={false} />
+          </FieldGroup>
+          <FieldGroup icon={BookOpen} label={t('select.subject')}>
+            <Select2 name="subjectSel" value={subjectSel.id} selectedLabel={subjectSel.label} onChange={onSelChange(setSubjectSel)} loadOptions={subjectLoader} placeholder={t('select.subject')} isClearable={false} />
+          </FieldGroup>
+          <FieldGroup icon={CalendarDays} label={t('generateExam.examDate', { defaultValue: 'Exam Date' })}>
+            <input
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              className="w-full h-[42px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 outline-none focus:border-[#0f3d5e] focus:ring-2 focus:ring-[#0f3d5e]/20"
+            />
+          </FieldGroup>
         </div>
-        <div className="min-w-[180px]">
-          <Select2 name="examRegSel" value={examReg.id} selectedLabel={examReg.label} onChange={onSelChange(setExamReg)} loadOptions={examRegLoader} placeholder="Select Exam" isClearable={false} />
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/30">
+          <Button size="sm" variant="primary" leftIcon={<FileText className="w-4 h-4" />} onClick={() => {}}>
+            {t('generateExam.addExam', { defaultValue: 'Add Exam' })}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={() => {}}>
+            {t('generateExam.showExam', { defaultValue: 'Show Exam' })}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Printer className="w-4 h-4" />} onClick={() => {}}>
+            {t('generateExam.printExam', { defaultValue: 'Print Exam' })}
+          </Button>
         </div>
-        <div className="min-w-[180px]">
-          <Select2 name="subjectSel" value={subjectSel.id} selectedLabel={subjectSel.label} onChange={onSelChange(setSubjectSel)} loadOptions={subjectLoader} placeholder="Select Subject" isClearable={false} />
-        </div>
-        <input
-          type="date"
-          value={examDate}
-          onChange={(e) => setExamDate(e.target.value)}
-          className="border border-slate-300 rounded-xl px-3 py-2 outline-none focus:border-[#0f3d5e] focus:ring-2 focus:ring-[#0f3d5e]/20"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="primary" leftIcon={<FileText className="w-4 h-4" />} onClick={() => {}}>
-          ADD EXAM
-        </Button>
-        <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={() => {}}>
-          SHOW EXAM
-        </Button>
-        <Button size="sm" variant="primary" leftIcon={<Printer className="w-4 h-4" />} onClick={() => {}}>
-          PRINT EXAM
-        </Button>
       </div>
 
       <div className="border border-slate-200 rounded-md overflow-hidden">
@@ -120,7 +148,7 @@ export default function GenerateExamTab() {
 
       <div className="flex justify-center">
         <Button size="md" variant="primary" leftIcon={<Save className="w-4 h-4" />} onClick={() => {}} className="px-12">
-          SAVE
+          {t('common.save')}
         </Button>
       </div>
     </div>

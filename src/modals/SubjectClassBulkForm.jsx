@@ -100,9 +100,9 @@ export default function SubjectClassBulkForm({ context = {}, onSuccess }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gradient-to-b from-[#0B3C5D] to-[#072b44] text-white">
-              <th className="px-4 py-3 text-left font-semibold rounded-tl-lg">{t('subjectClassBulk.cols.teacher')}</th>
-              <th className="px-4 py-3 text-left font-semibold">{t('subjectClassBulk.cols.subject')}</th>
-              <th className="px-4 py-3 text-left font-semibold">{t('subjectClassBulk.cols.periods')}</th>
+              <th className="px-4 py-3 text-start font-semibold rounded-tl-lg">{t('subjectClassBulk.cols.teacher')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('subjectClassBulk.cols.subject')}</th>
+              <th className="px-4 py-3 text-start font-semibold">{t('subjectClassBulk.cols.periods')}</th>
               <th className="px-2 py-3 w-12 rounded-tr-lg text-center">
                 <button
                   type="button"

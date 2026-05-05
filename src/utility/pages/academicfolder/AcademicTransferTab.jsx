@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowDown, ArrowRightLeft, Send, XCircle, GraduationCap, UserMinus } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowRightLeft, Send, XCircle, GraduationCap, UserMinus, Workflow } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import Modal from '../../../components/ui/Modal';
@@ -87,49 +87,60 @@ export default function AcademicTransferTab() {
 
   return (
     <div className="space-y-4">
-      {/* ── Toolbar: 4 buttons (top-right) ── */}
-      <div className="flex flex-wrap justify-end gap-2 px-3 py-3">
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<UserMinus className="w-4 h-4" />}
-          onClick={() => setOpenModal('studentDowngrade')}
-        >
-          {t('transferTab.studentDowngrade')}
-        </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<ArrowDown className="w-4 h-4" />}
-          onClick={() => setOpenModal('academicDowngrade')}
-        >
-          {t('transferTab.academicDowngrade')}
-        </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<ArrowRightLeft className="w-4 h-4" />}
-          onClick={() => setOpenModal('studentTransfer')}
-        >
-          {t('transferTab.studentTransfer')}
-        </Button>
-        <Button
-          size="sm"
-          variant="primary"
-          leftIcon={<GraduationCap className="w-4 h-4" />}
-          onClick={() => setOpenModal('academicTransfer')}
-        >
-          {t('transferTab.academicTransfer')}
-        </Button>
+      {/* ── Actions card: header + 4 transfer triggers ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Workflow className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('transferTab.actionsTitle', { defaultValue: 'Transfer actions' })}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 bg-slate-50/60 dark:bg-slate-800/30">
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<UserMinus className="w-4 h-4" />}
+            onClick={() => setOpenModal('studentDowngrade')}
+          >
+            {t('transferTab.studentDowngrade')}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<ArrowDown className="w-4 h-4" />}
+            onClick={() => setOpenModal('academicDowngrade')}
+          >
+            {t('transferTab.academicDowngrade')}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<ArrowRightLeft className="w-4 h-4" />}
+            onClick={() => setOpenModal('studentTransfer')}
+          >
+            {t('transferTab.studentTransfer')}
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            leftIcon={<GraduationCap className="w-4 h-4" />}
+            onClick={() => setOpenModal('academicTransfer')}
+          >
+            {t('transferTab.academicTransfer')}
+          </Button>
+        </div>
       </div>
 
       {/* ── Warning banner ── */}
       {!academicYearReady && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600" />
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-400/30 text-amber-900 dark:text-amber-200">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <div>
             <p className="font-semibold">{t('transferTab.warning')}</p>
-            <p className="text-sm text-amber-800/90">{t('transferTab.warningDesc')}</p>
+            <p className="text-sm text-amber-800/90 dark:text-amber-200/80">{t('transferTab.warningDesc')}</p>
           </div>
         </div>
       )}

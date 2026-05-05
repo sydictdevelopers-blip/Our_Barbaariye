@@ -123,7 +123,7 @@ export default function Sidebar({
             >
               <button
                 onClick={() => toggleMenu(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left border-l-2 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-start border-s-2 ${
                   activeParentId === item.id
                     ? 'bg-teal-500/30 text-white font-semibold shadow-inner border-teal-400'
                     : 'border-transparent text-white/85 hover:bg-white/12 font-medium'
@@ -148,7 +148,7 @@ export default function Sidebar({
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="overflow-hidden ml-5 pl-4 mt-1 mb-2 pt-1 border-l-2 border-teal-400/50 space-y-1"
+                    className="overflow-hidden ms-5 ps-4 mt-1 mb-2 pt-1 border-s-2 border-teal-400/50 space-y-1"
                   >
                     {item.children.map((child) => {
                       const ChildIcon = child.icon;

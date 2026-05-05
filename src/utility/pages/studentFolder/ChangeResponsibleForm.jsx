@@ -78,7 +78,7 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-[#0B3C5D] text-white">
-            <th className="text-left px-4 py-2.5 font-semibold">{t('responsibleForm.student')}</th>
+            <th className="text-start px-4 py-2.5 font-semibold">{t('responsibleForm.student')}</th>
             <th className="w-12 px-2 py-2">
               <button
                 type="button"
@@ -92,7 +92,7 @@ export default function ChangeResponsibleForm({ context, onSuccess, onCancel }) 
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} className="border-b border-slate-200 bg-white">
+            <tr key={row.id} className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40">
               <td className="px-4 py-2">
                 <Select2
                   name={`student_${row.id}`}

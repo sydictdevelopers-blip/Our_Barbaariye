@@ -399,11 +399,11 @@ export default function StudentPerformanceEditTab() {
               <table className="w-full text-sm">
                 <thead className="bg-[#0f3d5e] text-white sticky top-0 z-10">
                   <tr>
-                    <th className="text-left px-4 py-3 font-semibold">{t('studentPerformanceEdit.cols.student')}</th>
-                    <th className="text-left px-4 py-3 font-semibold w-32">{t('studentPerformanceEdit.cols.class')}</th>
-                    <th className="text-left px-4 py-3 font-semibold w-56">{t('studentPerformanceEdit.cols.performance')}</th>
-                    <th className="text-left px-4 py-3 font-semibold w-48">{t('studentPerformanceEdit.cols.rating')}</th>
-                    <th className="text-left px-4 py-3 font-semibold">{t('studentPerformanceEdit.cols.reason')}</th>
+                    <th className="text-start px-4 py-3 font-semibold">{t('studentPerformanceEdit.cols.student')}</th>
+                    <th className="text-start px-4 py-3 font-semibold w-32">{t('studentPerformanceEdit.cols.class')}</th>
+                    <th className="text-start px-4 py-3 font-semibold w-56">{t('studentPerformanceEdit.cols.performance')}</th>
+                    <th className="text-start px-4 py-3 font-semibold w-48">{t('studentPerformanceEdit.cols.rating')}</th>
+                    <th className="text-start px-4 py-3 font-semibold">{t('studentPerformanceEdit.cols.reason')}</th>
                   </tr>
                 </thead>
                 <tbody>

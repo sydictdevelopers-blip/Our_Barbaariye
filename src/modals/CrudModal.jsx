@@ -7,8 +7,10 @@ import * as swal from '../utils/swal';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Select2 from '../components/ui/Select2';
+import { useSelector } from 'react-redux';
 import { crud, fetchSelectOptions, fetchModuleHelp, uploadNewStudentImage } from '../services/api';
 import { CRUD_CONFIG } from '../config/crudConfig';
+import { selectIsReadOnlyBranch } from '../slices/uiSlice';
 
 /** Auto-detect valueKey (first *_id) iyo labelKey (first *_name ama column 2) */
 function detectKeys(columns, row) {
@@ -189,6 +191,7 @@ export default function CrudModal({
   if (!config) return null;
 
   const { t, i18n } = useTranslation();
+  const isReadOnly = useSelector(selectIsReadOnlyBranch);
   // If the string looks like an i18n key (e.g. "students.registerForm.fields.fullName")
   // run it through t(); otherwise return as-is. Static labels like "Class" remain unchanged.
   const tr = (s) => {
@@ -332,7 +335,7 @@ export default function CrudModal({
         swal.swalError('Isku xirka wuu fashilmay', 'Database-ga lama xiriin karin. Hubi in backend-ku socdo.');
       } else if (isGeneralValidationError) {
         setErrors({ submit: '' });
-        swal.swalError('Xog xareenta.', '');
+        swal.swalError(t('swal.titles.validationError', { defaultValue: 'Validation error' }), '');
       } else {
         setErrors({ submit: '' });
         swal.swalError(msg, '');
@@ -545,12 +548,12 @@ export default function CrudModal({
         size={config.modalSize || 'md'}
         footer={
           <div className="flex justify-end gap-2 w-full flex-wrap">
-            {!isEdit && (
+            {!isReadOnly && !isEdit && (
               <Button type="button" onClick={handleSave} disabled={loading}>
                 {loading ? '...' : t('common.save', { defaultValue: 'Save' })}
               </Button>
             )}
-            {isEdit && showUpdate && (
+            {!isReadOnly && isEdit && showUpdate && (
               <Button type="button" onClick={handleUpdate} disabled={loading}>
                 {loading ? '...' : t('common.update', { defaultValue: 'Update' })}
               </Button>
@@ -566,7 +569,7 @@ export default function CrudModal({
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
-            className="w-full mb-4 flex items-start gap-3 rounded-xl border border-[#0f3d5e]/20 bg-[#0f3d5e]/5 hover:bg-[#0f3d5e]/10 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 px-4 py-3 text-left transition-colors group"
+            className="w-full mb-4 flex items-start gap-3 rounded-xl border border-[#0f3d5e]/20 bg-[#0f3d5e]/5 hover:bg-[#0f3d5e]/10 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 px-4 py-3 text-start transition-colors group"
           >
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#0f3d5e] dark:text-teal-400" />
             <div className="flex-1 min-w-0">

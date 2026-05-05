@@ -26,6 +26,10 @@ const initialState = {
   sidebarOpen: false,
   activeTab: 'accounts',
   user: getInitialUser(),
+  // Branches the logged-in user has access to. Populated once the user lands
+  // on a protected route (BranchGuard fetches /user-branches). Cached here so
+  // every component can read the active branch's br_name without re-fetching.
+  userBranches: [],
 };
 
 const uiSlice = createSlice({
@@ -73,13 +77,26 @@ const uiSlice = createSlice({
         console.log('[setBranch] session br_id updated →', action.payload);
       }
     },
+    setUserBranches: (state, action) => {
+      state.userBranches = Array.isArray(action.payload) ? action.payload : [];
+    },
     logout: (state) => {
       state.user = null;
+      state.userBranches = [];
       localStorage.removeItem(AUTH_STORAGE_KEY);
     },
   },
 });
 
-export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, logout } = uiSlice.actions;
+export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, setUserBranches, logout } = uiSlice.actions;
+
+/** True when the logged-in user has access to the special "All" branch,
+ *  regardless of which branch is currently active. The whole app is held in
+ *  read-only mode (no insert / update / delete) for these users because the
+ *  legacy SP-set treats "All" as a global aggregate that must not be mutated. */
+export const selectIsReadOnlyBranch = (state) => {
+  const list = state.ui.userBranches || [];
+  return list.some((b) => String(b?.br_name ?? '').trim().toLowerCase() === 'all');
+};
 
 export default uiSlice.reducer;

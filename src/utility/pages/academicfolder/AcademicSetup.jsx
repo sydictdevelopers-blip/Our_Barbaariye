@@ -263,10 +263,10 @@ export default function AccountsPage() {
               // Remove Exam Schedule: hal alert, ma jiro modal — toos u tirtir.
               if (kind === 'ExamScheduleRemove') {
                 swalConfirmAction({
-                  title: 'Remove Exam Scheduale',
-                  text: 'Are You Sure You Went To Remove This?',
-                  confirmText: 'REMOVE BY EXAM',
-                  cancelText: 'CANCELACTION',
+                  title: t('examSchedule.removeTitle', 'Remove Exam Schedule'),
+                  text: t('examSchedule.removeText', 'Are you sure you want to remove this?'),
+                  confirmText: t('swal.buttons.remove', 'Remove'),
+                  cancelText: t('swal.buttons.cancel', 'Cancel'),
                   confirmColor: '#0B3C5D',
                   onConfirm: async () => {
                     const result = await crud({
@@ -299,7 +299,7 @@ export default function AccountsPage() {
     }
     return (
       <motion.div key={activeTab} {...motionProps} className="p-8 text-center text-slate-500">
-        wa ikana wlalayaal
+        {t('placeholders.comingSoon', 'Coming soon')}
       </motion.div>
     );
   };
@@ -307,9 +307,9 @@ export default function AccountsPage() {
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0">
       {tabs.length > 0 && (
-        <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/60">
+        <Card className="p-0 overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm shadow-slate-200/60 dark:shadow-slate-900/40">
           <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-          <div className="relative px-5 py-5 bg-white border-b border-slate-200/70">
+          <div className="relative px-5 py-5 bg-white dark:bg-slate-800/80 border-b border-slate-200/70 dark:border-slate-700/70">
             <Tabs
               tabs={tabs}
               activeTab={activeTab}

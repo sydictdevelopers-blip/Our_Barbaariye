@@ -247,7 +247,7 @@ export default function MeetingMinutesReportListModal({
                         <th
                           key={c.key}
                           style={{ width: c.w }}
-                          className="text-left font-semibold px-3 py-2 border border-slate-300 align-middle"
+                          className="text-start font-semibold px-3 py-2 border border-slate-300 align-middle"
                         >
                           {c.label}
                         </th>

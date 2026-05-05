@@ -173,10 +173,10 @@ export default function AssignClassExamBulkForm({ context = {}, onSuccess }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gradient-to-b from-[#0B3C5D] to-[#072b44] text-white">
-              <th className="px-4 py-3 text-left font-semibold rounded-tl-lg w-1/2">
+              <th className="px-4 py-3 text-start font-semibold rounded-tl-lg w-1/2">
                 {t('assignClassExamBulk.cols.class', 'Class')}
               </th>
-              <th className="px-4 py-3 text-left font-semibold rounded-tr-lg">
+              <th className="px-4 py-3 text-start font-semibold rounded-tr-lg">
                 {t('assignClassExamBulk.cols.exam', 'Exam')}
               </th>
             </tr>

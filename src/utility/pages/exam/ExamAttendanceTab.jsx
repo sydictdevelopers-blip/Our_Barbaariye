@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Database, Plus, Trash2 } from 'lucide-react';
+import { Database, Plus, Trash2, Filter, CalendarDays, Building2, FileText, Sun, BookOpen, Calendar as CalendarIcon } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
 import DataTableCard from '../../../components/DataTableCard';
@@ -131,132 +131,101 @@ export default function ExamAttendenceTab() {
     ? columns
     : [{ key: 'message', label: t('common.message', 'Message') }];
 
-  const headerActions = (
-    <>
-      <div className="min-w-[170px]">
-        <Select2
-          name="academic"
-          value={academic.id}
-          selectedLabel={academic.label}
-          onChange={(e) => setAcademic({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={academicLoader}
-          placeholder={t('select.academicYear', 'Select Academic Year')}
-          isClearable={false}
-        />
-      </div>
-      <div className="min-w-[150px]">
-        <Select2
-          name="room"
-          value={room.id}
-          selectedLabel={room.label}
-          onChange={(e) => setRoom({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={roomLoader}
-          placeholder={t('select.room', 'Select Room')}
-          isClearable
-        />
-      </div>
-      <div className="min-w-[150px]">
-        <Select2
-          name="exam"
-          value={exam.id}
-          selectedLabel={exam.label}
-          onChange={(e) => setExam({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={examLoader}
-          placeholder={t('select.exam', 'Select Exam')}
-          isClearable={false}
-        />
-      </div>
-      <div className="min-w-[150px]">
-        <Select2
-          name="shift"
-          value={shift.id}
-          selectedLabel={shift.label}
-          onChange={(e) => setShift({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={shiftLoader}
-          placeholder={t('select.shift', 'Select Shift')}
-          isClearable
-        />
-      </div>
-      <div className="min-w-[160px]">
-        <Select2
-          name="subject"
-          value={subject.id}
-          selectedLabel={subject.label}
-          onChange={(e) => setSubject({ id: e.target.value, label: e.target.label || '' })}
-          loadOptions={subjectLoader}
-          placeholder={t('select.subject', 'Select Subject')}
-          isClearable
-        />
-      </div>
-      <div className="min-w-[160px]">
-        <label className="block text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
-          {t('examAttendence.fields.date', 'Date.')}
-        </label>
-        <input
-          type="date"
-          value={attendDate}
-          onChange={(e) => setAttendDate(e.target.value)}
-          className="w-full px-3 py-[9px] rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f3d5e]/20 focus:border-[#0f3d5e]"
-        />
-      </div>
-      <div className="basis-full" />
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
-        onClick={buildDeleteAction(
-          t('examAttendence.roomAttendDelete', 'Room Attendence Delete'),
-          { academic: true, room: true, exam: true, date: true }
-        )}>
-        {t('examAttendence.roomAttendDelete', 'ROOM ATTENDENCE DELETE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
-        onClick={buildDeleteAction(
-          t('examAttendence.shiftAttendDelete', 'Shift Attendence Delete'),
-          { academic: true, shift: true, exam: true, date: true }
-        )}>
-        {t('examAttendence.shiftAttendDelete', 'SHIFT ATTENDENCE DELETE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
-        onClick={buildDeleteAction(
-          t('examAttendence.academicAttendDelete', 'Academic Attendence Delete'),
-          { academic: true, exam: true, date: true }
-        )}>
-        {t('examAttendence.academicAttendDelete', 'ACADEMIC ATTENDENCE DELETE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow}>
-        {t('examAttendence.showAttendence', 'SHOW ATTENDENCE')}
-      </Button>
-      <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddAttendence}>
-        {t('examAttendence.addAttendence', 'ADD ATTENDENCE')}
-      </Button>
-    </>
-  );
+  const labelCls = "inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5";
+  const labelIconCls = "w-3.5 h-3.5 text-[#0B3C5D] dark:text-teal-400";
 
   return (
-    <DataTableCard
-      showDataPanel={loaded}
-      searchPlaceholder={t('entity.search', 'Search')}
-      searchValue={searchQuery}
-      onSearchChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-      onSearchSubmit={() => {}}
-      headerActions={headerActions}
-      emptyTitleClickToLoad={t('entity.noLoaded', 'No data loaded')}
-      emptyDescClickToLoad={t('entity.loadHint', 'Click SHOW ATTENDENCE to load data')}
-      emptyIconClickToLoad={Database}
-      columns={tableColumns}
-      data={pagedRows}
-      isLoading={loading}
-      emptyIcon={Database}
-      emptyTitle={t('entity.notFound', 'Not Found')}
-      emptyDescription=""
-      hasActions={false}
-      total={total}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      itemsPerPage={pageSize}
-      onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
-      onNextPage={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-      onPageClick={(p) => setCurrentPage(p)}
-      onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
-      rowKey="id"
-    />
+    <div className="space-y-4">
+      {/* ── Filter card: header + grouped selects + actions row ── */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
+            <Filter className="w-3.5 h-3.5" />
+          </span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {t('examAttendence.filtersTitle', { defaultValue: 'Filters' })}
+          </span>
+        </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div>
+            <label className={labelCls}><CalendarDays className={labelIconCls} /><span>{t('select.academicYear')}</span></label>
+            <Select2 name="academic" value={academic.id} selectedLabel={academic.label} onChange={(e) => setAcademic({ id: e.target.value, label: e.target.label || '' })} loadOptions={academicLoader} placeholder={t('select.academicYear')} isClearable={false} />
+          </div>
+          <div>
+            <label className={labelCls}><Building2 className={labelIconCls} /><span>{t('select.room', 'Room')}</span></label>
+            <Select2 name="room" value={room.id} selectedLabel={room.label} onChange={(e) => setRoom({ id: e.target.value, label: e.target.label || '' })} loadOptions={roomLoader} placeholder={t('select.room', 'Select Room')} isClearable />
+          </div>
+          <div>
+            <label className={labelCls}><FileText className={labelIconCls} /><span>{t('select.exam')}</span></label>
+            <Select2 name="exam" value={exam.id} selectedLabel={exam.label} onChange={(e) => setExam({ id: e.target.value, label: e.target.label || '' })} loadOptions={examLoader} placeholder={t('select.exam')} isClearable={false} />
+          </div>
+          <div>
+            <label className={labelCls}><Sun className={labelIconCls} /><span>{t('select.shift', 'Shift')}</span></label>
+            <Select2 name="shift" value={shift.id} selectedLabel={shift.label} onChange={(e) => setShift({ id: e.target.value, label: e.target.label || '' })} loadOptions={shiftLoader} placeholder={t('select.shift', 'Select Shift')} isClearable />
+          </div>
+          <div>
+            <label className={labelCls}><BookOpen className={labelIconCls} /><span>{t('select.subject')}</span></label>
+            <Select2 name="subject" value={subject.id} selectedLabel={subject.label} onChange={(e) => setSubject({ id: e.target.value, label: e.target.label || '' })} loadOptions={subjectLoader} placeholder={t('select.subject')} isClearable />
+          </div>
+          <div>
+            <label className={labelCls}><CalendarIcon className={labelIconCls} /><span>{t('examAttendence.fields.date', 'Date')}</span></label>
+            <input
+              type="date"
+              value={attendDate}
+              onChange={(e) => setAttendDate(e.target.value)}
+              className="w-full h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f3d5e]/20 focus:border-[#0f3d5e]"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/30">
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
+            onClick={buildDeleteAction(t('examAttendence.roomAttendDelete', 'Room Attendence Delete'), { academic: true, room: true, exam: true, date: true })}>
+            {t('examAttendence.roomAttendDelete', 'Room Attend Delete')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
+            onClick={buildDeleteAction(t('examAttendence.shiftAttendDelete', 'Shift Attendence Delete'), { academic: true, shift: true, exam: true, date: true })}>
+            {t('examAttendence.shiftAttendDelete', 'Shift Attend Delete')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Trash2 className="w-4 h-4" />}
+            onClick={buildDeleteAction(t('examAttendence.academicAttendDelete', 'Academic Attendence Delete'), { academic: true, exam: true, date: true })}>
+            {t('examAttendence.academicAttendDelete', 'Academic Attend Delete')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow}>
+            {t('examAttendence.showAttendence', 'Show Attendence')}
+          </Button>
+          <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={handleAddAttendence}>
+            {t('examAttendence.addAttendence', 'Add Attendence')}
+          </Button>
+        </div>
+      </div>
+
+      <DataTableCard
+        showDataPanel={loaded}
+        searchPlaceholder={t('entity.search', 'Search')}
+        searchValue={searchQuery}
+        onSearchChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+        onSearchSubmit={() => {}}
+        emptyTitleClickToLoad={t('entity.noLoaded', 'No data loaded')}
+        emptyDescClickToLoad={t('entity.loadHint', 'Click SHOW ATTENDENCE to load data')}
+        emptyIconClickToLoad={Database}
+        columns={tableColumns}
+        data={pagedRows}
+        isLoading={loading}
+        emptyIcon={Database}
+        emptyTitle={t('entity.notFound', 'Not Found')}
+        emptyDescription=""
+        hasActions={false}
+        total={total}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        itemsPerPage={pageSize}
+        onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        onNextPage={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+        onPageClick={(p) => setCurrentPage(p)}
+        onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
+        rowKey="id"
+      />
+    </div>
   );
 }
