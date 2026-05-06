@@ -60,6 +60,7 @@ export default function LoginPage() {
       u_br_id: u.u_br_id,
       br_id: finalBrId,
       user_type: u.user_type,
+      privalage: u.privalage ?? [],
       initials,
     }));
     navigate('/', { replace: true });

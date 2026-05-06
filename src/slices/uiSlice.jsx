@@ -77,6 +77,16 @@ const uiSlice = createSlice({
         console.log('[setBranch] session br_id updated →', action.payload);
       }
     },
+    /** Replace privalage + user_type after a branch switch (privileges may
+     *  differ per branch). Branch id is updated separately via setBranch. */
+    setBranchContext: (state, action) => {
+      if (!state.user) return;
+      const { privalage, user_type, u_br_id } = action.payload || {};
+      if (privalage !== undefined) state.user.privalage = privalage;
+      if (user_type !== undefined) state.user.user_type = user_type;
+      if (u_br_id !== undefined) state.user.u_br_id = u_br_id;
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state.user));
+    },
     setUserBranches: (state, action) => {
       state.userBranches = Array.isArray(action.payload) ? action.payload : [];
     },
@@ -88,7 +98,7 @@ const uiSlice = createSlice({
   },
 });
 
-export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, setUserBranches, logout } = uiSlice.actions;
+export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, setBranchContext, setUserBranches, logout } = uiSlice.actions;
 
 // Read API_BASE the same way services/api.jsx does so dev/prod proxies work.
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
@@ -107,8 +117,14 @@ export const switchBranch = (br_id) => async (dispatch) => {
     const j = await res.json().catch(() => ({}));
     throw new Error(j?.message || 'Branch switch failed');
   }
+  const body = await res.json();
   dispatch(setBranch(br_id));
-  return res.json();
+  dispatch(setBranchContext({
+    privalage: body.privalage ?? [],
+    user_type: body.user_type,
+    u_br_id: body.u_br_id,
+  }));
+  return body;
 };
 
 /** logoutUser — clears server-side session cookie, then local state. We try

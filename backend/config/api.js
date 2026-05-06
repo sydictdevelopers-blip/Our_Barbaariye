@@ -71,6 +71,12 @@ function registerApiRoutes(app) {
           u_br_id: row.u_br_id,
           br_id: row.br_id,
           user_type: row.user_type,
+          // Drives sidebar/tab/button filtering on the client. Not a security
+          // boundary — backend already enforces auth via JWT + req.user. This
+          // only controls what the UI offers; if a tampered client adds a
+          // forbidden menu, calling its endpoint still requires the JWT and
+          // (eventually) server-side privilege checks.
+          privalage: row.privalage ?? [],
           user_branch_count: row.user_branch_count ?? 1,
         },
       });
@@ -130,7 +136,7 @@ function registerApiRoutes(app) {
         return res.status(400).json({ success: false, message: 'br_id waa lagama-maarmaan' });
       }
       const { rows } = await db.query(
-        `SELECT ub.u_br_id, ub.user_type
+        `SELECT ub.u_br_id, ub.user_type, ub.privalage
            FROM user_branch ub
           WHERE ub.usr_id = $1
             AND ub.br_id = $2
@@ -149,7 +155,15 @@ function registerApiRoutes(app) {
         br_id: requested,
         user_type: owned.user_type,
       });
-      return res.json({ success: true, br_id: requested, u_br_id: owned.u_br_id });
+      // Return new privalage so the client can refresh its UI gating without
+      // a full reload (privileges may differ per branch).
+      return res.json({
+        success: true,
+        br_id: requested,
+        u_br_id: owned.u_br_id,
+        user_type: owned.user_type,
+        privalage: owned.privalage ?? [],
+      });
     } catch (err) {
       console.error('[api/switch-branch] error:', err.message);
       return res.status(500).json({ success: false, message: 'Khalad server: ' + err.message });

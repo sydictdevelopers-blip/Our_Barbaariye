@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,14 +7,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { toggleSidebarCollapse, setSidebarOpen } from '../../slices/uiSlice';
 import { defaultMenuItems } from '../../config/menuConfig';
+import { deserializePrivilege, filterMenuByPrivilege } from '../../utils/privilege';
 
 const defaultUser = { initials: 'AS', name: 'Admin User', role: 'Administrator' };
 
 export default function Sidebar({
-  menuItems = defaultMenuItems,
+  menuItems: rawMenuItems = defaultMenuItems,
   user = defaultUser,
   logo = 'Barbaariye',
 }) {
+  const sessionUser = useSelector((state) => state.ui.user);
+  const menuItems = useMemo(() => {
+    const allowed = deserializePrivilege(sessionUser?.privalage);
+    return filterMenuByPrivilege(rawMenuItems, allowed, sessionUser?.user_type);
+  }, [rawMenuItems, sessionUser?.privalage, sessionUser?.user_type]);
   const location = useLocation();
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
