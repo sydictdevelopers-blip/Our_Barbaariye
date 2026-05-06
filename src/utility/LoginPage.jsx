@@ -38,13 +38,23 @@ export default function LoginPage() {
 
   const dispatchAndGo = async (u, chosenBrId) => {
     const initials = (u.username).slice(0, 2).toUpperCase();
-    const finalBrId = chosenBrId ?? u.br_id;
 
-    // Multi-branch users: re-issue JWT with the picked branch so backend
-    // uses the chosen branch (not the default one returned by login_check).
+    // login_check returns the default branch's privilege. If the user picked
+    // a different branch, switch first and use THAT branch's privilege +
+    // user_type — privileges differ per branch, so we must not stash the
+    // default-branch values on the user object.
+    let branchPriv = u.privalage ?? [];
+    let branchUserType = u.user_type;
+    let branchUBrId = u.u_br_id;
+    let finalBrId = u.br_id;
+
     if (chosenBrId != null && chosenBrId !== u.br_id) {
       try {
-        await dispatch(switchBranch(chosenBrId));
+        const result = await dispatch(switchBranch(chosenBrId));
+        finalBrId = chosenBrId;
+        branchPriv = result?.privalage ?? branchPriv;
+        branchUserType = result?.user_type ?? branchUserType;
+        branchUBrId = result?.u_br_id ?? branchUBrId;
       } catch (e) {
         setError(e?.message || 'Branch switch failed');
         return;
@@ -57,10 +67,10 @@ export default function LoginPage() {
       name: u.username,
       fullName: u.username,
       username: u.username,
-      u_br_id: u.u_br_id,
+      u_br_id: branchUBrId,
       br_id: finalBrId,
-      user_type: u.user_type,
-      privalage: u.privalage ?? [],
+      user_type: branchUserType,
+      privalage: branchPriv,
       initials,
     }));
     navigate('/', { replace: true });
