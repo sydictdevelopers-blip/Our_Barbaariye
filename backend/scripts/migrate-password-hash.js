@@ -101,6 +101,12 @@ async function main() {
       console.log('[step 4] password column already dropped — skipping');
     }
 
+    // Step 5 — patch SPs that still selected/updated the now-dropped column
+    // (users_show returned u.password; users_sp had a stale 10-arg overload;
+    // user_sp singular was dead code).
+    console.log('[step 5] applying followup SP patches');
+    await runFile(client, 'password-hash-followup.sql');
+
     console.log('[migrate] done ✓');
   } finally {
     client.release();
