@@ -236,6 +236,6 @@ module.exports = {
     WHERE q_b_id = ${Number(p?.q_b_id)}
     ORDER BY qu_a_id`,
 
-  // Exam Instructions list (uses the vw_exam_in PG function).
-  exam_in_show: (p) => `SELECT * FROM vw_exam_in(${Number(p?.u_br_id)})`,
+  // Exam Instructions list (uses the vw_exam_in PG function — takes br_id).
+  exam_in_show: (p) => `SELECT * FROM vw_exam_in(${Number(p?.br_id)})`,
 };

@@ -27,6 +27,7 @@ export default function ExamInstructionTab() {
   const { t } = useTranslation();
   const user = useSelector((state) => state.ui.user);
   const uBrId = user?.u_br_id ?? user?.br_id ?? 0;
+  const brId = user?.br_id ?? 0;
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,15 +43,15 @@ export default function ExamInstructionTab() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetchSelectOptions('exam_in_show', 200, '', { u_br_id: uBrId });
+      const resp = await fetchSelectOptions('exam_in_show', 200, '', { br_id: brId });
       setRows(Array.isArray(resp?.data) ? resp.data : []);
     } catch (e) {
-      swalError('Khalad', e?.message || 'Failed to load');
+      swalError(t('examInstruction.msg.errTitle'), e?.message || t('examInstruction.msg.loadFailed'));
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [uBrId]);
+  }, [brId, t]);
 
   const handleShow = async () => {
     setShowResults(true);
@@ -71,8 +72,8 @@ export default function ExamInstructionTab() {
 
   const openEdit = (row) => {
     setModalMode('edit');
-    setEditId(row.id);
-    setEditBody(row.instruction || '');
+    setEditId(row.ex_in_id);
+    setEditBody(row.body || '');
     setBodies(emptyBodies);
     setModalOpen(true);
   };
@@ -86,32 +87,35 @@ export default function ExamInstructionTab() {
       if (modalMode === 'insert') {
         const { a, b, c, d } = bodies;
         if (!a.trim() || !b.trim() || !c.trim() || !d.trim()) {
-          swalError('Khalad', 'Buuxi 4-ta instruction (A, B, C, D).');
+          swalError(t('examInstruction.msg.errTitle'), t('examInstruction.msg.fillAll'));
           setSaving(false);
           return;
         }
         steps = [{
-          type: 'sp', fn: 'exam_in_sp',
+          type: 'sp', fn: 'exam_instructions_sp',
           params: [0, a.trim(), b.trim(), c.trim(), d.trim(), uBrId, 'insert'],
         }];
       } else {
         const body = editBody.trim();
         if (!body) {
-          swalError('Khalad', 'Geli instruction-ka.');
+          swalError(t('examInstruction.msg.errTitle'), t('examInstruction.msg.enterInstruction'));
           setSaving(false);
           return;
         }
         steps = [{
-          type: 'sp', fn: 'exam_in_sp',
+          type: 'sp', fn: 'exam_instructions_sp',
           params: [editId, body, '', '', '', uBrId, 'update'],
         }];
       }
       await postBulk(steps);
-      swalSuccess('Wa la guulaystey', modalMode === 'insert' ? 'Waa la kaydiyay' : 'Waa la cusbooneysiiyay');
+      swalSuccess(
+        t('examInstruction.msg.successTitle'),
+        modalMode === 'insert' ? t('examInstruction.msg.saved') : t('examInstruction.msg.updated'),
+      );
       close();
       await refreshIfShown();
     } catch (e) {
-      swalError('Khalad ayaa dhacay', e?.message || 'Save failed');
+      swalError(t('examInstruction.msg.errOccurred'), e?.message || t('examInstruction.msg.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -122,13 +126,13 @@ export default function ExamInstructionTab() {
     if (!ok) return;
     try {
       await postBulk([{
-        type: 'sp', fn: 'exam_in_sp',
-        params: [row.id, '', '', '', '', uBrId, 'delete'],
+        type: 'sp', fn: 'exam_instructions_sp',
+        params: [row.ex_in_id, '', '', '', '', uBrId, 'delete'],
       }]);
-      swalSuccess('Wa la guulaystey', 'La tirtirey');
+      swalSuccess(t('examInstruction.msg.successTitle'), t('examInstruction.msg.deleted'));
       await refreshIfShown();
     } catch (e) {
-      swalError('Khalad', e?.message || 'Delete failed');
+      swalError(t('examInstruction.msg.errTitle'), e?.message || t('examInstruction.msg.deleteFailed'));
     }
   };
 
@@ -138,14 +142,14 @@ export default function ExamInstructionTab() {
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
         <div className="flex items-center justify-between gap-2 px-4 py-3 bg-slate-50/60 dark:bg-slate-800/30">
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('examInstruction.title', { defaultValue: 'Exam Instructions' })}
+            {t('examInstruction.title')}
           </span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="primary" leftIcon={<Database className="w-4 h-4" />} onClick={handleShow} disabled={loading}>
-              {loading ? t('action.loading') : t('action.showData')}
+              {loading ? t('examInstruction.loading') : t('examInstruction.showData')}
             </Button>
             <Button size="sm" variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={openInsert}>
-              {t('entity.addNew')}
+              {t('examInstruction.addNew')}
             </Button>
           </div>
         </div>
@@ -154,37 +158,37 @@ export default function ExamInstructionTab() {
       {showResults && (
       <div className="border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
         <div className="flex items-center bg-[#0B3C5D] text-white px-4 py-2">
-          <span className="font-semibold flex-1">{t('examInstruction.title', { defaultValue: 'Exam Instructions' })} ({rows.length})</span>
+          <span className="font-semibold flex-1">{t('examInstruction.title')} ({rows.length})</span>
         </div>
         {loading ? (
-          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('action.loading')}</div>
+          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.loading')}</div>
         ) : rows.length === 0 ? (
-          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.empty', { defaultValue: 'No instructions yet.' })}</div>
+          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.empty')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-700">
                 <tr>
-                  <th className="text-start px-4 py-2 w-16">ID</th>
-                  <th className="text-start px-4 py-2">Instruction</th>
-                  <th className="text-start px-4 py-2 w-32">Date</th>
-                  <th className="text-start px-4 py-2 w-32">Username</th>
-                  <th className="text-center px-4 py-2 w-32">Actions</th>
+                  <th className="text-start px-4 py-2 w-16">{t('examInstruction.table.id')}</th>
+                  <th className="text-start px-4 py-2">{t('examInstruction.table.instruction')}</th>
+                  <th className="text-start px-4 py-2 w-32">{t('examInstruction.table.date')}</th>
+                  <th className="text-start px-4 py-2 w-32">{t('examInstruction.table.username')}</th>
+                  <th className="text-center px-4 py-2 w-32">{t('examInstruction.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-4 py-2">{r.id}</td>
-                    <td className="px-4 py-2">{r.instruction}</td>
+                  <tr key={r.ex_in_id}>
+                    <td className="px-4 py-2">{r.ex_in_id}</td>
+                    <td className="px-4 py-2">{r.body}</td>
                     <td className="px-4 py-2">{r.reg_date}</td>
                     <td className="px-4 py-2">{r.username || ''}</td>
                     <td className="px-4 py-2">
                       <div className="flex justify-center gap-2">
-                        <button type="button" onClick={() => openEdit(r)} className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label="Edit">
+                        <button type="button" onClick={() => openEdit(r)} className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label={t('examInstruction.table.edit')}>
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button type="button" onClick={() => handleDelete(r)} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label="Delete">
+                        <button type="button" onClick={() => handleDelete(r)} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label={t('examInstruction.table.delete')}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -201,29 +205,26 @@ export default function ExamInstructionTab() {
       <Modal
         isOpen={modalOpen}
         onClose={close}
-        title="Exam Instructions Form"
+        title={t('examInstruction.modalTitle')}
         size="md"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('examInstruction.saving') : t('examInstruction.save')}
             </Button>
             <Button variant="primary" onClick={close} disabled={saving}>
-              Close
+              {t('examInstruction.close')}
             </Button>
           </div>
         }
       >
         {modalMode === 'insert' ? (
           <div className="space-y-4">
-            {[
-              { key: 'a', label: 'Inustraction (A) :' },
-              { key: 'b', label: 'Inustraction (B) :' },
-              { key: 'c', label: 'Inustraction (C) :' },
-              { key: 'd', label: 'Inustraction (D) :' },
-            ].map(({ key, label }) => (
+            {['a', 'b', 'c', 'd'].map((key) => (
               <div key={key} className="space-y-1">
-                <label className="text-emerald-600 font-medium">{label}</label>
+                <label className="text-emerald-600 font-medium">
+                  {t('examInstruction.instructionLabel', { letter: key.toUpperCase() })}
+                </label>
                 <textarea
                   rows={2}
                   value={bodies[key]}
@@ -235,7 +236,7 @@ export default function ExamInstructionTab() {
           </div>
         ) : (
           <div className="space-y-1">
-            <label className="text-emerald-600 font-medium">Instruction :</label>
+            <label className="text-emerald-600 font-medium">{t('examInstruction.instructionLabelSingle')}</label>
             <textarea
               rows={4}
               value={editBody}
