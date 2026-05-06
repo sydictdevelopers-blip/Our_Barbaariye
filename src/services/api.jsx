@@ -22,6 +22,18 @@ function _check401(res) {
     window.location.href = '/frontend/login';
   }
 }
+
+/**
+ * Server-ku wuxuu ka soo bixinayaa br_id / u_br_id JWT-ga (req.user). Sidaa
+ * darteed haddii frontend-ku diro qiime body-ga ah, server wuu iska tuurayaa.
+ * Defensively-strip si payload-ka shabakadda u nadiifsanaado iyo si tampering
+ * localStorage-ku uusan u soo bandhigin DevTools.
+ */
+function _stripSessionKeys(obj) {
+  if (!obj) return {};
+  const { br_id, u_br_id, ...rest } = obj;
+  return rest;
+}
 function getSessionBrId() {
   if (typeof window === 'undefined') return '';
   try {
@@ -101,10 +113,8 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
       queryName: queryName || 'accounts',
       page: 1,
       limit,
-      ...(sessionBrId && { br_id: sessionBrId }),
-      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search && { search }),
-      ...extra,
+      ..._stripSessionKeys(extra),
     }),
   }).then((res) => {
     _check401(res);
@@ -173,8 +183,6 @@ export function dedupeRequest(key, fn) {
 }
 
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
-  const sessionBrId = getSessionBrId();
-  const sessionUBrId = getSessionUBrId();
   const res = await fetch(`${API_BASE}/data`, {
     method: 'POST',
     credentials: 'include',
@@ -183,11 +191,9 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
       queryName: queryName || 'accounts',
       page,
       limit,
-      ...(sessionBrId && { br_id: sessionBrId }),
-      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search != null && String(search).trim() && { search: String(search).trim() }),
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
-      ...extra,
+      ..._stripSessionKeys(extra),
     }),
   });
   _check401(res);
