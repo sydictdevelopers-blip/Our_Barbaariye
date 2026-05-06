@@ -20,6 +20,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 
@@ -74,6 +75,11 @@ app.use(cors({
 // Muhiim: Frontend-ka wuxuu soo gudbinayaa form data (urlencoded) ama JSON
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Step 4e2: Cookie parser — req.cookies.session ayuu daah-furayaa JWT-ga.
+// (PR 1: cookie-ga waa la abuurayaa marka login dhaco, laakiin endpoint-yadu
+// weli ma uusan xaqiijinin — enforcement-ku PR 2 ayuu ku jiraa.)
+app.use(cookieParser());
 
 // Step 4f: Ku dar logger middleware (Simple request logger)
 // TALLAABO: Muuji method + URL marka request-ka soo dhaco

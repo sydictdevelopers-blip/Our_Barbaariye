@@ -33,6 +33,7 @@ export async function loginUser(username, password) {
   try {
     const res = await fetch(`${API_BASE}/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
@@ -74,6 +75,7 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
 
   const promise = fetch(`${API_BASE}/data`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       queryName: queryName || 'accounts',
@@ -109,6 +111,7 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
 export async function runBulk(steps) {
   const res = await fetch(`${API_BASE}/bulk`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ steps }),
   });
@@ -152,6 +155,7 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
   const sessionUBrId = getSessionUBrId();
   const res = await fetch(`${API_BASE}/data`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       queryName: queryName || 'accounts',
@@ -211,6 +215,7 @@ export async function fetchUserBranches(usr_id) {
   try {
     const res = await fetch(`${API_BASE}/user-branches`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usr_id }),
     });
@@ -226,7 +231,7 @@ export async function fetchUserBranches(usr_id) {
 /** Soo qaad help-ka module gaar ah (hal luuqad). Wuxuu soo celiyaa row ama null. */
 export async function fetchModuleHelp(moduleKey, lang = 'so') {
   if (!moduleKey) return null;
-  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}/${encodeURIComponent(lang)}`);
+  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}/${encodeURIComponent(lang)}`, { credentials: 'include' });
   if (!res.ok) return null;
   const body = await res.json().catch(() => ({}));
   return body?.data ?? null;
@@ -235,7 +240,7 @@ export async function fetchModuleHelp(moduleKey, lang = 'so') {
 /** Soo qaad dhamaan luuqadaha module gaar ah (rows array). */
 export async function fetchModuleHelpAll(moduleKey) {
   if (!moduleKey) return [];
-  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}`);
+  const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}`, { credentials: 'include' });
   if (!res.ok) return [];
   const body = await res.json().catch(() => ({}));
   return body?.data ?? [];
@@ -243,7 +248,7 @@ export async function fetchModuleHelpAll(moduleKey) {
 
 /** Soo qaad dhamaan records-ka help-ka (admin listing). */
 export async function fetchAllModuleHelp() {
-  const res = await fetch(`${API_BASE}/module-help`);
+  const res = await fetch(`${API_BASE}/module-help`, { credentials: 'include' });
   if (!res.ok) return [];
   const body = await res.json().catch(() => ({}));
   return body?.data ?? [];
@@ -253,6 +258,7 @@ export async function fetchAllModuleHelp() {
 export async function saveModuleHelp({ mh_id = 0, module_key, lang = 'so', title = '', description = '', video_url = '', oper = 'insert' }) {
   const res = await fetch(`${API_BASE}/module-help`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mh_id, module_key, lang, title, description, video_url, oper }),
   });
@@ -262,7 +268,7 @@ export async function saveModuleHelp({ mh_id = 0, module_key, lang = 'so', title
 }
 
 export async function deleteModuleHelp(mh_id) {
-  const res = await fetch(`${API_BASE}/module-help/${Number(mh_id) || 0}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}/module-help/${Number(mh_id) || 0}`, { method: 'DELETE', credentials: 'include' });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error || 'Delete failed');
   return body;
@@ -279,6 +285,7 @@ export async function uploadNewStudentImage(file) {
   fd.append('file', file);
   const res = await fetch(`${API_BASE}/student-image/upload-new`, {
     method: 'POST',
+    credentials: 'include',
     body: fd,
   });
   const body = await res.json().catch(() => ({}));
@@ -292,6 +299,7 @@ export async function uploadModuleVideo(file, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_BASE}/module-help/upload-video`);
+    xhr.withCredentials = true;
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && typeof onProgress === 'function') {
         onProgress(Math.round((e.loaded * 100) / e.total));
@@ -329,6 +337,7 @@ export async function crud({ operation, fn, params = {}, query }) {
   if (operation === 'fetch') {
     const res = await fetch(`${API_BASE}/data`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ queryName: query || 'accounts', page: 1, limit: 100 }),
     });
@@ -343,6 +352,7 @@ export async function crud({ operation, fn, params = {}, query }) {
   const body = { fn, ...params, oper: operation };
   const res = await fetch(`${API_BASE}/all`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
