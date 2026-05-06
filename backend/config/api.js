@@ -1,6 +1,7 @@
 /**
  * API Config – POST /api/showdata (fetch), POST /api/all (insert/update/delete)
  */
+const bcrypt = require('bcryptjs');
 const dynamicController = require('./dynamicController');
 const { getQuery } = require('./queries');
 const db = require('./db');
@@ -22,7 +23,8 @@ function registerApiRoutes(app) {
     res.json({ status: 'ok', message: 'Barbaariye API is running' });
   });
 
-  /** POST /api/login – { username, password } → { success, message, user? } */
+  /** POST /api/login – { username, password } → { success, message, user? }
+   *  PR 4: login_check returns password_hash; bcrypt.compare runs in Node. */
   async function handleLogin(req, res) {
     try {
       const { username, password } = req.body || {};
@@ -33,8 +35,8 @@ function registerApiRoutes(app) {
         });
       }
       const { rows } = await db.query(
-        'SELECT * FROM login_check($1, $2)',
-        [String(username).trim(), String(password)]
+        'SELECT * FROM login_check($1)',
+        [String(username).trim()]
       );
       const row = rows[0];
       if (!row) {
@@ -43,9 +45,15 @@ function registerApiRoutes(app) {
       if (!row.success) {
         return res.status(401).json({ success: false, message: row.message });
       }
-      // PR 2: JWT cookie is the sole auth credential. authkey + privalage
-      // are no longer returned to the client (they were unused in the UI and
-      // exposing authkey makes localStorage tampering more dangerous).
+
+      // Verify the bcrypt hash. Empty / malformed hash = lockout (account
+      // never had a password set or migration left it null).
+      const hash = row.password_hash || '';
+      const ok = hash.startsWith('$2') && await bcrypt.compare(String(password), hash);
+      if (!ok) {
+        return res.status(401).json({ success: false, message: 'Password-ku waa khalad' });
+      }
+
       setSessionCookie(res, {
         usr_id: row.usr_id,
         u_br_id: row.u_br_id,
@@ -55,7 +63,7 @@ function registerApiRoutes(app) {
 
       return res.json({
         success: true,
-        message: row.message,
+        message: 'Login waa guuleysta',
         user: {
           usr_id: row.usr_id,
           p_id: row.p_id,
