@@ -4,6 +4,7 @@
 const dynamicController = require('./dynamicController');
 const { getQuery } = require('./queries');
 const db = require('./db');
+const { setSessionCookie } = require('./auth');
 
 function formatColumnLabel(name) {
   return name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -42,6 +43,17 @@ function registerApiRoutes(app) {
       if (!row.success) {
         return res.status(401).json({ success: false, message: row.message });
       }
+      // PR 1: Issue a signed JWT in an HttpOnly cookie alongside the existing
+      // response. Endpoints don't enforce it yet — that arrives in PR 2.
+      // Payload-ka waa kaliya identifiers — privalage (JSONB weyn) iyo authkey
+      // (legacy credential) waa laga reebay token-ka.
+      setSessionCookie(res, {
+        usr_id: row.usr_id,
+        u_br_id: row.u_br_id,
+        br_id: row.br_id,
+        user_type: row.user_type,
+      });
+
       // Guul: soo celi xogta useer-ka (authkey la iska ilaaliyo HTTP-ka)
       return res.json({
         success: true,
