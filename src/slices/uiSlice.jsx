@@ -90,6 +90,37 @@ const uiSlice = createSlice({
 
 export const { toggleDarkMode, toggleSidebarCollapse, setSidebarOpen, setActiveTab, setUser, setBranch, setUserBranches, logout } = uiSlice.actions;
 
+// Read API_BASE the same way services/api.jsx does so dev/prod proxies work.
+const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
+/** switchBranch — server-side branch switch. The server validates that the
+ *  logged-in user owns the requested branch (via user_branch table) and
+ *  re-issues the JWT cookie. Only on success do we update Redux state. */
+export const switchBranch = (br_id) => async (dispatch) => {
+  const res = await fetch(`${API_BASE}/switch-branch`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ br_id }),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j?.message || 'Branch switch failed');
+  }
+  dispatch(setBranch(br_id));
+  return res.json();
+};
+
+/** logoutUser — clears server-side session cookie, then local state. We try
+ *  the server call first so the cookie is gone before the redirect; if it
+ *  fails (network), we still clear local state to avoid stuck sessions. */
+export const logoutUser = () => async (dispatch) => {
+  try {
+    await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
+  } catch (_) { /* ignore — local logout still proceeds */ }
+  dispatch(logout());
+};
+
 /** True when the logged-in user has access to the special "All" branch,
  *  regardless of which branch is currently active. The whole app is held in
  *  read-only mode (no insert / update / delete) for these users because the

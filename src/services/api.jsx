@@ -2,6 +2,38 @@
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 const AUTH_STORAGE_KEY = 'brabaariye_user';
+
+/**
+ * handleAuthFailure — called when an authenticated request returns 401.
+ * Wipes local session state and hard-redirects to /login. Guarded so a
+ * burst of failing parallel requests only triggers one redirect.
+ *
+ * Loginka laftiisa kala soo ma baxo halkan — `loginUser` 401 wuxuu macne u
+ * yahay "creds qaldan" oo aan ahayn session expiry. Sidaa darteed loginUser-ka
+ * `_check401`-ka ma uusan wacin.
+ */
+let _authFailureFired = false;
+function _check401(res) {
+  if (res?.status !== 401 || _authFailureFired) return;
+  _authFailureFired = true;
+  if (typeof window !== 'undefined') {
+    try { window.localStorage?.removeItem(AUTH_STORAGE_KEY); } catch (_) {}
+    // BrowserRouter basename='/frontend' so login lives at /frontend/login.
+    window.location.href = '/frontend/login';
+  }
+}
+
+/**
+ * Server-ku wuxuu ka soo bixinayaa br_id / u_br_id JWT-ga (req.user). Sidaa
+ * darteed haddii frontend-ku diro qiime body-ga ah, server wuu iska tuurayaa.
+ * Defensively-strip si payload-ka shabakadda u nadiifsanaado iyo si tampering
+ * localStorage-ku uusan u soo bandhigin DevTools.
+ */
+function _stripSessionKeys(obj) {
+  if (!obj) return {};
+  const { br_id, u_br_id, ...rest } = obj;
+  return rest;
+}
 function getSessionBrId() {
   if (typeof window === 'undefined') return '';
   try {
@@ -81,12 +113,11 @@ export async function fetchSelectOptions(queryName, limit = 25, search = '', ext
       queryName: queryName || 'accounts',
       page: 1,
       limit,
-      ...(sessionBrId && { br_id: sessionBrId }),
-      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search && { search }),
-      ...extra,
+      ..._stripSessionKeys(extra),
     }),
   }).then((res) => {
+    _check401(res);
     if (!res.ok) {
       return res.json().catch(() => ({ error: res.statusText })).then((err) => {
         throw new Error(err?.error || res.statusText || 'Failed');
@@ -115,6 +146,7 @@ export async function runBulk(steps) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ steps }),
   });
+  _check401(res);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || 'Bulk failed');
   // Bulk wax bedelay → tirtir dropdown cache-ka si dropdown-yada uu xog cusub helo
@@ -151,8 +183,6 @@ export function dedupeRequest(key, fn) {
 }
 
 export async function fetchDataPaginated({ queryName, page = 1, limit = 10, search = '', academicYearId = '', ...extra }) {
-  const sessionBrId = getSessionBrId();
-  const sessionUBrId = getSessionUBrId();
   const res = await fetch(`${API_BASE}/data`, {
     method: 'POST',
     credentials: 'include',
@@ -161,13 +191,12 @@ export async function fetchDataPaginated({ queryName, page = 1, limit = 10, sear
       queryName: queryName || 'accounts',
       page,
       limit,
-      ...(sessionBrId && { br_id: sessionBrId }),
-      ...(sessionUBrId && { u_br_id: sessionUBrId }),
       ...(search != null && String(search).trim() && { search: String(search).trim() }),
       ...(academicYearId != null && String(academicYearId).trim() && { academicYearId: String(academicYearId).trim() }),
-      ...extra,
+      ..._stripSessionKeys(extra),
     }),
   });
+  _check401(res);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Failed to fetch');
@@ -211,14 +240,18 @@ export function makeOptionLoader(optionsKey, getExtra, opts = {}) {
   };
 }
 
-export async function fetchUserBranches(usr_id) {
+/** Soo celi branches-ka user-ka logged-in. usr_id-ka server-ka wuxuu ka soo
+ *  qaadayaa JWT-ga (req.user) — body-ga lama dirayo, sidaa darteed user-ku
+ *  ma weydiisan karo branches-ka user kale. */
+export async function fetchUserBranches() {
   try {
     const res = await fetch(`${API_BASE}/user-branches`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usr_id }),
+      body: '{}',
     });
+    _check401(res);
     const data = await res.json().catch(() => ({ success: false, message: 'Server khalad' }));
     return data;
   } catch (err) {
@@ -232,6 +265,7 @@ export async function fetchUserBranches(usr_id) {
 export async function fetchModuleHelp(moduleKey, lang = 'so') {
   if (!moduleKey) return null;
   const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}/${encodeURIComponent(lang)}`, { credentials: 'include' });
+  _check401(res);
   if (!res.ok) return null;
   const body = await res.json().catch(() => ({}));
   return body?.data ?? null;
@@ -241,6 +275,7 @@ export async function fetchModuleHelp(moduleKey, lang = 'so') {
 export async function fetchModuleHelpAll(moduleKey) {
   if (!moduleKey) return [];
   const res = await fetch(`${API_BASE}/module-help/${encodeURIComponent(moduleKey)}`, { credentials: 'include' });
+  _check401(res);
   if (!res.ok) return [];
   const body = await res.json().catch(() => ({}));
   return body?.data ?? [];
@@ -249,6 +284,7 @@ export async function fetchModuleHelpAll(moduleKey) {
 /** Soo qaad dhamaan records-ka help-ka (admin listing). */
 export async function fetchAllModuleHelp() {
   const res = await fetch(`${API_BASE}/module-help`, { credentials: 'include' });
+  _check401(res);
   if (!res.ok) return [];
   const body = await res.json().catch(() => ({}));
   return body?.data ?? [];
@@ -262,6 +298,7 @@ export async function saveModuleHelp({ mh_id = 0, module_key, lang = 'so', title
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mh_id, module_key, lang, title, description, video_url, oper }),
   });
+  _check401(res);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error || 'Save failed');
   return body;
@@ -269,6 +306,7 @@ export async function saveModuleHelp({ mh_id = 0, module_key, lang = 'so', title
 
 export async function deleteModuleHelp(mh_id) {
   const res = await fetch(`${API_BASE}/module-help/${Number(mh_id) || 0}`, { method: 'DELETE', credentials: 'include' });
+  _check401(res);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error || 'Delete failed');
   return body;
@@ -288,6 +326,7 @@ export async function uploadNewStudentImage(file) {
     credentials: 'include',
     body: fd,
   });
+  _check401(res);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error || 'Upload failed');
   return body;
@@ -307,6 +346,7 @@ export async function uploadModuleVideo(file, onProgress) {
     };
     xhr.onload = () => {
       try {
+        if (xhr.status === 401) _check401({ status: 401 });
         const body = JSON.parse(xhr.responseText || '{}');
         if (xhr.status >= 200 && xhr.status < 300) return resolve(body);
         reject(new Error(body?.error || 'Upload failed'));
@@ -341,6 +381,7 @@ export async function crud({ operation, fn, params = {}, query }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ queryName: query || 'accounts', page: 1, limit: 100 }),
     });
+    _check401(res);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
       throw new Error(err.error || 'Failed to fetch');
@@ -356,6 +397,7 @@ export async function crud({ operation, fn, params = {}, query }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  _check401(res);
   const text = await res.text();
   let errMsg = text || 'Operation failed';
   try {

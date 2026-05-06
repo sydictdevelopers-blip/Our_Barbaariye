@@ -1,5 +1,29 @@
 const db = require('./db');
 const { getQuery } = require('./queries');
+const { PROCEDURE_PARAM_ORDER } = require('./dynamicController');
+
+/** Map of session-derived SP params → req.user key. Server overrides these at
+ *  known positions so a tampered client can't push another branch's id. */
+const SESSION_PARAM_MAP = {
+  br_id_sp: 'br_id',
+  u_br_id_sp: 'u_br_id',
+  p_user_id: 'usr_id',
+  user_id: 'usr_id',
+};
+
+function applySessionOverrides(fnName, params, user) {
+  if (!user) return params;
+  const order = PROCEDURE_PARAM_ORDER[fnName];
+  if (!Array.isArray(order)) return params;
+  const out = params.slice();
+  for (const [paramName, userKey] of Object.entries(SESSION_PARAM_MAP)) {
+    const idx = order.indexOf(paramName);
+    if (idx >= 0 && idx < out.length && user[userKey] !== undefined) {
+      out[idx] = user[userKey];
+    }
+  }
+  return out;
+}
 
 /**
  * POST /api/bulk
@@ -47,12 +71,13 @@ function resolveObject(obj, vars, iterCtx) {
   return out;
 }
 
-async function execStep(client, step, vars, iterCtx) {
+async function execStep(client, step, vars, iterCtx, user) {
   if (!step || typeof step !== 'object') throw new Error('Invalid step');
 
   if (step.type === 'sp') {
     if (!SP_NAME_RE.test(step.fn || '')) throw new Error(`Invalid SP name: ${step.fn}`);
-    const params = (step.params || []).map((p) => resolveValue(p, vars, iterCtx));
+    const resolved = (step.params || []).map((p) => resolveValue(p, vars, iterCtx));
+    const params = applySessionOverrides(step.fn, resolved, user);
     const placeholders = params.map((_, i) => `$${i + 1}`).join(', ');
     const sql = `SELECT * FROM ${step.fn}(${placeholders})`;
     const r = await client.query(sql, params);
@@ -62,6 +87,12 @@ async function execStep(client, step, vars, iterCtx) {
   if (step.type === 'select') {
     if (!step.query) throw new Error("select step missing 'query'");
     const queryParams = resolveObject(step.queryParams, vars, iterCtx);
+    if (user) {
+      // queries.js uses these names — force from JWT.
+      queryParams.br_id = user.br_id;
+      queryParams.u_br_id = user.u_br_id;
+      queryParams.usr_id = user.usr_id;
+    }
     const q = getQuery(step.query, queryParams);
     if (!q) throw new Error(`Unknown query: ${step.query}`);
     const r = await client.query(q.sql);
@@ -77,7 +108,7 @@ async function execStep(client, step, vars, iterCtx) {
     if (!step.step) throw new Error("forEach missing inner 'step'");
     const out = [];
     for (const item of arr) {
-      out.push(await execStep(client, step.step, vars, item));
+      out.push(await execStep(client, step.step, vars, item, user));
     }
     return out;
   }
@@ -97,7 +128,7 @@ exports.handleBulk = async (req, res) => {
     const vars = {};
     const results = [];
     for (const step of steps) {
-      results.push(await execStep(client, step, vars));
+      results.push(await execStep(client, step, vars, null, req.user));
     }
     await client.query('COMMIT');
     return res.json({ success: true, vars, results });

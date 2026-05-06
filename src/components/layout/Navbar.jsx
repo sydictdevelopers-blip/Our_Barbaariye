@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, ChevronDown, Sun, Moon, Menu, Globe, Building2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { toggleDarkMode, setSidebarOpen, setBranch, logout } from '../../slices/uiSlice';
+import { toggleDarkMode, setSidebarOpen, switchBranch, logoutUser } from '../../slices/uiSlice';
 import { LANGUAGES } from '../../i18n/i18n';
 import { fetchUserBranches } from '../../services/api';
 import SearchInput from '../ui/SearchInput';
@@ -40,7 +40,7 @@ export default function Navbar({
 
   useEffect(() => {
     if (!user?.usr_id) return;
-    fetchUserBranches(user.usr_id).then((resp) => {
+    fetchUserBranches().then((resp) => {
       if (resp?.success && resp.branches?.length) setUserBranches(resp.branches);
     });
   }, [user?.usr_id]);
@@ -107,7 +107,7 @@ export default function Navbar({
                       <button
                         key={br.br_id}
                         onClick={() => {
-                          dispatch(setBranch(br.br_id));
+                          dispatch(switchBranch(br.br_id)).catch(() => {});
                           setBranchOpen(false);
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-sm transition-colors ${
@@ -243,8 +243,9 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => {
-                    dispatch(logout());
-                    navigate('/login', { replace: true });
+                    dispatch(logoutUser()).finally(() => {
+                      navigate('/login', { replace: true });
+                    });
                   }}
                   className="w-full px-4 py-2 text-start text-sm hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600"
                 >
