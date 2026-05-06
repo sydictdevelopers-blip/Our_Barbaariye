@@ -12,7 +12,7 @@ import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
 import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
-import { setBranch, setUserBranches } from './slices/uiSlice';
+import { switchBranch, setUserBranches } from './slices/uiSlice';
 import { fetchUserBranches } from './services/api';
 function DarkModeInit() {
   const darkMode = useSelector((state) => state.ui.darkMode);
@@ -55,7 +55,7 @@ function BranchGuard() {
   const dispatch = useDispatch();
   useEffect(() => {
     if (!user?.usr_id) return;
-    fetchUserBranches(user.usr_id).then((resp) => {
+    fetchUserBranches().then((resp) => {
       const branches = resp?.branches || [];
       if (branches.length) dispatch(setUserBranches(branches));
       if (user.br_id == null) {
@@ -63,7 +63,7 @@ function BranchGuard() {
         if (first?.br_id != null) {
           // eslint-disable-next-line no-console
           console.warn('[BranchGuard] user logged in without br_id — auto-assigning', first.br_id);
-          dispatch(setBranch(first.br_id));
+          dispatch(switchBranch(first.br_id)).catch(() => {});
         }
       }
     });

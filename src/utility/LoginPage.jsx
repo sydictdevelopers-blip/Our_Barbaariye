@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Lock, Eye, EyeOff, Globe, Building2, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { setUser } from '../slices/uiSlice';
+import { setUser, switchBranch } from '../slices/uiSlice';
 import { LANGUAGES } from '../i18n/i18n';
 import { loginUser, fetchUserBranches } from '../services/api';
 
@@ -36,19 +36,30 @@ export default function LoginPage() {
     img.src = LOGO_URL;
   }, []);
 
-  const dispatchAndGo = (u, chosenBrId) => {
+  const dispatchAndGo = async (u, chosenBrId) => {
     const initials = (u.username).slice(0, 2).toUpperCase();
+    const finalBrId = chosenBrId ?? u.br_id;
+
+    // Multi-branch users: re-issue JWT with the picked branch so backend
+    // uses the chosen branch (not the default one returned by login_check).
+    if (chosenBrId != null && chosenBrId !== u.br_id) {
+      try {
+        await dispatch(switchBranch(chosenBrId));
+      } catch (e) {
+        setError(e?.message || 'Branch switch failed');
+        return;
+      }
+    }
+
     dispatch(setUser({
       usr_id: u.usr_id,
       p_id: u.p_id,
       name: u.username,
       fullName: u.username,
       username: u.username,
-      authkey: u.authkey,
       u_br_id: u.u_br_id,
-      br_id: chosenBrId ?? u.br_id,
+      br_id: finalBrId,
       user_type: u.user_type,
-      privalage: u.privalage,
       initials,
     }));
     navigate('/', { replace: true });
@@ -75,7 +86,7 @@ export default function LoginPage() {
         setBranchLoading(true);
         setBranchError('');
         setPendingUser(u);
-        const brResp = await fetchUserBranches(u.usr_id);
+        const brResp = await fetchUserBranches();
         setBranchLoading(false);
         if (!brResp?.success || !brResp.branches?.length) {
           setBranchError(t('branch.error'));

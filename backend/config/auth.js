@@ -58,10 +58,32 @@ function clearSessionCookie(res) {
   res.clearCookie(COOKIE_NAME, { path: '/' });
 }
 
+/**
+ * requireAuth — Express middleware. Verifies the session cookie and attaches
+ * the decoded payload to req.user. Sends 401 on missing/invalid token. The
+ * server-side br_id / u_br_id / usr_id come from req.user only — never trust
+ * client-supplied body fields for these.
+ */
+function requireAuth(req, res, next) {
+  const token = req.cookies && req.cookies[COOKIE_NAME];
+  if (!token) {
+    return res.status(401).json({ error: 'No session', code: 'NO_SESSION' });
+  }
+  try {
+    req.user = verifySession(token);
+    return next();
+  } catch (err) {
+    // Invalid / expired → clear so the client stops sending it
+    clearSessionCookie(res);
+    return res.status(401).json({ error: 'Invalid session', code: 'INVALID_SESSION' });
+  }
+}
+
 module.exports = {
   COOKIE_NAME,
   signSession,
   verifySession,
   setSessionCookie,
   clearSessionCookie,
+  requireAuth,
 };

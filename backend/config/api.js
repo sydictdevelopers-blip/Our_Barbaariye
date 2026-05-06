@@ -4,7 +4,7 @@
 const dynamicController = require('./dynamicController');
 const { getQuery } = require('./queries');
 const db = require('./db');
-const { setSessionCookie } = require('./auth');
+const { setSessionCookie, clearSessionCookie, requireAuth } = require('./auth');
 
 function formatColumnLabel(name) {
   return name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -43,10 +43,9 @@ function registerApiRoutes(app) {
       if (!row.success) {
         return res.status(401).json({ success: false, message: row.message });
       }
-      // PR 1: Issue a signed JWT in an HttpOnly cookie alongside the existing
-      // response. Endpoints don't enforce it yet — that arrives in PR 2.
-      // Payload-ka waa kaliya identifiers — privalage (JSONB weyn) iyo authkey
-      // (legacy credential) waa laga reebay token-ka.
+      // PR 2: JWT cookie is the sole auth credential. authkey + privalage
+      // are no longer returned to the client (they were unused in the UI and
+      // exposing authkey makes localStorage tampering more dangerous).
       setSessionCookie(res, {
         usr_id: row.usr_id,
         u_br_id: row.u_br_id,
@@ -54,7 +53,6 @@ function registerApiRoutes(app) {
         user_type: row.user_type,
       });
 
-      // Guul: soo celi xogta useer-ka (authkey la iska ilaaliyo HTTP-ka)
       return res.json({
         success: true,
         message: row.message,
@@ -62,11 +60,9 @@ function registerApiRoutes(app) {
           usr_id: row.usr_id,
           p_id: row.p_id,
           username: row.username,
-          authkey: row.authkey,
           u_br_id: row.u_br_id,
           br_id: row.br_id,
           user_type: row.user_type,
-          privalage: row.privalage,
           user_branch_count: row.user_branch_count ?? 1,
         },
       });
@@ -82,11 +78,10 @@ function registerApiRoutes(app) {
   app.post('/api/login', handleLogin);
   app.post('/login', handleLogin);
 
-  /** POST /api/user-branches – { usr_id } → { branches: [{br_id, br_name}] } */
+  /** POST /api/user-branches – soo celi branches-ka user-ka logged-in (req.user.usr_id) */
   async function handleUserBranches(req, res) {
     try {
-      const { usr_id } = req.body || {};
-      if (!usr_id) return res.status(400).json({ success: false, message: 'usr_id waa lagama-maarmaan' });
+      const usr_id = req.user.usr_id;
       const { rows } = await db.query(
         `SELECT u.br_id, u.br_name
            FROM branch u
@@ -102,13 +97,71 @@ function registerApiRoutes(app) {
     }
   }
 
-  app.post('/api/user-branches', handleUserBranches);
-  app.post('/user-branches', handleUserBranches);
+  app.post('/api/user-branches', requireAuth, handleUserBranches);
+  app.post('/user-branches', requireAuth, handleUserBranches);
+
+  /** POST /api/logout – clear the session cookie. */
+  app.post('/api/logout', (req, res) => {
+    clearSessionCookie(res);
+    res.json({ success: true });
+  });
+  app.post('/logout', (req, res) => {
+    clearSessionCookie(res);
+    res.json({ success: true });
+  });
+
+  /** POST /api/switch-branch – { br_id } → re-issue JWT with the new branch.
+   *  Server validates that the logged-in user actually owns the requested
+   *  branch via user_branch table — without this, any authenticated user
+   *  could elevate to any branch by sending its id. */
+  async function handleSwitchBranch(req, res) {
+    try {
+      const usr_id = req.user.usr_id;
+      const requested = Number(req.body?.br_id);
+      if (!Number.isFinite(requested) || requested <= 0) {
+        return res.status(400).json({ success: false, message: 'br_id waa lagama-maarmaan' });
+      }
+      const { rows } = await db.query(
+        `SELECT ub.u_br_id, ub.user_type
+           FROM user_branch ub
+          WHERE ub.usr_id = $1
+            AND ub.br_id = $2
+            AND LOWER(TRIM(COALESCE(ub.state, '')))     = 'active'
+            AND LOWER(TRIM(COALESCE(ub.lock_user, ''))) = 'unlocked'
+          LIMIT 1`,
+        [usr_id, requested]
+      );
+      const owned = rows[0];
+      if (!owned) {
+        return res.status(403).json({ success: false, message: 'Branch-kan uma jirto user-kan' });
+      }
+      setSessionCookie(res, {
+        usr_id,
+        u_br_id: owned.u_br_id,
+        br_id: requested,
+        user_type: owned.user_type,
+      });
+      return res.json({ success: true, br_id: requested, u_br_id: owned.u_br_id });
+    } catch (err) {
+      console.error('[api/switch-branch] error:', err.message);
+      return res.status(500).json({ success: false, message: 'Khalad server: ' + err.message });
+    }
+  }
+
+  app.post('/api/switch-branch', requireAuth, handleSwitchBranch);
+  app.post('/switch-branch', requireAuth, handleSwitchBranch);
 
   /** POST /api/data – { queryName, page?, limit?, search? } → { columns, data, pagination } */
   async function handleDataRequest(req, res) {
     try {
-      const body = req.body || {};
+      // Trust ONLY the JWT for branch context. Body-supplied br_id/u_br_id
+      // are silently overridden so a tampered client can't read other branches.
+      const body = {
+        ...(req.body || {}),
+        br_id: req.user.br_id,
+        u_br_id: req.user.u_br_id,
+        usr_id: req.user.usr_id,
+      };
       const queryName = (body.queryName || body.query || '').toString().trim();
       const page = Math.max(1, parseInt(body.page, 10) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(body.limit, 10) || 10));
@@ -157,16 +210,16 @@ function registerApiRoutes(app) {
     }
   }
 
-  app.post('/api/data', handleDataRequest);
-  app.post('/api/showdata', (req, res) =>
+  app.post('/api/data', requireAuth, handleDataRequest);
+  app.post('/api/showdata', requireAuth, (req, res) =>
     handleDataRequest(
       { ...req, body: { ...req.body, page: req.body?.page ?? 1, limit: req.body?.limit ?? 100 } },
       res
     )
   );
   // Same handlers at /data and /showdata (when proxy strips /api, e.g. http://172.20.0.20/api -> backend gets /data)
-  app.post('/data', handleDataRequest);
-  app.post('/showdata', (req, res) =>
+  app.post('/data', requireAuth, handleDataRequest);
+  app.post('/showdata', requireAuth, (req, res) =>
     handleDataRequest(
       { ...req, body: { ...req.body, page: req.body?.page ?? 1, limit: req.body?.limit ?? 100 } },
       res
@@ -174,18 +227,20 @@ function registerApiRoutes(app) {
   );
 
   /** POST /api/stream – { queryName } → streaming JSON array (xogta badan 1M+ rows) */
-  app.post('/api/stream', (req, res) => {
+  function handleStream(req, res) {
     const queryName = (req.body?.queryName || req.body?.query || '').trim();
-    const entry = getQuery(queryName || 'accounts', req.body || {});
+    const body = {
+      ...(req.body || {}),
+      br_id: req.user.br_id,
+      u_br_id: req.user.u_br_id,
+      usr_id: req.user.usr_id,
+    };
+    const entry = getQuery(queryName || 'accounts', body);
     if (!entry) return res.status(404).json({ error: 'Query not allowed or not found' });
     dynamicController.handleStreamRequest(req, res, entry.sql);
-  });
-  app.post('/stream', (req, res) => {
-    const queryName = (req.body?.queryName || req.body?.query || '').trim();
-    const entry = getQuery(queryName || 'accounts', req.body || {});
-    if (!entry) return res.status(404).json({ error: 'Query not allowed or not found' });
-    dynamicController.handleStreamRequest(req, res, entry.sql);
-  });
+  }
+  app.post('/api/stream', requireAuth, handleStream);
+  app.post('/stream', requireAuth, handleStream);
 }
 
 module.exports = { registerApiRoutes };

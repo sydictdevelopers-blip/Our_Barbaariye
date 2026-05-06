@@ -35,6 +35,7 @@ const dynamicController = require('./dynamicController');
 const api = require('./api');
 const moduleHelp = require('./moduleHelpController');
 const studentImage = require('./studentImageController');
+const { requireAuth } = require('./auth');
 
 // Step 3: Abuur Express app instance
 const app = express();
@@ -116,12 +117,12 @@ app.post('/api/test-db', handleDbCheck);
 
 // Step 5: Abuur API endpoints
 // Step 5a: /api/all and /all (when proxy strips /api, e.g. http://172.20.0.20/api)
-app.post('/api/all', dynamicController.handleDynamicRequest);
-app.post('/all', dynamicController.handleDynamicRequest);
+app.post('/api/all', requireAuth, dynamicController.handleDynamicRequest);
+app.post('/all', requireAuth, dynamicController.handleDynamicRequest);
 
 // Generic bulk transaction runner — accepts a steps array, runs in one transaction.
 const bulkController = require('./bulkController');
-app.post('/api/bulk', bulkController.handleBulk);
+app.post('/api/bulk', requireAuth, bulkController.handleBulk);
 
 // Step 6: Health check – JSON so clients can parse (works when proxy strips /api)
 app.get('/health', (req, res) => {

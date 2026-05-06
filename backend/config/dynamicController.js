@@ -116,6 +116,18 @@ exports.handleDynamicRequest = async (req, res) => {
             bodyParams.oper = bodyParams.oper.trim().toLowerCase();
         }
 
+        // Force session-derived params to come from the verified JWT, not the
+        // body. Any client-supplied br_id_sp / u_br_id_sp / *_user_id is
+        // silently overwritten so a tampered client can't elevate to another
+        // branch or impersonate another user.
+        if (req.user) {
+            if ('br_id_sp' in bodyParams)   bodyParams.br_id_sp   = req.user.br_id;
+            if ('u_br_id_sp' in bodyParams) bodyParams.u_br_id_sp = req.user.u_br_id;
+            // Some SPs use `p_user_id` / `user_id` for the acting user.
+            if ('p_user_id' in bodyParams)  bodyParams.p_user_id  = req.user.usr_id;
+            if ('user_id' in bodyParams)    bodyParams.user_id    = req.user.usr_id;
+        }
+
         const order = PROCEDURE_PARAM_ORDER[procedureName];
 
         if (Array.isArray(order)) {
@@ -278,6 +290,10 @@ exports.runSelectQueryPaginated = async (query, page = 1, limit = 10, search = '
     : [];
   return { columns, data: rows, total };
 };
+
+// Exported so bulkController can override session-derived params at known
+// positions (br_id_sp / u_br_id_sp) before SPs run.
+exports.PROCEDURE_PARAM_ORDER = PROCEDURE_PARAM_ORDER;
 
 /** POST /api/stream – row-by-row JSON (xogta badan) – sql waa la gudbiyay api.js (queries whitelist) */
 const QueryStream = require('pg-query-stream');
