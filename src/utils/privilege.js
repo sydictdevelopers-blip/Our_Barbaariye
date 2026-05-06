@@ -62,26 +62,34 @@ function isAdmin(userType) {
   return String(userType || '').trim().toLowerCase() === 'admin';
 }
 
-/** Should this top-level module be visible? */
+/**
+ * Visibility rules — privalage is enforced for every user (including Admin)
+ * so admins can scope themselves to a subset of menus when they save their
+ * own privilege tree. Two safety nets keep an admin from locking themselves
+ * out:
+ *   1. dashboard is always visible to everyone.
+ *   2. userPrivilege + moduleVideos are always visible to admins, regardless
+ *      of what their privalage tree says — they can't lose access to the
+ *      tools that let them edit privileges.
+ *
+ * Non-admins can never see ADMIN_ONLY menus, even if their privalage
+ * mistakenly references them.
+ */
 export function canSeeModule(moduleId, allowedIds, userType) {
   if (ALWAYS_VISIBLE_MENU_IDS.has(moduleId)) return true;
-  if (isAdmin(userType)) return true;
-  if (ADMIN_ONLY_MENU_IDS.has(moduleId)) return false;
+  if (ADMIN_ONLY_MENU_IDS.has(moduleId)) return isAdmin(userType);
   return allowedIds.has(`module:${moduleId}`);
 }
 
-export function canSeeMenu(moduleId, menuId, allowedIds, userType) {
-  if (isAdmin(userType)) return true;
+export function canSeeMenu(moduleId, menuId, allowedIds) {
   return allowedIds.has(`menu:${moduleId}/${menuId}`);
 }
 
-export function canSeeTab(moduleId, menuId, tabId, allowedIds, userType) {
-  if (isAdmin(userType)) return true;
+export function canSeeTab(moduleId, menuId, tabId, allowedIds) {
   return allowedIds.has(`tab:${moduleId}/${menuId}/${tabId}`);
 }
 
-export function canDoAction(moduleId, menuId, tabId, actionId, allowedIds, userType) {
-  if (isAdmin(userType)) return true;
+export function canDoAction(moduleId, menuId, tabId, actionId, allowedIds) {
   return allowedIds.has(`action:${moduleId}/${menuId}/${tabId}/${actionId}`);
 }
 
@@ -89,7 +97,6 @@ export function canDoAction(moduleId, menuId, tabId, actionId, allowedIds, userT
  *  mutate). Modules with no surviving children are dropped — except those
  *  that are flat single-page links (no children/tabs to begin with). */
 export function filterMenuByPrivilege(menuItems, allowedIds, userType) {
-  const admin = isAdmin(userType);
   const out = [];
   for (const mod of menuItems || []) {
     if (!mod) continue;
@@ -105,18 +112,18 @@ export function filterMenuByPrivilege(menuItems, allowedIds, userType) {
     const children = [];
     for (const menu of mod.children) {
       if (!menu) continue;
-      if (!admin && !canSeeMenu(mod.id, menu.id, allowedIds, userType)) continue;
+      if (!canSeeMenu(mod.id, menu.id, allowedIds)) continue;
 
       let tabs = menu.tabs;
-      if (Array.isArray(tabs) && !admin) {
+      if (Array.isArray(tabs)) {
         tabs = tabs
-          .filter((tab) => canSeeTab(mod.id, menu.id, tab.id, allowedIds, userType))
+          .filter((tab) => canSeeTab(mod.id, menu.id, tab.id, allowedIds))
           .map((tab) => {
             if (!Array.isArray(tab.loadButtons)) return tab;
             return {
               ...tab,
               loadButtons: tab.loadButtons.filter((btn) =>
-                canDoAction(mod.id, menu.id, tab.id, btn.id, allowedIds, userType)
+                canDoAction(mod.id, menu.id, tab.id, btn.id, allowedIds)
               ),
             };
           });
@@ -136,17 +143,16 @@ export function filterMenuByPrivilege(menuItems, allowedIds, userType) {
 
 /** Filter just the tabs array for a given menuId+moduleId. Used by tab
  *  pages (AcademicSetup etc.) that consume getTabsForPath. */
-export function filterTabs(tabs, moduleId, menuId, allowedIds, userType) {
+export function filterTabs(tabs, moduleId, menuId, allowedIds /* userType reserved */) {
   if (!Array.isArray(tabs)) return tabs;
-  const admin = isAdmin(userType);
   return tabs
-    .filter((tab) => admin || canSeeTab(moduleId, menuId, tab.id, allowedIds, userType))
+    .filter((tab) => canSeeTab(moduleId, menuId, tab.id, allowedIds))
     .map((tab) => {
       if (!Array.isArray(tab.loadButtons)) return tab;
       return {
         ...tab,
         loadButtons: tab.loadButtons.filter((btn) =>
-          admin || canDoAction(moduleId, menuId, tab.id, btn.id, allowedIds, userType)
+          canDoAction(moduleId, menuId, tab.id, btn.id, allowedIds)
         ),
       };
     });
