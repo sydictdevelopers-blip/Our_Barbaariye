@@ -17,6 +17,7 @@
 const multer = require('multer');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const db = require('./db');
+const { requireAuth } = require('./auth');
 
 const S3_FOLDER = 'Barbaare_v10_demo';
 
@@ -161,8 +162,10 @@ async function handleUpload(req, res) {
 }
 
 function register(app) {
-  app.post('/api/student-image/upload', upload.single('file'), handleUpload);
-  app.post('/api/student-image/upload-new', upload.single('file'), handleUploadNew);
+  // requireAuth runs first so unauth'd uploads get rejected before multer
+  // buffers the (potentially large) file in memory.
+  app.post('/api/student-image/upload', requireAuth, upload.single('file'), handleUpload);
+  app.post('/api/student-image/upload-new', requireAuth, upload.single('file'), handleUploadNew);
 }
 
 module.exports = { register };
