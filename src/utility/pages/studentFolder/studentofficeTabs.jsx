@@ -12,7 +12,7 @@ import StudentInfoTab from './StudentInfoTab';
 import StudentStateTab from './StudentStateTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
-import { getTabsForPath } from '../../../config/menuConfig';
+import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
@@ -39,7 +39,7 @@ export default function StudentofficeTabs() {
   const dispatch = useDispatch();
   const [modal, setModal] = useState({ entityKey: null, editRow: null });
 
-  const rawTabs = getTabsForPath(location.pathname);
+  const rawTabs = useTabsForPath(location.pathname);
   const tabs = useMemo(
     () => rawTabs.map(mapTab).map((tab) => ({
       ...tab,

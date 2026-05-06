@@ -12,7 +12,7 @@ import DataTableCard from '../../../components/DataTableCard';
 import CrudModal from '../../../modals/CrudModal';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
-import { getTabsForPath } from '../../../config/menuConfig';
+import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
@@ -287,7 +287,7 @@ export default function ComplainManagementPage() {
   const { t } = useTranslation();
   const [modal, setModal] = useState({ entityKey: null, editRow: null, context: {} });
 
-  const rawTabs = getTabsForPath(location.pathname);
+  const rawTabs = useTabsForPath(location.pathname);
   const tabs = useMemo(() => rawTabs.map((tab) => mapTab(tab, t)), [rawTabs, t]);
 
   const { activeTab } = useSelector((state) => state.ui);

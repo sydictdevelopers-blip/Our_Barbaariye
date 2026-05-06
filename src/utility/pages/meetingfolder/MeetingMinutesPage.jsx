@@ -14,7 +14,7 @@ import DataTableCard from '../../../components/DataTableCard';
 import MeetingAgendaModal from '../../../modals/MeetingAgendaModal';
 import MeetingMinutesReportModal from '../../../modals/MeetingMinutesReportModal';
 import MeetingMinutesReportListModal from '../../../modals/MeetingMinutesReportListModal';
-import { getTabsForPath } from '../../../config/menuConfig';
+import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { fetchDataPaginated, crud, getSessionUBrIdNum } from '../../../services/api';
 import { swalConfirm, swalError } from '../../../utils/swal';
@@ -384,7 +384,7 @@ export default function MeetingMinutesPage() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
-  const rawTabs = getTabsForPath(location.pathname);
+  const rawTabs = useTabsForPath(location.pathname);
   const tabs = useMemo(() => rawTabs.map((tab) => mapTab(tab, t)), [rawTabs, t]);
 
   const { activeTab } = useSelector((state) => state.ui);

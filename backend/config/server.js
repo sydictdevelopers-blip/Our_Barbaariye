@@ -21,6 +21,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
@@ -78,9 +79,22 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
 // Step 4e2: Cookie parser — req.cookies.session ayuu daah-furayaa JWT-ga.
-// (PR 1: cookie-ga waa la abuurayaa marka login dhaco, laakiin endpoint-yadu
-// weli ma uusan xaqiijinin — enforcement-ku PR 2 ayuu ku jiraa.)
 app.use(cookieParser());
+
+// Step 4e3: Rate limit /login — 10 failed attempts per 15 min per IP. Counts
+// only failed responses (4xx/5xx) so legit users with shaky networks aren't
+// punished. Behind a proxy you must app.set('trust proxy', n) so req.ip is
+// the real client; for now we trust express's default (single-hop).
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { success: false, message: 'Isku-day badan ayaad samaysay. Fadlan sug 15 daqiiqo.' },
+});
+app.use('/api/login', loginRateLimit);
+app.use('/login', loginRateLimit);
 
 // Step 4f: Ku dar logger middleware (Simple request logger)
 // TALLAABO: Muuji method + URL marka request-ka soo dhaco

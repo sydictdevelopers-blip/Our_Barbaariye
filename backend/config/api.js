@@ -1,6 +1,7 @@
 /**
  * API Config – POST /api/showdata (fetch), POST /api/all (insert/update/delete)
  */
+const bcrypt = require('bcryptjs');
 const dynamicController = require('./dynamicController');
 const { getQuery } = require('./queries');
 const db = require('./db');
@@ -22,7 +23,8 @@ function registerApiRoutes(app) {
     res.json({ status: 'ok', message: 'Barbaariye API is running' });
   });
 
-  /** POST /api/login – { username, password } → { success, message, user? } */
+  /** POST /api/login – { username, password } → { success, message, user? }
+   *  PR 4: login_check returns password_hash; bcrypt.compare runs in Node. */
   async function handleLogin(req, res) {
     try {
       const { username, password } = req.body || {};
@@ -33,8 +35,8 @@ function registerApiRoutes(app) {
         });
       }
       const { rows } = await db.query(
-        'SELECT * FROM login_check($1, $2)',
-        [String(username).trim(), String(password)]
+        'SELECT * FROM login_check($1)',
+        [String(username).trim()]
       );
       const row = rows[0];
       if (!row) {
@@ -43,9 +45,15 @@ function registerApiRoutes(app) {
       if (!row.success) {
         return res.status(401).json({ success: false, message: row.message });
       }
-      // PR 2: JWT cookie is the sole auth credential. authkey + privalage
-      // are no longer returned to the client (they were unused in the UI and
-      // exposing authkey makes localStorage tampering more dangerous).
+
+      // Verify the bcrypt hash. Empty / malformed hash = lockout (account
+      // never had a password set or migration left it null).
+      const hash = row.password_hash || '';
+      const ok = hash.startsWith('$2') && await bcrypt.compare(String(password), hash);
+      if (!ok) {
+        return res.status(401).json({ success: false, message: 'Password-ku waa khalad' });
+      }
+
       setSessionCookie(res, {
         usr_id: row.usr_id,
         u_br_id: row.u_br_id,
@@ -55,7 +63,7 @@ function registerApiRoutes(app) {
 
       return res.json({
         success: true,
-        message: row.message,
+        message: 'Login waa guuleysta',
         user: {
           usr_id: row.usr_id,
           p_id: row.p_id,
@@ -63,6 +71,12 @@ function registerApiRoutes(app) {
           u_br_id: row.u_br_id,
           br_id: row.br_id,
           user_type: row.user_type,
+          // Drives sidebar/tab/button filtering on the client. Not a security
+          // boundary — backend already enforces auth via JWT + req.user. This
+          // only controls what the UI offers; if a tampered client adds a
+          // forbidden menu, calling its endpoint still requires the JWT and
+          // (eventually) server-side privilege checks.
+          privalage: row.privalage ?? [],
           user_branch_count: row.user_branch_count ?? 1,
         },
       });
@@ -122,7 +136,7 @@ function registerApiRoutes(app) {
         return res.status(400).json({ success: false, message: 'br_id waa lagama-maarmaan' });
       }
       const { rows } = await db.query(
-        `SELECT ub.u_br_id, ub.user_type
+        `SELECT ub.u_br_id, ub.user_type, ub.privalage
            FROM user_branch ub
           WHERE ub.usr_id = $1
             AND ub.br_id = $2
@@ -141,7 +155,15 @@ function registerApiRoutes(app) {
         br_id: requested,
         user_type: owned.user_type,
       });
-      return res.json({ success: true, br_id: requested, u_br_id: owned.u_br_id });
+      // Return new privalage so the client can refresh its UI gating without
+      // a full reload (privileges may differ per branch).
+      return res.json({
+        success: true,
+        br_id: requested,
+        u_br_id: owned.u_br_id,
+        user_type: owned.user_type,
+        privalage: owned.privalage ?? [],
+      });
     } catch (err) {
       console.error('[api/switch-branch] error:', err.message);
       return res.status(500).json({ success: false, message: 'Khalad server: ' + err.message });

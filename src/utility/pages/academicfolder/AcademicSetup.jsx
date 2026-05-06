@@ -39,7 +39,7 @@ import ExamAttendenceTab from '../exam/ExamAttendanceTab';
 import AssignTeacherRoomTab from '../exam/AssignTeacherRoomTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
-import { getTabsForPath } from '../../../config/menuConfig';
+import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
@@ -67,7 +67,7 @@ export default function AccountsPage() {
   const [actionModal, setActionModal] = useState({ kind: null, context: null });
   const entityTabRef = useRef(null);
 
-  const rawTabs = getTabsForPath(location.pathname);
+  const rawTabs = useTabsForPath(location.pathname);
   const tabs = useMemo(
     () => rawTabs.map(mapTab).map((tab) => ({
       ...tab,

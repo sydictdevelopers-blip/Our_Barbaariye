@@ -26,6 +26,7 @@ import { loadData } from '../slices/dataSlice';
 import { store } from '../store/store';
 import { crud, fetchSelectOptions } from '../services/api';
 import { swalSuccess, swalError } from '../utils/swal';
+import { deserializePrivilege as deserializeUserPrivalage } from '../utils/privilege';
 
 /* ───────────────── Permission tree helpers ───────────────── */
 
@@ -116,26 +117,6 @@ function serializePrivilege(tree, selectedIds) {
       return { menuId: module.moduleKey, children };
     })
     .filter(Boolean);
-}
-
-function deserializePrivilege(privilege) {
-  const ids = new Set();
-  const list = Array.isArray(privilege) ? privilege : [];
-  list.forEach((module) => {
-    const moduleKey = module.menuId;
-    if (!moduleKey) return;
-    ids.add(`module:${moduleKey}`);
-    (module.children || []).forEach((menu) => {
-      ids.add(`menu:${moduleKey}/${menu.id}`);
-      (menu.tabs || []).forEach((tab) => {
-        ids.add(`tab:${moduleKey}/${menu.id}/${tab.id}`);
-        (tab.buttons || []).forEach((btn) => {
-          ids.add(`action:${moduleKey}/${menu.id}/${tab.id}/${btn}`);
-        });
-      });
-    });
-  });
-  return ids;
 }
 
 function IndeterminateCheckbox({ checked, indeterminate, onChange }) {
@@ -359,7 +340,7 @@ export default function UserPrivilegePage() {
     if (typeof priv === 'string') {
       try { priv = JSON.parse(priv); } catch { priv = []; }
     }
-    setModalSelectedIds(deserializePrivilege(priv));
+    setModalSelectedIds(deserializeUserPrivalage(priv));
     setModalActiveModuleId(tree[0]?.id || '');
     setPrivModal((p) => ({ ...p, user: row }));
   };

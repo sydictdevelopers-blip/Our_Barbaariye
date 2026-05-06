@@ -17,6 +17,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
+const { requireAuth } = require('./auth');
 
 const UPLOAD_ROOT = path.resolve(__dirname, '..', 'uploads');
 const VIDEO_DIR = path.join(UPLOAD_ROOT, 'videos');
@@ -156,24 +157,26 @@ function uploadVideo(req, res) {
 }
 
 function registerModuleHelpRoutes(app) {
-  // Static serve for uploaded videos
+  // Static serve for uploaded videos. Left unauthenticated so <video> tags
+  // can stream them — URLs include a timestamp+random suffix that's hard to
+  // guess. Lock down with requireAuth here if videos ever hold sensitive data.
   const express = require('express');
   app.use('/uploads', express.static(UPLOAD_ROOT, { maxAge: '7d' }));
 
-  app.get('/api/module-help', listAll);
-  app.get('/api/module-help/:key', getByKey);
-  app.get('/api/module-help/:key/:lang', getByKeyLang);
-  app.post('/api/module-help', upsert);
-  app.delete('/api/module-help/:id', remove);
-  app.post('/api/module-help/upload-video', uploadVideo);
+  app.get('/api/module-help', requireAuth, listAll);
+  app.get('/api/module-help/:key', requireAuth, getByKey);
+  app.get('/api/module-help/:key/:lang', requireAuth, getByKeyLang);
+  app.post('/api/module-help', requireAuth, upsert);
+  app.delete('/api/module-help/:id', requireAuth, remove);
+  app.post('/api/module-help/upload-video', requireAuth, uploadVideo);
 
   // Aliases marka proxy-ga /api saaro
-  app.get('/module-help', listAll);
-  app.get('/module-help/:key', getByKey);
-  app.get('/module-help/:key/:lang', getByKeyLang);
-  app.post('/module-help', upsert);
-  app.delete('/module-help/:id', remove);
-  app.post('/module-help/upload-video', uploadVideo);
+  app.get('/module-help', requireAuth, listAll);
+  app.get('/module-help/:key', requireAuth, getByKey);
+  app.get('/module-help/:key/:lang', requireAuth, getByKeyLang);
+  app.post('/module-help', requireAuth, upsert);
+  app.delete('/module-help/:id', requireAuth, remove);
+  app.post('/module-help/upload-video', requireAuth, uploadVideo);
 }
 
 module.exports = { registerModuleHelpRoutes };

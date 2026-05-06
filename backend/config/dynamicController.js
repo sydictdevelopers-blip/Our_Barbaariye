@@ -1,4 +1,7 @@
 const db = require('./db');
+const bcrypt = require('bcryptjs');
+
+const BCRYPT_COST = 12;
 
 /**
  * Dynamic mode: any stored procedure ending with '_sp' is allowed.
@@ -126,6 +129,14 @@ exports.handleDynamicRequest = async (req, res) => {
             // Some SPs use `p_user_id` / `user_id` for the acting user.
             if ('p_user_id' in bodyParams)  bodyParams.p_user_id  = req.user.usr_id;
             if ('user_id' in bodyParams)    bodyParams.user_id    = req.user.usr_id;
+        }
+
+        // users_sp expects password_sp to already be a bcrypt hash. Caller
+        // (admin UI) sends plaintext; hash it here before the SP runs.
+        // Empty string passes through untouched — users_sp treats that as
+        // "leave hash unchanged" on UPDATE.
+        if (procedureName === 'users_sp' && typeof bodyParams.password_sp === 'string' && bodyParams.password_sp.length > 0) {
+            bodyParams.password_sp = await bcrypt.hash(bodyParams.password_sp, BCRYPT_COST);
         }
 
         const order = PROCEDURE_PARAM_ORDER[procedureName];
