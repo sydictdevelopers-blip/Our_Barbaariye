@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Database, Plus, Printer, Pencil, Trash2, Eye } from 'lucide-react';
+import { Plus, Database, Printer, Pencil, Trash2, Eye } from 'lucide-react';
+import { resolveTabIcon } from '../../../utils/iconRegistry';
 import Swal from 'sweetalert2';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
@@ -11,6 +12,7 @@ import Button from '../../../components/ui/Button';
 import ActionButton from '../../../components/ui/ActionButton';
 import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
+import DateInput from '../../../components/ui/DateInput';
 import MeetingAgendaModal from '../../../modals/MeetingAgendaModal';
 import MeetingMinutesReportModal from '../../../modals/MeetingMinutesReportModal';
 import MeetingMinutesReportListModal from '../../../modals/MeetingMinutesReportListModal';
@@ -18,6 +20,7 @@ import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { fetchDataPaginated, crud, getSessionUBrIdNum } from '../../../services/api';
 import { swalConfirm, swalError } from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
 const SWAL_CLS = {
   container: 'swal-on-top',
@@ -54,8 +57,6 @@ const motionProps = {
   transition: { duration: 0.2 },
 };
 
-const iconMap = { Users };
-
 const INPUT_CLS =
   'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLS = 'block text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1';
@@ -74,7 +75,7 @@ const buildColumns = (t) => [
 function mapTab(tab, t) {
   return {
     ...tab,
-    icon: typeof tab.icon === 'string' ? (iconMap[tab.icon] ?? Users) : tab.icon,
+    icon: resolveTabIcon(tab.icon),
     label: tab.labelKey ? t(tab.labelKey, tab.label) : tab.label,
   };
 }
@@ -94,8 +95,8 @@ function dropFallback(rows) {
 function MeetingMinutesTab() {
   const { t } = useTranslation();
   const COLUMNS = useMemo(() => buildColumns(t), [t]);
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [loaded, setLoaded] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -178,15 +179,7 @@ function MeetingMinutesTab() {
         swalError(t('meetingAgenda.errNoId', 'Row id is missing'));
         return;
       }
-      const ok = await swalConfirm({
-        title: t('meetingAgenda.confirmDeleteTitle', 'Delete agenda?'),
-        text: t(
-          'meetingAgenda.confirmDeleteText',
-          'This action will permanently delete this agenda.'
-        ),
-        confirmText: t('swal.buttons.yesDelete', 'Yes, delete'),
-        cancelText: t('swal.buttons.no', 'Cancel'),
-      });
+      const ok = await confirmDelete({ id, label: 'Meeting Agenda', recordPreview: row?.agenda });
       if (!ok) return;
       const u_br_id = getSessionUBrIdNum();
       if (!u_br_id) {
@@ -258,9 +251,8 @@ function MeetingMinutesTab() {
             <label htmlFor="meeting-from" className={LABEL_CLS}>
               {t('meeting.from', 'From.')}
             </label>
-            <input
+            <DateInput
               id="meeting-from"
-              type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               className={INPUT_CLS}
@@ -270,9 +262,8 @@ function MeetingMinutesTab() {
             <label htmlFor="meeting-to" className={LABEL_CLS}>
               {t('meeting.to', 'To.')}
             </label>
-            <input
+            <DateInput
               id="meeting-to"
-              type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
               className={INPUT_CLS}

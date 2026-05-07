@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Database, Plus } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import CrudModal from '../../../modals/CrudModal';
@@ -14,21 +13,21 @@ import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
+import { resolveTabIcon, resolveButtonIcon } from '../../../utils/iconRegistry';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { store } from '../../../store/store';
 import ChangeResponsibleForm from './ChangeResponsibleForm';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
-const iconMap = { Database, Plus };
 
 function mapTab(tab) {
   return {
     ...tab,
-    icon: iconMap[tab.icon] ?? Database,
+    icon: resolveTabIcon(tab.icon),
     loadButtons: (tab.loadButtons || []).map((btn) => ({
       ...btn,
-      icon: iconMap[btn.icon] ?? Plus,
+      icon: resolveButtonIcon(btn.icon),
     })),
   };
 }

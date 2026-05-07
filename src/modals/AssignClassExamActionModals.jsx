@@ -95,7 +95,7 @@ export function GenerateExamFormModal({ isOpen, onClose, onSuccess, context }) {
     setB({ id: '', label: '' });
   }, [ay.id]);
 
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () => makeOptionLoader('exam_reg_options', () => ({ ...(ay.id && { academicYearId: ay.id }) })),
     [ay.id]
@@ -259,7 +259,7 @@ export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
     setState('');
   }, [isOpen, context]);
 
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () => makeOptionLoader('exam_reg_options', () => ({ ...(ay.id && { academicYearId: ay.id }) })),
     [ay.id]
@@ -382,7 +382,7 @@ export function RemoveByClassModal({ isOpen, onClose, onSuccess, context }) {
       })),
     [cl.id]
   );
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   // Exam loader: (cl_id, b_id, academicYearId) — kaliya exams-ka u assigned
   // class-kan + batch-kan + academic-kan ayaa muuqda.
   const examLoader = useMemo(
@@ -508,7 +508,7 @@ export function RemoveByExamModal({ isOpen, onClose, onSuccess, context }) {
     setEx({ id: '', label: '' });
   }, [ay.id]);
 
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () =>
       makeOptionLoader('exam_by_academic_options', () => ({

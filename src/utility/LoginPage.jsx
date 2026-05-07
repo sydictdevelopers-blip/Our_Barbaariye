@@ -36,6 +36,19 @@ export default function LoginPage() {
     img.src = LOGO_URL;
   }, []);
 
+  // If api.jsx redirected here after a 401 (token expired or invalid), surface
+  // a one-shot notice so the user knows why they were logged out. The flag is
+  // set in sessionStorage by `_check401` and consumed exactly once here.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage?.getItem('sessionExpiredNotice')) {
+        setError(t('login.errors.sessionExpired'));
+        window.sessionStorage.removeItem('sessionExpiredNotice');
+      }
+    } catch (_) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const dispatchAndGo = async (u, chosenBrId) => {
     const initials = (u.username).slice(0, 2).toUpperCase();
 

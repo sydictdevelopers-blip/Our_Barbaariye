@@ -179,7 +179,7 @@ const ENTITIES = [
       { name: 'cl_id_sp', label: 'academicSetup.subjectClassSetup.fields.class', type: 'select', required: true, optionsKey: 'class_options', rowKey: 'cl_id', value: 'cl_id', nameKey: 'class_name', param: 'cl_id_sp', placeholder: 'academicSetup.subjectClassSetup.ph.class', default: '' },
       { name: 'sub_id_sp', label: 'academicSetup.subjectClassSetup.fields.subject', type: 'select', required: true, optionsKey: 'subject_options', rowKey: 'sub_id', value: 'sub_id', nameKey: 'subject_name', param: 'sub_id_sp', placeholder: 'academicSetup.subjectClassSetup.ph.subject', default: '' },
       { name: 'emp_id_sp', label: 'academicSetup.subjectClassSetup.fields.teacher', type: 'select', required: true, optionsKey: 'employee_options', rowKey: 'emp_id', value: 'emp_id', nameKey: 'employee_name', param: 'emp_id_sp', placeholder: 'academicSetup.subjectClassSetup.ph.teacher', default: '' },
-      { name: 'no_of_period_sp', label: 'academicSetup.subjectClassSetup.fields.periods', placeholder: 'academicSetup.subjectClassSetup.ph.periods', type: 'number', rowKey: 'no_of_period', param: 'no_of_period_sp', default: 0, props: { min: 0 } },
+      { name: 'no_of_period_sp', label: 'academicSetup.subjectClassSetup.fields.periods', placeholder: 'academicSetup.subjectClassSetup.ph.periods', type: 'number', required: true, rowKey: 'no_of_period', param: 'no_of_period_sp', default: 1, props: { min: 1, max: 20, step: 1 } },
       { name: 'state_sp', label: 'academicSetup.subjectClassSetup.fields.state', placeholder: 'academicSetup.subjectClassSetup.ph.state', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
@@ -266,9 +266,9 @@ const ENTITIES = [
     omitPUsrId: true,
     idParam: 'lev_id_sp',
     fields: [
-      { name: 'l_ty_id_sp', label: 'academicSetup.levelSetup.fields.levelType', placeholder: 'academicSetup.levelSetup.ph.levelType', type: 'select', param: 'l_ty_id_sp', optionsKey: 'level_type', value: 'l_ty_id', rowKey: 'l_ty_id', nameKey: 'level_name', default: '' },
-      { name: 'level_name_sp', label: 'academicSetup.levelSetup.fields.level', placeholder: 'academicSetup.levelSetup.ph.level', type: 'text', required: true, rowKey: 'level', param: 'level_name_sp' },
-      { name: 'fee_sp', label: 'academicSetup.levelSetup.fields.fee', placeholder: 'academicSetup.levelSetup.ph.fee', type: 'number', rowKey: 'fee', param: 'fee_sp', default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'l_ty_id_sp', label: 'academicSetup.levelSetup.fields.levelType', placeholder: 'academicSetup.levelSetup.ph.levelType', type: 'select', required: true, param: 'l_ty_id_sp', optionsKey: 'level_type', value: 'l_ty_id', rowKey: 'l_ty_id', nameKey: 'level_name', default: '' },
+      { name: 'level_name_sp', label: 'academicSetup.levelSetup.fields.level', placeholder: 'academicSetup.levelSetup.ph.level', type: 'text', required: true, rowKey: 'level', param: 'level_name_sp', props: { maxLength: 80 } },
+      { name: 'fee_sp', label: 'academicSetup.levelSetup.fields.fee', placeholder: 'academicSetup.levelSetup.ph.fee', type: 'number', required: true, rowKey: 'fee', param: 'fee_sp', default: 0, props: { min: 0, max: 100000, step: 0.01 } },
       { name: 'br_id_sp', label: 'Branch ID', type: 'hidden', param: 'br_id_sp', default: 1 },
       { name: 'u_br_id_sp', label: 'U Branch ID', type: 'hidden', param: 'u_br_id_sp', default: 1 },
     ],
@@ -293,9 +293,9 @@ const ENTITIES = [
     omitPId: true,
     omitPUsrId: true,
     fields: [
-      { name: 'name_sp', label: 'academicSetup.subjectsSetup.fields.subjectName', placeholder: 'academicSetup.subjectsSetup.ph.subjectName', type: 'text', required: true, rowKey: 'name', param: 'name_sp' },
-      { name: 'ordering_sp', label: 'academicSetup.subjectsSetup.fields.ordering', placeholder: 'academicSetup.subjectsSetup.ph.ordering', type: 'number', rowKey: 'ordering', param: 'ordering_sp', default: 0, props: { min: 0 } },
-      { name: 'state_sp', label: 'academicSetup.subjectsSetup.fields.state', placeholder: 'academicSetup.subjectsSetup.ph.state', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
+      { name: 'name_sp', label: 'academicSetup.subjectsSetup.fields.subjectName', placeholder: 'academicSetup.subjectsSetup.ph.subjectName', type: 'text', required: true, rowKey: 'name', param: 'name_sp', props: { maxLength: 80 } },
+      { name: 'ordering_sp', label: 'academicSetup.subjectsSetup.fields.ordering', placeholder: 'academicSetup.subjectsSetup.ph.ordering', type: 'number', rowKey: 'ordering', param: 'ordering_sp', default: 0, props: { min: 0, max: 100, step: 1 } },
+      { name: 'state_sp', label: 'academicSetup.subjectsSetup.fields.state', placeholder: 'academicSetup.subjectsSetup.ph.state', type: 'select', required: true, rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
     ],
   },
   {
@@ -340,11 +340,18 @@ const ENTITIES = [
     omitPUsrId: true,
     fields: [
       { name: 'academic_name_sp', label: 'academicSetup.academicYearTab.fields.academicYear', placeholder: 'academicSetup.academicYearTab.ph.academicYear', type: 'text', required: true, rowKey: 'academic', param: 'academic_name_sp' },
-      { name: 'started_sp', label: 'academicSetup.academicYearTab.fields.startDate', placeholder: 'academicSetup.academicYearTab.ph.startDate', type: 'date', rowKey: 'started', param: 'started_sp' },
-      { name: 'ended_sp', label: 'academicSetup.academicYearTab.fields.endDate', placeholder: 'academicSetup.academicYearTab.ph.endDate', type: 'date', rowKey: 'ended', param: 'ended_sp' },
-      { name: 'active_sp', label: 'academicSetup.academicYearTab.fields.state', placeholder: 'academicSetup.academicYearTab.ph.state', type: 'select', rowKey: 'state', param: 'active_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active' },
+      { name: 'started_sp', label: 'academicSetup.academicYearTab.fields.startDate', placeholder: 'academicSetup.academicYearTab.ph.startDate', type: 'date', required: true, rowKey: 'started', param: 'started_sp', default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'ended_sp', label: 'academicSetup.academicYearTab.fields.endDate', placeholder: 'academicSetup.academicYearTab.ph.endDate', type: 'date', required: true, rowKey: 'ended', param: 'ended_sp', default: () => new Date().toISOString().slice(0, 10) },
       { name: 'u_br_id_sp', label: 'U Branch ID', type: 'hidden', param: 'u_br_id_sp', default: 1 },
     ],
+    // End date must come after start date — otherwise the academic year is
+    // a backwards range that breaks every downstream report/aggregation.
+    extraValidate: (form) => {
+      if (form.started_sp && form.ended_sp && form.started_sp >= form.ended_sp) {
+        return { ended_sp: 'academicSetup.academicYearTab.errEndAfterStart' };
+      }
+      return {};
+    },
   },
   {
     key: 'mdl_student_info',
@@ -353,8 +360,8 @@ const ENTITIES = [
     idKey: 'studentacademicyear_id',
     fields: [
       { name: 'year_name', label: 'Year Name', type: 'text', required: true, param: 'p_name_sp' },
-      { name: 'start_date', label: 'Start Date', type: 'date', param: 'p_start_date_sp' },
-      { name: 'end_date', label: 'End Date', type: 'date', param: 'p_end_date_sp' },
+      { name: 'start_date', label: 'Start Date', type: 'date', param: 'p_start_date_sp', default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'end_date', label: 'End Date', type: 'date', param: 'p_end_date_sp', default: () => new Date().toISOString().slice(0, 10) },
     ],
   },
   {
@@ -364,8 +371,8 @@ const ENTITIES = [
     idKey: 'studentacademicyear_id',
     fields: [
       { name: 'year_name', label: 'Year Name', type: 'text', required: true, param: 'p_name_sp' },
-      { name: 'start_date', label: 'Start Date', type: 'date', param: 'p_start_date_sp' },
-      { name: 'end_date', label: 'End Date', type: 'date', param: 'p_end_date_sp' },
+      { name: 'start_date', label: 'Start Date', type: 'date', param: 'p_start_date_sp', default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'end_date', label: 'End Date', type: 'date', param: 'p_end_date_sp', default: () => new Date().toISOString().slice(0, 10) },
       { name: 'acc_id', label: 'Account', type: 'select', optionsKey: 'accounts', param: 'p_acc_id_sp', value: 'acc_id', nameKey: 'acc_name' },
       { name: 'gender', label: 'Gender', type: 'select', optionsKey: 'gendersections', param: 'p_gender_sp', value: 'acc_id', nameKey: 'acc_name' },
       { name: 'status', label: 'Status', type: 'radio', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], param: 'p_status_sp' },
@@ -478,8 +485,8 @@ const ENTITIES = [
     fields: [
       { name: 'a_y_id_sp', label: 'crud.examSetting.fields.academicYear', placeholder: 'crud.examSetting.ph.academicYear', type: 'select', required: true, optionsKey: 'academic_options', rowKey: 'a_y_id', value: 'a_y_id', nameKey: 'academic_name', param: 'a_y_id_sp', default: '' },
       { name: 'percentage_fail_pass_sp', label: 'crud.examSetting.fields.passPct', placeholder: 'crud.examSetting.ph.passPct', type: 'number', required: true, rowKey: 'percentage_fail_pass', param: 'percentage_fail_pass_sp', default: 0, props: { min: 0, max: 100, step: 0.01 } },
-      { name: 'attendance_marks_sp', label: 'crud.examSetting.fields.attendanceMarks', placeholder: 'crud.examSetting.ph.attendanceMarks', type: 'number', required: true, rowKey: 'attendance_marks', param: 'attendance_marks_sp', default: 0, props: { min: 0, step: 0.01 } },
-      { name: 'activity_marks_sp', label: 'crud.examSetting.fields.activityMarks', placeholder: 'crud.examSetting.ph.activityMarks', type: 'number', required: true, rowKey: 'activity_marks', param: 'activity_marks_sp', default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'attendance_marks_sp', label: 'crud.examSetting.fields.attendanceMarks', placeholder: 'crud.examSetting.ph.attendanceMarks', type: 'number', required: true, rowKey: 'attendance_marks', param: 'attendance_marks_sp', default: 0, props: { min: 0, max: 100, step: 0.01 } },
+      { name: 'activity_marks_sp', label: 'crud.examSetting.fields.activityMarks', placeholder: 'crud.examSetting.ph.activityMarks', type: 'number', required: true, rowKey: 'activity_marks', param: 'activity_marks_sp', default: 0, props: { min: 0, max: 100, step: 0.01 } },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
   },
@@ -665,8 +672,8 @@ const ENTITIES = [
     gridCols: 2,
     fields: [
       { name: 'room_name_sp', label: 'crud.room.fields.roomName', placeholder: 'crud.room.ph.roomName', type: 'text', required: true, rowKey: 'room_name', param: 'room_name_sp' },
-      { name: 'no_of_students_sp', label: 'crud.room.fields.noOfStudents', placeholder: 'crud.room.ph.noOfStudents', type: 'number', required: true, rowKey: 'no_of_students', param: 'no_of_students_sp', default: 0, props: { min: 0 } },
-      { name: 'no_of_teachers_sp', label: 'crud.room.fields.noOfTeachers', placeholder: 'crud.room.ph.noOfTeachers', type: 'number', required: true, rowKey: 'no_of_teachers', param: 'no_of_teachers_sp', default: 0, props: { min: 0 } },
+      { name: 'no_of_students_sp', label: 'crud.room.fields.noOfStudents', placeholder: 'crud.room.ph.noOfStudents', type: 'number', required: true, rowKey: 'no_of_students', param: 'no_of_students_sp', default: 0, props: { min: 0, max: 500, step: 1 } },
+      { name: 'no_of_teachers_sp', label: 'crud.room.fields.noOfTeachers', placeholder: 'crud.room.ph.noOfTeachers', type: 'number', required: true, rowKey: 'no_of_teachers', param: 'no_of_teachers_sp', default: 0, props: { min: 0, max: 50, step: 1 } },
       { name: 'state_sp', label: 'crud.room.fields.state', type: 'select', rowKey: 'state', param: 'state_sp', options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }], default: 'Active', showOnMode: 'update' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
@@ -688,11 +695,21 @@ const ENTITIES = [
       { name: 'day_id_sp', label: 'crud.examSchedule.fields.day', placeholder: 'crud.examSchedule.ph.day', type: 'select', required: true, optionsKey: 'day_options', rowKey: 'd_id', value: 'd_id', nameKey: 'day', param: 'day_id_sp', default: '' },
       { name: 'per_id_sp', label: 'crud.examSchedule.fields.period', placeholder: 'crud.examSchedule.ph.period', type: 'select', required: true, optionsKey: 'period_options', rowKey: 'pr_id', value: 'pr_id', nameKey: 'period', param: 'per_id_sp', default: '' },
       { name: 'sh_id_sp', label: 'crud.examSchedule.fields.shift', placeholder: 'crud.examSchedule.ph.shift', type: 'select', required: true, optionsKey: 'shift_options', rowKey: 'sh_id', value: 'sh_id', nameKey: 'shift', param: 'sh_id_sp', default: '' },
-      { name: 'exam_date_sp', label: 'crud.examSchedule.fields.examDate', type: 'date', required: true, rowKey: 'exam_date', param: 'exam_date_sp' },
+      { name: 'exam_date_sp', label: 'crud.examSchedule.fields.examDate', type: 'date', required: true, rowKey: 'exam_date', param: 'exam_date_sp', default: () => new Date().toISOString().slice(0, 10) },
       { name: 'start_time_sp', label: 'crud.examSchedule.fields.startTime', type: 'time', required: true, rowKey: 'start_time', param: 'start_time_sp' },
       { name: 'end_time_sp', label: 'crud.examSchedule.fields.endTime', type: 'time', required: true, rowKey: 'end_time', param: 'end_time_sp' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
+    // Logical time-order check — start_time must come BEFORE end_time. PG
+    // accepts a backwards range but it produces a schedule no human can sit.
+    extraValidate: (form) => {
+      const s = String(form.start_time_sp || '');
+      const e = String(form.end_time_sp || '');
+      if (s && e && s >= e) {
+        return { end_time_sp: 'crud.examSchedule.errEndAfterStart' };
+      }
+      return {};
+    },
   },
   {
     key: 'Complain',

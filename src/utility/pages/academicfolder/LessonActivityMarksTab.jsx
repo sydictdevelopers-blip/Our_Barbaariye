@@ -3,19 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { Database, Pencil, Plus, Trash2, X, GraduationCap, CalendarDays, Filter } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
+import DateInput from '../../../components/ui/DateInput';
 import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
 import { crud, fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalConfirm, swalError, swalSuccess } from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
-const EMPTY_FORM = {
+const getEmptyForm = () => ({
   ac_id: '', ac_label: '',
   cl_id: '', cl_label: '',
   a_y_id: '', a_y_label: '',
   sub_cl_id: '', sub_cl_label: '',
   e_r_id: '', e_r_label: '',
-  marks: '', description: '', deadline: '',
-};
+  marks: '', description: '',
+  deadline: new Date().toISOString().slice(0, 10),
+});
 
 const INPUT_CLS = 'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLS = 'block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1';
@@ -60,7 +63,7 @@ export default function LessonActivityMarksTab() {
   const [filterClassLabel, setFilterClassLabel] = useState('');
 
   /* ── Lazy loaders (server-side: 25 default + search) ── */
-  const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academic_options', null, { sortByActiveState: true }), []);
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
   const activityLoader = useMemo(() => makeOptionLoader('activity_type_options'), []);
   const examRegLoader  = useMemo(() => makeOptionLoader('exam_reg_options'), []);
@@ -79,7 +82,7 @@ export default function LessonActivityMarksTab() {
   const [addOpen,   setAddOpen]   = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving,    setSaving]    = useState(false);
-  const [form,      setForm]      = useState(EMPTY_FORM);
+  const [form,      setForm]      = useState(getEmptyForm);
 
   /* ── Subject loader depends on cl_id + a_y_id; recreate when they change. ── */
   const subjectLoader = useMemo(
@@ -112,7 +115,7 @@ export default function LessonActivityMarksTab() {
   const handleAddNew = () => {
     setEditingId(null);
     setForm({
-      ...EMPTY_FORM,
+      ...getEmptyForm(),
       cl_id: filterClass, cl_label: filterClassLabel,
       a_y_id: filterAcademic, a_y_label: filterAcademicLabel,
     });
@@ -144,7 +147,7 @@ export default function LessonActivityMarksTab() {
 
   /* ── delete ── */
   const handleDelete = useCallback(async (row) => {
-    const ok = await swalConfirm({ title: t('lessonActivityMarks.confirmDelete') });
+    const ok = await confirmDelete({ id: row.ac_t_id, label: 'Lesson Activity Mark', recordPreview: row.description });
     if (!ok) return;
     try {
       await crud({
@@ -173,6 +176,22 @@ export default function LessonActivityMarksTab() {
   const handleSave = async () => {
     if (!form.ac_id || !form.cl_id || !form.a_y_id || !form.sub_cl_id || !form.e_r_id || !form.deadline) {
       swalError(t('lessonActivityMarks.errFieldsRequired'));
+      return;
+    }
+    // Numeric range check on marks — must be a non-negative finite number.
+    // Empty marks defaults to 0 below, but if the user typed something it
+    // must parse cleanly (no negatives, no NaN like "abc").
+    if (form.marks !== '' && form.marks != null) {
+      const n = Number(form.marks);
+      if (!Number.isFinite(n) || n < 0) {
+        swalError(t('lessonActivityMarks.errMarksInvalid', 'Dhibcaha waa inay tahay tiro saxan oo aan ka yarayn 0'));
+        return;
+      }
+    }
+    // Deadline must not be in the past — student can't be marked on a past activity.
+    const today = new Date().toISOString().slice(0, 10);
+    if (form.deadline && form.deadline < today) {
+      swalError(t('lessonActivityMarks.errDeadlinePast', 'Taariikhda dhammaadka waa inay tahay maanta ama mid kaamustaqbalka ah'));
       return;
     }
     setSaving(true);
@@ -233,14 +252,6 @@ export default function LessonActivityMarksTab() {
       {/* ── Filter card: header + grouped selects + actions row ── */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('lessonActivityMarks.filtersTitle', { defaultValue: 'Filters' })}
-          </span>
-        </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldGroup icon={CalendarDays} label={t('select.academicYear', { defaultValue: 'Academic Year' })}>
             <Select2
@@ -373,7 +384,7 @@ export default function LessonActivityMarksTab() {
 
               {/* Deadline */}
               <Field label={t('lessonActivityMarks.fields.deadline')}>
-                <input type="date" value={form.deadline} onChange={setField('deadline')} className={INPUT_CLS} />
+                <DateInput value={form.deadline} onChange={setField('deadline')} className={INPUT_CLS} />
               </Field>
 
               {/* Description — full width */}

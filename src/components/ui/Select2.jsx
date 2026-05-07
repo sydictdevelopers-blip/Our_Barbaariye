@@ -18,7 +18,7 @@ function renderOptionWithState(opt, meta) {
   const isActive = String(opt.state).toLowerCase() === 'active';
   const badgeClass = isActive
     ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-    : 'bg-slate-100 text-slate-500 border border-slate-200';
+    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
   return (
     <div className="flex items-center justify-between gap-2 w-full">
       <span className="truncate">{tDb(opt.label)}</span>

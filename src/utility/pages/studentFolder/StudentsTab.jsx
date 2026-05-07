@@ -62,7 +62,7 @@ export default function StudentsTab() {
   // NOTE: batch dropdown-ku ma isticmaalo loadOptions — wuxuu si toos ah u qaataa
   // `batchOptionsCache` (la buuxiyey marka class la doortay). Sidaas darteed DB
   // lagu wici maayo marka dropdown-ka la furo.
-  const academicLoader = useMemo(() => makeOptionLoader('academic_options'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academic_options', null, { sortByActiveState: true }), []);
 
   // Marka class la doorto → hal mar ka soo qaad batch options-ka, cache-garey,
   // oo si toos ah u dooro option-ka kowaad. Kadib dropdown-ka cache-ka ayuu
@@ -259,14 +259,6 @@ export default function StudentsTab() {
   const filterToolbar = (
     <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
       <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-          <Filter className="w-3.5 h-3.5" />
-        </span>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {t('entity.filtersTitle', { defaultValue: 'Filters' })}
-        </span>
-      </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className={labelCls}><GraduationCap className={labelIconCls} /><span>{t('students.cols.class')}</span></label>

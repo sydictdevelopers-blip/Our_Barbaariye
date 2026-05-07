@@ -1,17 +1,17 @@
-import { BookMarked } from 'lucide-react';
+import { Sliders } from 'lucide-react';
 
 export const examSettingSection = {
   id: 'ExamSetting',
   label: 'Exam Setting',
   labelKey: 'menu.examSetting',
-  icon: BookMarked,
+  icon: Sliders,
   path: '/ExamSetting',
   tabs: [
     {
       "id": "QuestionsTable",
       "label": "Questions Table",
       "labelKey": "tabs.questionsTable",
-      "icon": "Users"
+      "icon": "HelpCircle"
     },
     {
       "id": "ExamInstruction",
@@ -19,11 +19,11 @@ export const examSettingSection = {
       "labelKey": "tabs.examInstruction",
       "entityKey": "ExamInstruction",
       "modalKey": "ExamInstruction",
-      "icon": "ClipboardCheck",
+      "icon": "Info",
       "queryName": "ExamInstruction",
       "loadButtons": [
-        { "id": "addNew", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamInstruction" },
-        { "id": "ExamInstruction", "label": "SHOW DATA", "labelKey": "entity.showData", "icon": "Database" }
+        { "id": "ExamInstruction", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamInstruction" }
       ]
     },
     {
@@ -32,11 +32,11 @@ export const examSettingSection = {
       "labelKey": "tabs.generateExam",
       "entityKey": "GenerateExam",
       "modalKey": "GenerateExam",
-      "icon": "PenTool",
+      "icon": "Sparkles",
       "queryName": "GenerateExam",
       "loadButtons": [
-        { "id": "addNew", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "GenerateExam" },
-        { "id": "GenerateExam", "label": "SHOW DATA", "labelKey": "entity.showData", "icon": "Database" }
+        { "id": "GenerateExam", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "GenerateExam" }
       ]
     },
     {
@@ -45,11 +45,11 @@ export const examSettingSection = {
       "labelKey": "tabs.createOnlineExam",
       "entityKey": "CreateOnlineExam",
       "modalKey": "CreateOnlineExam",
-      "icon": "FolderPlus",
+      "icon": "Globe",
       "queryName": "CreateOnlineExam",
       "loadButtons": [
-        { "id": "addNew", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "CreateOnlineExam" },
-        { "id": "CreateOnlineExam", "label": "SHOW DATA", "labelKey": "entity.showData", "icon": "Database" }
+        { "id": "CreateOnlineExam", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "CreateOnlineExam" }
       ]
     },
     {
@@ -58,11 +58,11 @@ export const examSettingSection = {
       "labelKey": "tabs.examCopy",
       "entityKey": "ExamCopy",
       "modalKey": "ExamCopy",
-      "icon": "Hourglass",
+      "icon": "Copy",
       "queryName": "ExamCopy",
       "loadButtons": [
-        { "id": "addNew", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamCopy" },
-        { "id": "ExamCopy", "label": "SHOW DATA", "labelKey": "entity.showData", "icon": "Database" }
+        { "id": "ExamCopy", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ExamCopy" }
       ]
     }
   ],

@@ -39,7 +39,7 @@ export default function AssignStudentRoomTab() {
   const [ay, setAy] = useState({ id: '', label: '' });
 
   const roomLoader = useMemo(() => makeOptionLoader('room_options'), []);
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
 
   const loadData = useCallback(async () => {
     if (!room.id) {
@@ -138,7 +138,7 @@ export default function AssignStudentRoomTab() {
               <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-sky-700">Filter</span>
             </div>
             <div className="flex-1 min-w-[220px]">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Room</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">Room</label>
               <Select2
                 value={room.id}
                 selectedLabel={room.label}
@@ -148,7 +148,7 @@ export default function AssignStudentRoomTab() {
               />
             </div>
             <div className="flex-1 min-w-[220px]">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Academic Year</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">Academic Year</label>
               <Select2
                 value={ay.id}
                 selectedLabel={ay.label}

@@ -28,7 +28,7 @@ export default function AcademicTransferTab() {
 
   /* ── Lazy loaders (server-side: 25 default + search) ── */
   const classLoader   = useMemo(() => makeOptionLoader('class_options'), []);
-  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const studentLoader = useMemo(() => makeOptionLoader('student_options'), []);
 
   /* ── Banner: warning when no new academic year ── */

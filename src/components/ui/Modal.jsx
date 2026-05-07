@@ -12,7 +12,7 @@ import { X } from 'lucide-react';
  * @param {ReactNode} [header] - Custom header (overrides title if provided)
  * @param {string} [size] - sm | md | lg | xl
  * @param {boolean} [showCloseButton=true] - Show X button
- * @param {boolean} [closeOnOverlay=true] - Close when clicking overlay
+ * @param {boolean} [closeOnOverlay=false] - Close when clicking overlay (default: false — close only via X button)
  * @param {boolean} [showHeader=true] - Show header section
  * @param {string} [className] - Extra class for modal container
  * @param {string} [bodyClassName] - Extra class for body
@@ -27,7 +27,7 @@ export default function Modal({
   header,
   size = 'md',
   showCloseButton = true,
-  closeOnOverlay = true,
+  closeOnOverlay = false,
   showHeader = true,
   pageScroll = false,
   className = '',

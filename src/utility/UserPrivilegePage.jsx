@@ -33,31 +33,42 @@ import { deserializePrivilege as deserializeUserPrivalage } from '../utils/privi
 function buildPermissionTree(items = defaultMenuItems) {
   return items
     .filter((m) => m.id !== 'dashboard' && m.id !== 'userPrivilege')
-    .map((module) => ({
-      id: `module:${module.id}`,
-      moduleKey: module.id,
-      type: 'module',
-      label: module.label,
-      icon: module.icon,
-      children: (module.children || []).map((menu) => ({
-        id: `menu:${module.id}/${menu.id}`,
-        menuKey: menu.id,
-        type: 'menu',
-        label: menu.label,
-        children: (menu.tabs || []).map((tab) => ({
-          id: `tab:${module.id}/${menu.id}/${tab.id}`,
-          tabKey: tab.id,
-          type: 'tab',
-          label: tab.label,
-          children: (tab.loadButtons || []).map((btn) => ({
-            id: `action:${module.id}/${menu.id}/${tab.id}/${btn.id}`,
-            actionKey: btn.id,
-            type: 'action',
-            label: btn.label,
+    .map((module) => {
+      // A module can either have `children` (each child has its own tabs),
+      // or expose `tabs` directly (single-page modules like ComplainManagement
+      // and MeetingMinutes). Wrap the latter in a synthetic menu reusing the
+      // module's id so the rest of the tree code stays uniform.
+      const menus = module.children?.length
+        ? module.children
+        : module.tabs?.length
+          ? [{ id: module.id, label: module.label, tabs: module.tabs }]
+          : [];
+      return {
+        id: `module:${module.id}`,
+        moduleKey: module.id,
+        type: 'module',
+        label: module.label,
+        icon: module.icon,
+        children: menus.map((menu) => ({
+          id: `menu:${module.id}/${menu.id}`,
+          menuKey: menu.id,
+          type: 'menu',
+          label: menu.label,
+          children: (menu.tabs || []).map((tab) => ({
+            id: `tab:${module.id}/${menu.id}/${tab.id}`,
+            tabKey: tab.id,
+            type: 'tab',
+            label: tab.label,
+            children: (tab.loadButtons || []).map((btn) => ({
+              id: `action:${module.id}/${menu.id}/${tab.id}/${btn.id}`,
+              actionKey: btn.id,
+              type: 'action',
+              label: btn.label,
+            })),
           })),
         })),
-      })),
-    }))
+      };
+    })
     .filter((m) => m.children.length > 0);
 }
 
@@ -163,7 +174,7 @@ function PermissionTreePanel({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('userPrivilege.searchPermission')}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
           />
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
@@ -189,7 +200,7 @@ function PermissionTreePanel({
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                 isActive
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
               {Icon && <Icon className="w-4 h-4" />}
@@ -200,21 +211,21 @@ function PermissionTreePanel({
       </div>
 
       {/* Active module content */}
-      <div className="mt-4 rounded-2xl bg-white border border-slate-100 shadow-sm px-4 py-5">
+      <div className="mt-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm px-4 py-5">
         {(() => {
           const activeModule = filteredTree.find((m) => m.id === activeModuleId) || filteredTree[0] || null;
-          if (!activeModule) return <p className="text-sm text-slate-500">{t('userPrivilege.noPermissions')}</p>;
+          if (!activeModule) return <p className="text-sm text-slate-500 dark:text-slate-400">{t('userPrivilege.noPermissions')}</p>;
           return (
             <div className="flex flex-wrap gap-6">
               {activeModule.children.map((menu) => (
                 <div key={menu.id} className="min-w-[210px] space-y-2">
-                  <div className="text-sm font-semibold text-sky-700 border-b border-sky-100 pb-1">{menu.label}</div>
+                  <div className="text-sm font-semibold text-sky-700 dark:text-sky-400 border-b border-sky-100 dark:border-sky-900/40 pb-1">{menu.label}</div>
                   <div className="space-y-1.5 pt-1">
                     {menu.children.map((tab) => {
                       const tabState = getNodeState(tab, selectedIds);
                       return (
                         <div key={tab.id} className="space-y-0.5">
-                          <div className="flex items-center gap-2 text-sm text-slate-800">
+                          <div className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
                             <IndeterminateCheckbox
                               checked={tabState === 'checked'}
                               indeterminate={tabState === 'indeterminate'}
@@ -234,7 +245,7 @@ function PermissionTreePanel({
                                     className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors ${
                                       actionChecked
                                         ? 'bg-violet-50 text-violet-700 border-violet-400'
-                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
                                     }`}
                                   >
                                     <span>{action.label}</span>
@@ -545,7 +556,7 @@ export default function UserPrivilegePage() {
         }
       >
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.user')}</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t('select.user')}</label>
           <Select2
             name="privUser"
             value={privModal.user ? String(privModal.user.usr_id) : ''}

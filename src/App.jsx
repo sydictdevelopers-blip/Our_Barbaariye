@@ -12,6 +12,7 @@ import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
 import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
+import SessionExpiredModal from './components/SessionExpiredModal';
 import { switchBranch, setUserBranches } from './slices/uiSlice';
 import { fetchUserBranches } from './services/api';
 function DarkModeInit() {
@@ -93,6 +94,7 @@ function AppContent() {
     <>
       <DarkModeInit />
       <LangDirInit />
+      <SessionExpiredModal />
       <BranchGuard />
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />

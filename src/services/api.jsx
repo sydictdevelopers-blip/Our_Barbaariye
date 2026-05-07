@@ -18,8 +18,23 @@ function _check401(res) {
   _authFailureFired = true;
   if (typeof window !== 'undefined') {
     try { window.localStorage?.removeItem(AUTH_STORAGE_KEY); } catch (_) {}
-    // BrowserRouter basename='/frontend' so login lives at /frontend/login.
-    window.location.href = '/frontend/login';
+    // Wipe persisted EntityTab filter selections so the next user (or the
+    // same user re-logging in) starts with a clean toolbar.
+    try {
+      const ss = window.sessionStorage;
+      const stale = [];
+      for (let i = 0; i < ss.length; i += 1) {
+        const k = ss.key(i);
+        if (k && k.startsWith('filters:')) stale.push(k);
+      }
+      stale.forEach((k) => ss.removeItem(k));
+    } catch (_) {}
+    // Fallback flag — if the user reloads while the modal is open (skipping
+    // its click handler), LoginPage still shows a banner on next mount.
+    try { window.sessionStorage?.setItem('sessionExpiredNotice', '1'); } catch (_) {}
+    // SessionExpiredModal listens for this and prompts the user before the
+    // redirect, so they understand why they're being sent back to /login.
+    try { window.dispatchEvent(new CustomEvent('session-expired')); } catch (_) {}
   }
 }
 
@@ -228,7 +243,7 @@ export function makeOptionLoader(optionsKey, getExtra, opts = {}) {
     const cols = res?.columns || Object.keys(rows[0]).map((k) => ({ key: k }));
     const valueKey = opts.valueKey || cols[0]?.key;
     const labelKey = opts.labelKey || cols[1]?.key || valueKey;
-    return rows.map((r) => {
+    const items = rows.map((r) => {
       const item = {
         value: String(r[valueKey] ?? ''),
         label: String(r[labelKey] ?? r[valueKey] ?? ''),
@@ -237,6 +252,18 @@ export function makeOptionLoader(optionsKey, getExtra, opts = {}) {
       if (r.state != null) item.state = String(r.state);
       return item;
     });
+    // Defense-in-depth: sort active rows to the top when requested. The
+    // backend SQL also orders this way, but SP-driven queries that we can't
+    // easily ORDER BY get covered here. `Array.prototype.sort` is stable in
+    // modern JS engines, so within each group the original order is preserved.
+    if (opts.sortByActiveState) {
+      items.sort((a, b) => {
+        const aActive = String(a.state ?? '').trim().toLowerCase() === 'active' ? 0 : 1;
+        const bActive = String(b.state ?? '').trim().toLowerCase() === 'active' ? 0 : 1;
+        return aActive - bActive;
+      });
+    }
+    return items;
   };
 }
 

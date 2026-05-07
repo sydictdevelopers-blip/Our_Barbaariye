@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Power } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
+import ActionButton from '../../../components/ui/ActionButton';
 import CrudModal from '../../../modals/CrudModal';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
@@ -12,6 +14,8 @@ import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
+import { crud } from '../../../services/api';
+import { swalConfirmAction, swalError } from '../../../utils/swal';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
 
@@ -40,9 +44,50 @@ export default function AccountsPage() {
 
   const closeModal = () => setModal({ entityKey: null, editRow: null });
 
+  const activateAcademicYear = useCallback(async (row) => {
+    await swalConfirmAction({
+      title: t('academicSetup.academicYearTab.confirmActivateTitle', { defaultValue: 'Activate this academic year?' }),
+      text: t('academicSetup.academicYearTab.confirmActivateText', { defaultValue: 'All other years will be marked Inactive.' }),
+      onConfirm: async () => {
+        try {
+          const res = await crud({
+            operation: 'activate',
+            fn: 'academic_year_sp',
+            params: {
+              a_y_id_sp: row.id ?? row.a_y_id ?? 0,
+              academic_name_sp: row.academic ?? '',
+              started_sp: row.started ?? '',
+              ended_sp: row.ended ?? '',
+              u_br_id_sp: row.u_br_id ?? 1,
+            },
+          });
+          dispatch(loadData('academicYeartab'));
+          return res;
+        } catch (e) {
+          swalError(e?.message);
+          throw e;
+        }
+      },
+    });
+  }, [dispatch, t]);
+
+  const academicYearRowActions = useCallback((row) => {
+    if (String(row?.state ?? '').toLowerCase() === 'active') return null;
+    return (
+      <ActionButton
+        variant="warning"
+        aria-label="Activate"
+        onClick={() => activateAcademicYear(row)}
+      >
+        <Power className="w-4 h-4" />
+      </ActionButton>
+    );
+  }, [activateAcademicYear]);
+
   const renderTabContent = () => {
     const cfg = activeTabConfig?.entityKey ? activeTabConfig : null;
     if (cfg) {
+      const isAcademicYear = cfg.entityKey === 'academicYeartab';
       return (
         <motion.div key={activeTab} {...motionProps}>
           <EntityTab
@@ -54,6 +99,7 @@ export default function AccountsPage() {
             onEdit={openModal}
             showAcademicYearSelect={cfg.showAcademicYearSelect}
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
+            extraRowActions={isAcademicYear ? academicYearRowActions : undefined}
           />
         </motion.div>
       );

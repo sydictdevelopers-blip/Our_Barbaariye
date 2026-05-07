@@ -61,7 +61,7 @@ export function RoomByClassModal({ isOpen, onClose, onSuccess, context }) {
   }, [isOpen, context]);
 
   const roomLoader = useMemo(() => makeOptionLoader('room_options'), []);
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () => makeOptionLoader('exam_by_academic_options', () => ({
       ...(ay.id && { academicYearId: ay.id }),
@@ -156,7 +156,7 @@ export function RoomByClassModal({ isOpen, onClose, onSuccess, context }) {
         <div className="flex items-center justify-between w-full gap-3 flex-wrap">
           {room.id ? (
             <div className="flex items-center gap-1.5 text-[11.5px]">
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold">
                 <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
                 {room.seats} total
               </span>
@@ -346,7 +346,7 @@ export function ClassByRoomModal({ isOpen, onClose, onSuccess, context }) {
   }, [isOpen, context]);
 
   const classLoader = useMemo(() => makeOptionLoader('class_simple_options'), []);
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () => makeOptionLoader('exam_by_academic_options', () => ({
       ...(ay.id && { academicYearId: ay.id }),
@@ -444,7 +444,7 @@ export function ClassByRoomModal({ isOpen, onClose, onSuccess, context }) {
         <div className="flex items-center justify-between w-full gap-3 flex-wrap">
           {cls.id ? (
             <div className="flex items-center gap-1.5 text-[11.5px]">
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold">
                 {rows.filter((r) => r.r_id).length} room{rows.filter((r) => r.r_id).length === 1 ? '' : 's'}
               </span>
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 font-semibold">

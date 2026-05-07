@@ -1,4 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { clearAllData } from './dataSlice';
+import { clearDropdownCache } from '../services/api';
+import { clearPersistedFilters } from '../utility/EntityTab';
 
 const AUTH_STORAGE_KEY = 'brabaariye_user';
 
@@ -124,6 +127,12 @@ export const switchBranch = (br_id) => async (dispatch) => {
     user_type: body.user_type,
     u_br_id: body.u_br_id,
   }));
+  // Tirtir cached entities + dropdown cache si table-yada aanay u tusin xogta
+  // branch-kii hore. Branch cusub waxay leedahay rows kala duwan oo backend
+  // kaliya helo marka request cusub uu socdo.
+  dispatch(clearAllData());
+  clearDropdownCache();
+  clearPersistedFilters();
   return body;
 };
 
@@ -135,6 +144,11 @@ export const logoutUser = () => async (dispatch) => {
     await fetch(`${API_BASE}/logout`, { method: 'POST', credentials: 'include' });
   } catch (_) { /* ignore — local logout still proceeds */ }
   dispatch(logout());
+  // Tirtir DHAMMAAN xogta entities + dropdown cache si user-kii xiga
+  // (ama mar kale isla user-ku) aanu u arkin xogtii hore.
+  dispatch(clearAllData());
+  clearDropdownCache();
+  clearPersistedFilters();
 };
 
 /** True when the logged-in user has access to the special "All" branch,

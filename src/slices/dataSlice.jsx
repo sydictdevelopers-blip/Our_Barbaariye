@@ -99,6 +99,11 @@ const dataSlice = createSlice({
       state.entities[entityKey].originalData = [];
       state.entities[entityKey].totalRows = 0;
     },
+    /** Tirtir DHAMMAAN entities — la wacayo marka logout/branch-switch dhaco si
+        xogta branch-kii hore ay ugu liqimsamin user-ka ama branch-ka cusub. */
+    clearAllData: (state) => {
+      state.entities = {};
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -171,7 +176,7 @@ const dataSlice = createSlice({
   },
 });
 
-export const { setSearchQuery, setCurrentPage, setItemsPerPage, clearEntityData } = dataSlice.actions;
+export const { setSearchQuery, setCurrentPage, setItemsPerPage, clearEntityData, clearAllData } = dataSlice.actions;
 
 /** Select full entity by key (accounts, subjects, ...). Uses stable default ref to avoid rerenders. */
 export const selectEntity = (entityKey) => (state) =>

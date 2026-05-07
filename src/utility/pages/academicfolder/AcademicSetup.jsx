@@ -1,11 +1,12 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Database, Plus, Users, Timer, PenTool, FolderPlus, ClipboardCheck, Hourglass } from 'lucide-react';
+import { Power } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
+import ActionButton from '../../../components/ui/ActionButton';
 import CrudModal from '../../../modals/CrudModal';
 import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
 import AssignClassExamBulkForm from '../../../modals/AssignClassExamBulkForm';
@@ -21,7 +22,7 @@ import {
   PrintExamScheduleModal,
 } from '../../../modals/ExamScheduleActionModals';
 import { crud, getSessionUBrIdNum, getSessionBrIdNum } from '../../../services/api';
-import { swalConfirmAction } from '../../../utils/swal';
+import { swalConfirmAction, swalError } from '../../../utils/swal';
 import BranchTransferTab from './BranchTransferTab';
 import AcademicTransferTab from './AcademicTransferTab';
 import ClassTransferTab from './ClassTransferTab';
@@ -41,20 +42,20 @@ import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
+import { resolveTabIcon, resolveButtonIcon } from '../../../utils/iconRegistry';
 import { loadData } from '../../../slices/dataSlice';
 import { setActiveTab } from '../../../slices/uiSlice';
 import { store } from '../../../store/store';
 
 const motionProps = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } };
-const iconMap = { Database, Plus, Users, Timer, PenTool, FolderPlus, ClipboardCheck, Hourglass };
 
 function mapTab(tab) {
   return {
     ...tab,
-    icon: typeof tab.icon === 'string' ? (iconMap[tab.icon] ?? Database) : tab.icon,
+    icon: resolveTabIcon(tab.icon),
     loadButtons: (tab.loadButtons || []).map((btn) => ({
       ...btn,
-      icon: typeof btn.icon === 'string' ? (iconMap[btn.icon] ?? Plus) : btn.icon,
+      icon: resolveButtonIcon(btn.icon),
     })),
   };
 }
@@ -92,6 +93,46 @@ export default function AccountsPage() {
   };
 
   const closeModal = () => setModal({ entityKey: null, editRow: null, context: {} });
+
+  const activateAcademicYear = useCallback(async (row) => {
+    await swalConfirmAction({
+      title: t('academicSetup.academicYearTab.confirmActivateTitle', { defaultValue: 'Activate this academic year?' }),
+      text: t('academicSetup.academicYearTab.confirmActivateText', { defaultValue: 'All other years will be marked Inactive.' }),
+      onConfirm: async () => {
+        try {
+          const res = await crud({
+            operation: 'activate',
+            fn: 'academic_year_sp',
+            params: {
+              a_y_id_sp: row.id ?? row.a_y_id ?? 0,
+              academic_name_sp: row.academic ?? row.academic_name ?? '',
+              started_sp: row.started ?? '',
+              ended_sp: row.ended ?? '',
+              u_br_id_sp: row.u_br_id ?? getSessionUBrIdNum() ?? 1,
+            },
+          });
+          dispatch(loadData('academicYeartab'));
+          return res;
+        } catch (e) {
+          swalError(e?.message);
+          throw e;
+        }
+      },
+    });
+  }, [dispatch, t]);
+
+  const academicYearRowActions = useCallback((row) => {
+    if (String(row?.state ?? '').toLowerCase() === 'active') return null;
+    return (
+      <ActionButton
+        variant="warning"
+        aria-label="Activate"
+        onClick={() => activateAcademicYear(row)}
+      >
+        <Power className="w-4 h-4" />
+      </ActionButton>
+    );
+  }, [activateAcademicYear]);
 
   const reloadEntity = (entityKey) => {
     const q = getQueryForModalKey(tabs, entityKey);
@@ -244,6 +285,7 @@ export default function AccountsPage() {
             hideEdit={cfg.hideEdit}
             hideAddNew={cfg.hideAddNew}
             hiddenColumns={cfg.hiddenColumns}
+            extraRowActions={cfg.entityKey === 'academicYeartab' ? academicYearRowActions : undefined}
             bulkForm={
               cfg.entityKey === 'SubjectClassSetup'
                 ? ({ context, onSuccess }) => (

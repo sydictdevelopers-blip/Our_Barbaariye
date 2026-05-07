@@ -53,6 +53,19 @@ export default function SubjectClassBulkForm({ context = {}, onSuccess }) {
       swal.swalError(t('subjectClassBulk.errFillRow'), '');
       return;
     }
+    // Numeric / range check on no_of_period — must be a positive integer.
+    // Backend stores as int and 0/negative periods produce broken schedules.
+    const badPeriods = valid.filter((r) => {
+      const n = Number(r.no_of_period);
+      return !Number.isFinite(n) || n <= 0 || !Number.isInteger(n);
+    });
+    if (badPeriods.length) {
+      swal.swalError(
+        t('subjectClassBulk.errPeriodInvalid', 'Tirada Kooraska waa inay tahay tiro saxan oo ka weyn 0'),
+        ''
+      );
+      return;
+    }
     setLoading(true);
     const u_br_id = getSessionUBrId();
     const clId = Number(context.cl_id) || 0;

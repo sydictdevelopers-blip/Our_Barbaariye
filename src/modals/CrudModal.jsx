@@ -45,6 +45,21 @@ function cacheKeyFor(optionsKey, extra) {
   return `${optionsKey}::${sig}`;
 }
 
+// Option keys that surface academic years — for these, the active row should
+// always render first in the dropdown. Defense-in-depth: backend SQL also
+// orders this way, but SP-driven keys (e.g. result_academic_options) need
+// the sort applied client-side.
+const ACADEMIC_YEAR_OPTION_KEYS = new Set(['academic_options', 'academicYeartab', 'result_academic_options']);
+
+function sortActiveFirstIfAcademic(optionsKey, items) {
+  if (!ACADEMIC_YEAR_OPTION_KEYS.has(optionsKey)) return items;
+  return [...items].sort((a, b) => {
+    const aActive = String(a.state ?? '').trim().toLowerCase() === 'active' ? 0 : 1;
+    const bActive = String(b.state ?? '').trim().toLowerCase() === 'active' ? 0 : 1;
+    return aActive - bActive;
+  });
+}
+
 async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra = {}) {
   const ck = cacheKeyFor(optionsKey, extra);
   const cacheEntry = selectCache[ck] ?? { items: [], cached: false };
@@ -57,11 +72,11 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
     const rows = res?.data || [];
     const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
     const { valueKey, labelKey } = detectKeys(cols, rows[0]);
-    const items = rows.map((r) => {
+    const items = sortActiveFirstIfAcademic(optionsKey, rows.map((r) => {
       const item = { value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') };
       if (r.state != null) item.state = String(r.state);
       return item;
-    });
+    }));
     cacheEntry.items = items;
     cacheEntry.cached = true;
     const opts = [...items];
@@ -70,7 +85,7 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
   }
 
   if (!searchLower) {
-    const opts = [...cacheEntry.items];
+    const opts = sortActiveFirstIfAcademic(optionsKey, [...cacheEntry.items]);
     if (cacheEntry.items.length >= 25) opts.push({ value: '__hint__', label: HINT_LABEL, isHint: true });
     return opts;
   }
@@ -86,11 +101,11 @@ async function loadOptionsForKey(optionsKey, search = '', useCache = true, extra
   const rows = res?.data || [];
   const cols = res?.columns || (rows[0] && Object.keys(rows[0]).map((key) => ({ key })));
   const { valueKey, labelKey } = detectKeys(cols, rows[0]);
-  const newItems = rows.map((r) => {
+  const newItems = sortActiveFirstIfAcademic(optionsKey, rows.map((r) => {
     const item = { value: r[valueKey], label: r[labelKey] ?? String(r[valueKey] ?? '') };
     if (r.state != null) item.state = String(r.state);
     return item;
-  });
+  }));
   if (newItems.length > 0) {
     const existingIds = new Set(cacheEntry.items.map((x) => x.value));
     newItems.forEach((item) => {
@@ -207,10 +222,14 @@ export default function CrudModal({
     if (!msg) return msg;
     const m = String(msg);
     const idx = m.lastIndexOf(' required');
-    if (idx === -1) return m;
-    const labelPart = m.slice(0, idx);
-    const requiredWord = t('common.required', { defaultValue: 'required' });
-    return `${tr(labelPart)} ${requiredWord}`;
+    if (idx !== -1) {
+      const labelPart = m.slice(0, idx);
+      const requiredWord = t('common.required', { defaultValue: 'required' });
+      return `${tr(labelPart)} ${requiredWord}`;
+    }
+    // Pass through tr() so extraValidate-returned i18n keys (e.g.
+    // "academicSetup.academicYearTab.errEndAfterStart") get translated too.
+    return tr(m);
   };
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
@@ -435,7 +454,7 @@ export default function CrudModal({
             onChange={handleChange}
             options={useAsync ? [] : opts}
             loadOptions={useAsync ? createLoadOptions(key, () => extraParamsFor(f, form)) : undefined}
-            placeholder={depsUnmet ? t('crudModal.selectFirst', { defaultValue: 'Marka hore dooro kala xiriirka...' }) : (fPh ?? t('crudModal.search', { defaultValue: 'Raadi...' }))}
+            placeholder={fPh ?? t('crudModal.search', { defaultValue: 'Raadi...' })}
             isDisabled={depsUnmet}
             noOptionsMessage={noResultsMsg}
             onCreate={handleCreate}

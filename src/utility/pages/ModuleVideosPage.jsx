@@ -15,6 +15,7 @@ import {
   resolveMediaUrl,
 } from '../../services/api';
 import { swalError, swalSuccess, swalConfirm } from '../../utils/swal';
+import { confirmDelete } from '../../utils/confirmDelete';
 import { defaultMenuItems } from '../../config/menuConfig';
 import { LANGUAGES } from '../../i18n/i18n';
 
@@ -137,6 +138,15 @@ export default function ModuleVideosPage() {
 
   const handleSave = async () => {
     if (!form.module_key) { swalError(t('help.moduleRequired', { defaultValue: 'Fadlan dooro module' })); return; }
+    if (!String(form.title ?? '').trim()) {
+      swalError(t('help.titleRequired', { defaultValue: 'Title-ka waa lagama maarmaan' }));
+      return;
+    }
+    const url = String(form.video_url ?? '').trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      swalError(t('help.urlInvalid', { defaultValue: 'Video URL waa inuu ku bilaabmaa http:// ama https://' }));
+      return;
+    }
     setSaving(true);
     try {
       await saveModuleHelp({ ...form, oper: 'insert' });
@@ -151,7 +161,7 @@ export default function ModuleVideosPage() {
   };
 
   const handleDelete = async (row) => {
-    const ok = await swalConfirm();
+    const ok = await confirmDelete({ id: row.mh_id, label: 'Module Video', recordPreview: row.title || row.module_key });
     if (!ok) return;
     try {
       await deleteModuleHelp(row.mh_id);

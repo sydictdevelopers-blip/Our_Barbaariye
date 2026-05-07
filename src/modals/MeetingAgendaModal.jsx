@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
+import DateInput from '../components/ui/DateInput';
 import Button from '../components/ui/Button';
 import { crud, getSessionUBrIdNum } from '../services/api';
 import { swalError } from '../utils/swal';
@@ -224,9 +225,8 @@ export default function MeetingAgendaModal({ isOpen, onClose, editRow, onSuccess
           error={errors.meet_date}
           htmlFor="ma-meet-date"
         >
-          <input
+          <DateInput
             id="ma-meet-date"
-            type="date"
             name="meet_date"
             value={form.meet_date}
             onChange={handleChange}

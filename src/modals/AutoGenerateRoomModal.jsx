@@ -123,7 +123,7 @@ export default function AutoGenerateRoomModal({ isOpen, onClose, onSuccess }) {
 
   const roomLoader  = useMemo(() => makeOptionLoader('room_options'), []);
   const classLoader = useMemo(() => makeOptionLoader('class_simple_options'), []);
-  const acadLoader  = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader  = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader  = useMemo(
     () => makeOptionLoader('exam_by_academic_options', () => ({ ...(ay.id && { academicYearId: ay.id }) })),
     [ay.id]
@@ -218,8 +218,8 @@ export default function AutoGenerateRoomModal({ isOpen, onClose, onSuccess }) {
 
       {step === 1 && (
         <div className="px-2 pb-2">
-          <p className="text-[12.5px] text-slate-500 mb-4 leading-relaxed">
-            Pick the assignment <strong className="text-slate-700">type</strong>. The form will
+          <p className="text-[12.5px] text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+            Pick the assignment <strong className="text-slate-700 dark:text-slate-200">type</strong>. The form will
             auto-load the fields it needs for that type.
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -231,7 +231,7 @@ export default function AutoGenerateRoomModal({ isOpen, onClose, onSuccess }) {
                 className={`px-3 py-3 rounded-xl border text-[12px] font-semibold uppercase tracking-wide transition ${
                   type === o.value
                     ? 'bg-[#0B3C5D] text-white border-[#0B3C5D] shadow-md'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-[#0B3C5D]/40 hover:bg-slate-50'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-[#0B3C5D]/40 hover:bg-slate-50 dark:hover:bg-slate-700'
                 }`}
               >
                 {o.label}

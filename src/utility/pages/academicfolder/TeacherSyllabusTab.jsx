@@ -7,6 +7,7 @@ import Modal from '../../../components/ui/Modal';
 import DataTableCard from '../../../components/DataTableCard';
 import { makeOptionLoader, fetchDataPaginated, crud } from '../../../services/api';
 import * as swal from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
 const AUTH_STORAGE_KEY = 'brabaariye_user';
 const getSessionUBrId = () => {
@@ -52,8 +53,9 @@ export default function TeacherSyllabusTab() {
 
   /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
-  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const teacherLoader  = useMemo(() => makeOptionLoader('employee_options'), []);
+  const chapterLoader  = useMemo(() => makeOptionLoader('chapter_options'), []);
   const filterSubjectLoader = useMemo(
     () => makeOptionLoader('subject_class_options', () => ({ cl_id: filterClass, a_y_id: filterAcademic }), { labelKey: 'subject_name' }),
     [filterClass, filterAcademic]
@@ -76,7 +78,7 @@ export default function TeacherSyllabusTab() {
     cl_id: '',      cl_label: '',
     a_y_id: '',     a_y_label: '',
     sub_cl_id: '',  sub_cl_label: '',
-    chapter: '',
+    chapter: '',    chapter_label: '',
     topic: '',
     page: '',
     description: '',
@@ -130,7 +132,8 @@ export default function TeacherSyllabusTab() {
       cl_id: filterClass || '',      cl_label: filterClassLabel || '',
       a_y_id: filterAcademic || '',  a_y_label: filterAcademicLabel || '',
       sub_cl_id: row.sub_cl_id != null ? String(row.sub_cl_id) : '', sub_cl_label: row.subject ?? '',
-      chapter: row.chapter != null ? String(row.chapter) : '',
+      chapter: row.chap_id != null ? String(row.chap_id) : '',
+      chapter_label: row.chapter ?? '',
       topic: row.topic ?? '',
       page: row.page ?? '',
       description: row.description ?? '',
@@ -155,6 +158,7 @@ export default function TeacherSyllabusTab() {
           a_y_id: full.a_y_id != null ? String(full.a_y_id) : f.a_y_id,
           sub_cl_id: full.sub_cl_id != null ? String(full.sub_cl_id) : f.sub_cl_id,
           chapter: full.chap_id != null ? String(full.chap_id) : f.chapter,
+          chapter_label: full.chapter ?? full.chapter_name ?? f.chapter_label,
           topic: full.topic ?? f.topic,
           page: full.page ?? f.page,
           description: full.description ?? f.description,
@@ -167,12 +171,7 @@ export default function TeacherSyllabusTab() {
 
   const handleDeleteRow = async (row) => {
     if (!row?.id) return;
-    const ok = await swal.swalConfirm({
-      title: t('teacherSyllabus.confirmDeleteTitle'),
-      text: t('teacherSyllabus.confirmDeleteText'),
-      confirmText: t('teacherSyllabus.confirmYes'),
-      cancelText: t('teacherSyllabus.confirmNo'),
-    });
+    const ok = await confirmDelete({ id: row.id, label: t('tabs.teacherSyllabus'), recordPreview: row.subject_name || row.lesson_title });
     if (!ok) return;
     try {
       const res = await crud({
@@ -218,16 +217,16 @@ export default function TeacherSyllabusTab() {
         <button
           type="button"
           onClick={() => openEditModal(row)}
-          title="Edit"
-          className="p-1.5 rounded-md text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          title={t('common.edit')}
+          className="p-1.5 rounded-md text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
         >
           <Pencil className="w-4 h-4" />
         </button>
         <button
           type="button"
           onClick={() => handleDeleteRow(row)}
-          title="Delete"
-          className="p-1.5 rounded-md text-rose-700 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+          title={t('common.delete')}
+          className="p-1.5 rounded-md text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 focus:outline-none focus:ring-2 focus:ring-rose-500/40"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -245,7 +244,7 @@ export default function TeacherSyllabusTab() {
       cl_id: filterClass || '', cl_label: filterClassLabel || '',
       a_y_id: filterAcademic || '', a_y_label: filterAcademicLabel || '',
       sub_cl_id: '', sub_cl_label: '',
-      chapter: '',
+      chapter: '', chapter_label: '',
       topic: '',
       page: '',
       description: '',
@@ -306,14 +305,6 @@ export default function TeacherSyllabusTab() {
       {/* ── Filter card: header + grouped selects + actions row ── */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('teacherSyllabus.filtersTitle', { defaultValue: 'Filters' })}
-          </span>
-        </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FieldGroup icon={GraduationCap} label={t('select.class', { defaultValue: 'Class' })}>
             <Select2
@@ -416,7 +407,7 @@ export default function TeacherSyllabusTab() {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3.5">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               {t('teacherSyllabus.fields.teacher')} <span className="text-rose-500">*</span>
             </label>
             <Select2
@@ -429,7 +420,7 @@ export default function TeacherSyllabusTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               {t('teacherSyllabus.fields.class')} <span className="text-rose-500">*</span>
             </label>
             <Select2
@@ -442,7 +433,7 @@ export default function TeacherSyllabusTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               {t('teacherSyllabus.fields.academicYear')} <span className="text-rose-500">*</span>
             </label>
             <Select2
@@ -455,7 +446,7 @@ export default function TeacherSyllabusTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               {t('teacherSyllabus.fields.subject')} <span className="text-rose-500">*</span>
             </label>
             <Select2
@@ -470,44 +461,44 @@ export default function TeacherSyllabusTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.chapter')}</label>
-            <input
-              type="number"
-              min="0"
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('teacherSyllabus.fields.chapter')}</label>
+            <Select2
+              name="chapter"
               value={form.chapter}
-              onChange={(e) => setField('chapter', e.target.value)}
+              selectedLabel={form.chapter_label}
+              onChange={setSelectField('chapter', 'chapter_label')}
+              loadOptions={chapterLoader}
               placeholder={t('teacherSyllabus.placeholders.chapter')}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.topic')}</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('teacherSyllabus.fields.topic')}</label>
             <input
               type="text"
               value={form.topic}
               onChange={(e) => setField('topic', e.target.value)}
               placeholder={t('teacherSyllabus.placeholders.topic')}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.page')}</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('teacherSyllabus.fields.page')}</label>
             <input
               type="text"
               value={form.page}
               onChange={(e) => setField('page', e.target.value)}
               placeholder={t('teacherSyllabus.placeholders.page')}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">{t('teacherSyllabus.fields.description')}</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('teacherSyllabus.fields.description')}</label>
             <textarea
               rows={3}
               value={form.description}
               onChange={(e) => setField('description', e.target.value)}
               placeholder={t('teacherSyllabus.placeholders.description')}
-              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
             />
           </div>
         </div>

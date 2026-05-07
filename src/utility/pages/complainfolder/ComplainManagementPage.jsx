@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Timer, Database, Plus, Eye, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Timer, Eye, Undo2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { resolveTabIcon, resolveButtonIcon } from '../../../utils/iconRegistry';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import ActionButton from '../../../components/ui/ActionButton';
@@ -27,16 +28,14 @@ const motionProps = {
   transition: { duration: 0.2 },
 };
 
-const iconMap = { Users, Timer, Database, Plus };
-
 function mapTab(tab, t) {
   return {
     ...tab,
-    icon: typeof tab.icon === 'string' ? (iconMap[tab.icon] ?? Users) : tab.icon,
+    icon: resolveTabIcon(tab.icon),
     label: tab.labelKey ? t(tab.labelKey, tab.label) : tab.label,
     loadButtons: (tab.loadButtons || []).map((btn) => ({
       ...btn,
-      icon: typeof btn.icon === 'string' ? (iconMap[btn.icon] ?? Plus) : btn.icon,
+      icon: resolveButtonIcon(btn.icon),
     })),
   };
 }

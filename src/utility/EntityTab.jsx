@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImper
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
+import { confirmDelete } from '../utils/confirmDelete';
 import { Plus, Pencil, Trash2, Save, Check, X, Filter } from 'lucide-react';
 import Button from '../components/ui/Button';
 import ActionButton from '../components/ui/ActionButton';
@@ -30,22 +31,24 @@ const toLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1, -1);
 // Halkaan ka qeexo query-ka academic year – automatic loo isticmaalo haddii tab kuu pass gudbin
 const DEFAULT_ACADEMIC_YEAR_OPTIONS_QUERY = 'academicYeartab';
 
-// Persist filter selections per-tab in sessionStorage so they survive the tab
-// remount caused by AcademicSetup's `<motion.div key={activeTab}>`. Same API as
-// useState, just hydrates from / writes to a string key.
+// Per-tab filter selections need to survive the tab remount caused by
+// AcademicSetup's `<motion.div key={activeTab}>` — but should reset on a full
+// page refresh. We keep them in a module-level Map: tab-switch reads back the
+// last value from memory, but a refresh wipes the JS module and leaves the Map
+// empty so the user starts fresh. (sessionStorage would survive refresh too,
+// which is the bug we're avoiding.)
+const FILTER_MEM = new Map();
+
+/** Wipe all persisted filter selections (called on logout to avoid leaking the
+ *  previous user's class/academic/etc. picks into the next session). */
+export function clearPersistedFilters() {
+  FILTER_MEM.clear();
+}
+
 function usePersistedState(key, defaultValue) {
-  const [val, setVal] = useState(() => {
-    if (typeof window === 'undefined') return defaultValue;
-    try {
-      const stored = window.sessionStorage.getItem(key);
-      return stored != null ? JSON.parse(stored) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  });
+  const [val, setVal] = useState(() => (FILTER_MEM.has(key) ? FILTER_MEM.get(key) : defaultValue));
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try { window.sessionStorage.setItem(key, JSON.stringify(val)); } catch { /* quota or disabled */ }
+    FILTER_MEM.set(key, val);
   }, [key, val]);
   return [val, setVal];
 }
@@ -248,7 +251,7 @@ function EntityTab({
   // Loaders that depend on other selects (batch→class, subject→class+academic, exam→class+academic)
   // read live state via getExtra so chained dropdowns refresh on selection change.
   const acadLoader = useMemo(
-    () => makeOptionLoader(optionsQuery, () => ({ cl_id: selectedClassId })),
+    () => makeOptionLoader(optionsQuery, () => ({ cl_id: selectedClassId }), { sortByActiveState: true }),
     [optionsQuery, selectedClassId]
   );
   const classLoader = useMemo(() => makeOptionLoader(clsOptionsQuery), [clsOptionsQuery]);
@@ -489,7 +492,7 @@ function EntityTab({
             variant="delete"
             aria-label="Delete"
             onClick={async () => {
-              if (await swalConfirm()) doDelete(row);
+              if (await confirmDelete({ id: row.id, label })) doDelete(row);
             }}
           >
             <Trash2 className="w-4 h-4" />
@@ -497,7 +500,7 @@ function EntityTab({
         </div>
       );
     },
-    [isReadOnly, isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit]
+    [isReadOnly, isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit, label]
   );
 
   const headerActions = (
@@ -917,14 +920,6 @@ function EntityTab({
   const filterCard = hasFilterContent ? (
     <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden mb-3">
       <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-          <Filter className="w-3.5 h-3.5" />
-        </span>
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {t('entity.filtersTitle', { defaultValue: 'Filters' })}
-        </span>
-      </div>
       <div className="p-3 flex flex-wrap items-end gap-2">
         {headerActions}
       </div>

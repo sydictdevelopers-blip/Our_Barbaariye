@@ -42,7 +42,7 @@ export default function ClassTransferTab() {
   /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
   const classLoader    = useMemo(() => makeOptionLoader('class_options'), []);
   const batchLoader    = useMemo(() => makeOptionLoader('batch_options'), []);
-  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
 
   /* ── Top toolbar 3 selects ── */
   const [filterClass,    filterClassLabel,    setFilterClass]    = useSelect();
@@ -132,14 +132,6 @@ export default function ClassTransferTab() {
       {/* ── Filter card: header + grouped selects + actions row ── */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('classTransfer.filtersTitle', { defaultValue: 'Filters' })}
-          </span>
-        </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FieldGroup icon={GraduationCap} label={t('select.class', { defaultValue: 'Class' })}>
             <Select2

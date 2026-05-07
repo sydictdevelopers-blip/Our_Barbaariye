@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import Select2 from '../components/ui/Select2';
 import Button from '../components/ui/Button';
+import DateInput from '../components/ui/DateInput';
 import {
   crud,
   makeOptionLoader,
@@ -165,6 +166,17 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
       swalError('Wax la kaydiyo lama helin', 'Ugu yaraan hal row buuxiyo.');
       return;
     }
+    // Logical time-order check — start_time must come BEFORE end_time on the
+    // same day. PG would still accept "16:00 → 14:00" but it'd produce a
+    // schedule no human can sit, so we block it client-side.
+    const badTimes = valid.filter((r) => String(r.start_time) >= String(r.end_time));
+    if (badTimes.length) {
+      swalError(
+        'Wakhtiga waa khalad',
+        `Row-yada ${badTimes.length}: start time waa inay ka horraysaa end time. Hubi rows-ka.`
+      );
+      return;
+    }
     setSaving(true);
     const u_br_id = getSessionUBrIdNum();
     let ok = 0;
@@ -311,8 +323,7 @@ export default function ExamScheduleBulkForm({ context = {}, onSuccess }) {
                   />
                 </td>
                 <td className="p-2 align-top">
-                  <input
-                    type="date"
+                  <DateInput
                     value={row.exam_date}
                     onChange={(e) => setField(i, 'exam_date', e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-[#0B3C5D]"

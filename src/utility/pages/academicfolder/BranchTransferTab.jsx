@@ -46,7 +46,7 @@ export default function BranchTransferTab() {
 
   /* ── Lazy loaders (server-side: 25 default + search) ── */
   const classLoader   = useMemo(() => makeOptionLoader('class_options'), []);
-  const batchLoader   = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const batchLoader   = useMemo(() => makeOptionLoader('batch_options'), []);
   const branchLoader  = useMemo(() => makeOptionLoader('branch_options'), []);
   const studentLoader = useMemo(() => makeOptionLoader('student_options'), []);
 
@@ -97,16 +97,6 @@ export default function BranchTransferTab() {
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         {/* Subtle accent bar */}
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-
-        {/* Filters header */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('branchTransfer.filtersTitle', { defaultValue: 'Filters' })}
-          </span>
-        </div>
 
         {/* Selects grid — labelled fields, responsive 1→4 columns */}
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -240,7 +230,7 @@ export default function BranchTransferTab() {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.student')}</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t('select.student')}</label>
             <Select2
               name="tStudent"
               value={tStudentId}
@@ -251,7 +241,7 @@ export default function BranchTransferTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.branch')}</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t('select.branch')}</label>
             <Select2
               name="tBranch"
               value={tBranchId}
@@ -262,7 +252,7 @@ export default function BranchTransferTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">{t('select.class')}</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">{t('select.class')}</label>
             <Select2
               name="tClass"
               value={tClassId}

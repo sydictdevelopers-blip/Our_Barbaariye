@@ -1,11 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, Database } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
+import ActionButton from '../../../components/ui/ActionButton';
+import DataTableCard from '../../../components/DataTableCard';
 import { fetchSelectOptions } from '../../../services/api';
 import { swalSuccess, swalError, swalConfirm } from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
@@ -39,6 +42,10 @@ export default function ExamInstructionTab() {
   const [bodies, setBodies] = useState(emptyBodies);
   const [editBody, setEditBody] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -122,7 +129,7 @@ export default function ExamInstructionTab() {
   };
 
   const handleDelete = async (row) => {
-    const ok = await swalConfirm();
+    const ok = await confirmDelete({ id: row.ex_in_id, label: 'Exam Instruction', recordPreview: row.title || row.instruction });
     if (!ok) return;
     try {
       await postBulk([{
@@ -135,6 +142,41 @@ export default function ExamInstructionTab() {
       swalError(t('examInstruction.msg.errTitle'), e?.message || t('examInstruction.msg.deleteFailed'));
     }
   };
+
+  const COLUMNS = useMemo(() => ([
+    { key: 'ex_in_id', label: t('examInstruction.table.id') },
+    { key: 'body',     label: t('examInstruction.table.instruction') },
+    { key: 'reg_date', label: t('examInstruction.table.date') },
+    { key: 'username', label: t('examInstruction.table.username') },
+  ]), [t]);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      Object.values(r).some((v) => String(v ?? '').toLowerCase().includes(q))
+    );
+  }, [rows, search]);
+  const total = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
+
+  useEffect(() => { setPage(1); }, [rows, pageSize]);
+
+  const renderActions = useCallback((row) => (
+    <div className="inline-flex gap-2">
+      <ActionButton variant="edit" aria-label={t('examInstruction.table.edit')} onClick={() => openEdit(row)}>
+        <Pencil className="w-4 h-4" />
+      </ActionButton>
+      <ActionButton variant="delete" aria-label={t('examInstruction.table.delete')} onClick={() => handleDelete(row)}>
+        <Trash2 className="w-4 h-4" />
+      </ActionButton>
+    </div>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [t]);
 
   return (
     <div className="space-y-4 px-2 py-3">
@@ -156,50 +198,25 @@ export default function ExamInstructionTab() {
       </div>
 
       {showResults && (
-      <div className="border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden">
-        <div className="flex items-center bg-[#0B3C5D] text-white px-4 py-2">
-          <span className="font-semibold flex-1">{t('examInstruction.title')} ({rows.length})</span>
-        </div>
-        {loading ? (
-          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.loading')}</div>
-        ) : rows.length === 0 ? (
-          <div className="p-4 text-center text-slate-500 dark:text-slate-400">{t('examInstruction.empty')}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-slate-700">
-                <tr>
-                  <th className="text-start px-4 py-2 w-16">{t('examInstruction.table.id')}</th>
-                  <th className="text-start px-4 py-2">{t('examInstruction.table.instruction')}</th>
-                  <th className="text-start px-4 py-2 w-32">{t('examInstruction.table.date')}</th>
-                  <th className="text-start px-4 py-2 w-32">{t('examInstruction.table.username')}</th>
-                  <th className="text-center px-4 py-2 w-32">{t('examInstruction.table.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {rows.map((r) => (
-                  <tr key={r.ex_in_id}>
-                    <td className="px-4 py-2">{r.ex_in_id}</td>
-                    <td className="px-4 py-2">{r.body}</td>
-                    <td className="px-4 py-2">{r.reg_date}</td>
-                    <td className="px-4 py-2">{r.username || ''}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex justify-center gap-2">
-                        <button type="button" onClick={() => openEdit(r)} className="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label={t('examInstruction.table.edit')}>
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button type="button" onClick={() => handleDelete(r)} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded flex items-center justify-center" aria-label={t('examInstruction.table.delete')}>
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <DataTableCard
+          columns={COLUMNS}
+          data={pagedRows}
+          isLoading={loading}
+          total={total}
+          currentPage={page}
+          totalPages={totalPages}
+          itemsPerPage={pageSize}
+          onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onPageClick={(p) => setPage(p)}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          searchValue={search}
+          onSearchChange={(e) => { setSearch(e?.target?.value ?? ''); setPage(1); }}
+          emptyTitle={t('examInstruction.title')}
+          emptyDescription={t('examInstruction.empty')}
+          renderActions={renderActions}
+          rowKey={(row) => row.ex_in_id}
+        />
       )}
 
       <Modal

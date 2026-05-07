@@ -24,20 +24,33 @@ import { tDb } from '../i18n/i18n';
 /* ─── Cell classifiers ─── */
 const CURRENCY_KEYS = ['balance', 'amount', 'salary', 'fee', 'price'];
 const STATUS_KEYS = ['state', 'status', 'is_active', 'active', 'lock_user', 'locked'];
-const DATE_KEY_RE = /date|_at$|reg_date|created|updated|dob|birth/i;
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T|\s)/;
+// Match ANY value that begins with YYYY-MM-DD (with or without time/timezone),
+// so we don't have to maintain a regex of column names. The backend now passes
+// dates through as raw strings, so this catches them all.
+const DATE_VALUE_RE = /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
 
 const isCurrencyCol = (key) => CURRENCY_KEYS.some((k) => key === k || key?.toLowerCase().includes(k));
 const isStatusCol = (key) => STATUS_KEYS.some((k) => key?.toLowerCase() === k);
-const isDateCol = (key) => DATE_KEY_RE.test(String(key || ''));
+const isDateValue = (value) => typeof value === 'string' && DATE_VALUE_RE.test(value.trim());
 
+/**
+ * Format a YYYY-MM-DD[ HH:MM:SS] string by splitting components manually —
+ * NEVER `new Date(s)`, which would reinterpret the value through the user's
+ * timezone and shift it. The string crossing the wire is exactly what's in
+ * the DB, so we display it byte-for-byte equivalent (just prettier).
+ */
 const formatDate = (value) => {
   if (value == null || value === '') return '—';
-  const s = String(value);
-  if (!ISO_DATE_RE.test(s) && !/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+  const s = String(value).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return s;
+  const [, y, mo, d, hh, mm] = m;
+  // Construct Date with local-component overload so the calendar date is exact
+  // regardless of the user's timezone (no UTC-string parsing path).
+  const date = new Date(Number(y), Number(mo) - 1, Number(d));
+  if (isNaN(date.getTime())) return s;
+  const datePart = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+  return hh ? `${datePart} ${hh}:${mm}` : datePart;
 };
 
 const StatusBadge = ({ value }) => {
@@ -114,7 +127,9 @@ const formatCell = (col, row) => {
     return <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">${display}</span>;
   }
   if (isStatusCol(col.key)) return <StatusBadge value={value} />;
-  if (isDateCol(col.key)) return <span className="tabular-nums text-slate-600 dark:text-slate-300">{formatDate(value)}</span>;
+  // Date detection by value, not by column name — works for `started`, `ended`,
+  // `meet_date`, etc. without per-column registration.
+  if (isDateValue(value)) return <span className="tabular-nums text-slate-600 dark:text-slate-300">{formatDate(value)}</span>;
   if (value == null || value === '') return <span className="text-slate-300 dark:text-slate-600">—</span>;
   // tDb passes user-entered strings (names, etc.) through unchanged and only
   // translates known fixed-vocabulary values like 'By Name' / 'By Serial'.
@@ -361,7 +376,7 @@ function DataTableCard({
                           <th
                             key={header.id}
                             className={`
-                              px-3 py-3 font-semibold text-[0.72rem] uppercase tracking-[0.08em]
+                              px-3 py-3 font-semibold text-[0.8rem] uppercase tracking-[0.08em]
                               text-white/95 align-middle break-words
                               bg-gradient-to-b from-[#0B3C5D] to-[#072b44]
                               border-e border-white/10 last:border-e-0
@@ -452,7 +467,7 @@ function DataTableCard({
                               <td
                                 key={cell.id}
                                 className={`
-                                  px-3 py-1.5 align-middle text-[0.875rem] break-words
+                                  px-3 py-2 align-middle text-[0.95rem] break-words
                                   border-e border-slate-100 dark:border-slate-700/60 last:border-e-0
                                   ${align === 'center' ? 'text-center' : 'text-start'}
                                   ${isFirst ? 'sticky start-0 z-[1] font-semibold text-[#0B3C5D] dark:text-teal-300 tabular-nums' : 'font-normal'}

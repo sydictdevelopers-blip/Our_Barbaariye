@@ -16,7 +16,7 @@ import { swalError, swalSuccess } from '../../../utils/swal';
 
 const FAILURE_PATTERN = /lock|locked|not\s+registered|not\s+found|denied|forbidden|userlock|notreg|invalid/i;
 
-const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
+const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1.5';
 const INPUT_CLS = 'w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3d5e]/30 focus:border-[#0f3d5e] text-sm';
 const SELECT_CLS = `${INPUT_CLS} pr-7`;
 
@@ -260,11 +260,6 @@ export default function StudentPerformanceEditTab() {
     <div className="space-y-4">
       {/* ── Filters ── */}
       <div className="bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900/40 border-b border-slate-200/70 dark:border-slate-700/70">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('studentPerformanceEdit.filtersTitle')}
-          </h3>
-        </div>
         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3.5 items-end">
           <div>
             <label htmlFor="spe-filter-class" className={LABEL_CLS}>{t('studentPerformanceEdit.filters.class')}</label>

@@ -67,6 +67,20 @@ export default function ModuleHelpModal({ isOpen, onClose, moduleKey, moduleLabe
   }, [isOpen, load]);
 
   const handleSave = async () => {
+    // Title is the only required field — module_key + lang come from props,
+    // video_url and description are optional. Trim before checking so a row
+    // of spaces doesn't pass.
+    if (!String(form.title ?? '').trim()) {
+      swalError(t('moduleHelp.errTitleRequired', 'Title-ka waa lagama maarmaan'));
+      return;
+    }
+    // If the user pasted a video URL, validate it's a real URL — otherwise
+    // the embed render will silently fail at view time.
+    const url = String(form.video_url ?? '').trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      swalError(t('moduleHelp.errUrlInvalid', 'Video URL waa inuu ku bilaabmaa http:// ama https://'));
+      return;
+    }
     setSaving(true);
     try {
       await saveModuleHelp({

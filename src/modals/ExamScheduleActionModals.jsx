@@ -55,7 +55,7 @@ export function CopyExamFormModal({ isOpen, onClose, onSuccess, context }) {
     setDst({ id: '', label: '' });
   }, [isOpen, context]);
 
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
 
   const handleTransfer = async () => {
     if (!src.id) return swalError('Fadlan dooro Source Academic Year', '');
@@ -144,7 +144,7 @@ export function PrintExamScheduleModal({ isOpen, onClose, context }) {
     setData(null);
   }, [isOpen, context]);
 
-  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab'), []);
+  const acadLoader = useMemo(() => makeOptionLoader('academicYeartab', null, { sortByActiveState: true }), []);
   const examLoader = useMemo(
     () =>
       makeOptionLoader('exam_by_academic_options', () => ({

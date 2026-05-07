@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
+import DateInput from '../components/ui/DateInput';
 import Button from '../components/ui/Button';
 import Select2 from '../components/ui/Select2';
 import { fetchSelectOptions, makeOptionLoader } from '../services/api';
@@ -319,8 +320,7 @@ export default function StudentStateModal({ isOpen, onClose, onSuccess }) {
         </FieldWrap>
 
         <FieldWrap label={t('studentState.date')} error={errors.date}>
-          <input
-            type="date"
+          <DateInput
             name="date"
             value={form.date}
             onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}

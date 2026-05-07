@@ -9,6 +9,7 @@ import ActionButton from '../../../components/ui/ActionButton';
 import DataTableCard from '../../../components/DataTableCard';
 import { makeOptionLoader, fetchSelectOptions, runBulk } from '../../../services/api';
 import { swalSuccess, swalError, swalConfirm } from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
 const LANGUAGE_ID = 1;
 
@@ -428,7 +429,7 @@ export default function QuestionsTableTab() {
   };
 
   const handleDelete = async (row) => {
-    const ok = await swalConfirm();
+    const ok = await confirmDelete({ id: row.id, label: 'Question', recordPreview: row.question || row.q_text });
     if (!ok) return;
     const qbId = row.id;
     // question_bank_edit_sp 'delete' with empty state cascades: it removes all
@@ -455,14 +456,6 @@ export default function QuestionsTableTab() {
       {/* ── Filter card: header + grouped selects + actions row ── */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('questionsTable.filtersTitle')}
-          </span>
-        </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <FieldGroup icon={GraduationCap} label={t('questionsTable.ph.grade')}>
             <Select2 name="gradeSelect" value={grade.id} selectedLabel={grade.label} onChange={onSelChange(setGrade)} loadOptions={gradeLoader} placeholder={t('questionsTable.ph.grade')} isClearable={false} />
@@ -624,7 +617,6 @@ export default function QuestionsTableTab() {
         onClose={closeEditModal}
         title={t('questionsTable.editModal.title')}
         size="lg"
-        closeOnOverlay={!editSaving}
         footer={
           <>
             <Button size="sm" variant="secondary" onClick={closeEditModal} disabled={editSaving}>

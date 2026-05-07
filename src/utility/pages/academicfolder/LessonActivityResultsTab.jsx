@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Eye, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
+import DateInput from '../../../components/ui/DateInput';
 import EmptyState from '../../../components/ui/EmptyState';
 import DataTableCard from '../../../components/DataTableCard';
 import { crud, fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalConfirm, swalError, swalSuccess } from '../../../utils/swal';
+import { confirmDelete } from '../../../utils/confirmDelete';
 
 const EMPTY_FORM = { ac_t_id: '', ac_t_label: '', std_cl_id: '', std_cl_label: '', marks_obtained: '', state: 'Active' };
 
 const INPUT_CLS = 'w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
-const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
+const LABEL_CLS = 'block text-[11px] font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wide mb-1.5';
 
 export default function LessonActivityResultsTab() {
   const { t } = useTranslation();
@@ -34,7 +36,7 @@ export default function LessonActivityResultsTab() {
   const [filterDate,         setFilterDate]         = useState(new Date().toISOString().slice(0, 10));
 
   /* ── Lazy loaders (server-side: 25 default + search beyond) ── */
-  const academicLoader     = useMemo(() => makeOptionLoader('academic_options'), []);
+  const academicLoader     = useMemo(() => makeOptionLoader('academic_options', null, { sortByActiveState: true }), []);
   const classLoader        = useMemo(() => makeOptionLoader('class_options'), []);
   const batchLoader        = useMemo(() => makeOptionLoader('batch_options'), []);
   const activityTypeLoader = useMemo(() => makeOptionLoader('activity_type_options'), []);
@@ -154,7 +156,7 @@ export default function LessonActivityResultsTab() {
   /* ── Delete ── */
   const handleDelete = useCallback(async (row) => {
     if (!row.lar_id || row.lar_id === 0) { swalError(t('lessonActivityResults.errDeleteNoRow')); return; }
-    const ok = await swalConfirm({ title: t('lessonActivityResults.confirmDelete') });
+    const ok = await confirmDelete({ id: row.lar_id, label: 'Lesson Activity Result', recordPreview: row.student_name });
     if (!ok) return;
     try {
       await crud({
@@ -173,6 +175,15 @@ export default function LessonActivityResultsTab() {
   /* ── Save ── */
   const handleSave = async () => {
     if (!form.ac_t_id || !form.std_cl_id) { swalError(t('lessonActivityResults.errFieldsRequired')); return; }
+    // Marks must be a valid non-negative number. We don't cap the upper bound
+    // because the activity's max_marks varies per row — backend SP enforces it.
+    if (form.marks_obtained !== '' && form.marks_obtained != null) {
+      const n = Number(form.marks_obtained);
+      if (!Number.isFinite(n) || n < 0) {
+        swalError(t('lessonActivityResults.errMarksInvalid', 'Dhibcaha waa inay tahay tiro saxan oo aan ka yarayn 0'));
+        return;
+      }
+    }
     setSaving(true);
     try {
       const isEdit = editingId != null && editingId !== 0;
@@ -229,16 +240,13 @@ export default function LessonActivityResultsTab() {
     { label: t('lessonActivityResults.filters.subject'),      node: <Select2 key={`fs-${filterClass}-${filterAcademic}`} name="fs" value={filterSubject}  selectedLabel={filterSubjectLabel} onChange={(e) => { setFilterSubject(e.target.value); setFilterSubjectLabel(e.target.label || ''); }} loadOptions={subjectLoader} isDisabled={!filterClass || !filterAcademic} placeholder={filterClass && filterAcademic ? t('select.subject') : t('select.pickClassYearFirst')} /> },
     { label: t('lessonActivityResults.filters.activityType'), node: <Select2 name="ft" value={filterActivityType} selectedLabel={filterActivityTypeLabel} onChange={(e) => { setFilterActivityType(e.target.value); setFilterActivityTypeLabel(e.target.label || ''); }} loadOptions={activityTypeLoader} placeholder={t('select.type')} /> },
     { label: t('lessonActivityResults.filters.exam'),         node: <Select2 name="fe" value={filterExam}     selectedLabel={filterExamLabel}     onChange={(e) => { setFilterExam(e.target.value); setFilterExamLabel(e.target.label || ''); }} loadOptions={examLoader} placeholder={t('select.exam')} /> },
-    { label: t('lessonActivityResults.filters.date'),         node: <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full px-3 py-[7px] rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" /> },
+    { label: t('lessonActivityResults.filters.date'),         node: <DateInput value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="w-full px-3 py-[7px] rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500" /> },
   ];
 
   return (
     <div className="space-y-4">
       {/* ── Filters card ── */}
       <div className="bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900/40 border-b border-slate-200/70 dark:border-slate-700/70">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('lessonActivityResults.filtersTitle')}</h3>
-        </div>
         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3.5">
           {filterFields.map(({ label, node }) => (
             <div key={label}>

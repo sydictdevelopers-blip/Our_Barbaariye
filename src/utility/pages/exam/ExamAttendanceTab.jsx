@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Database, Plus, Trash2, Filter, CalendarDays, Building2, FileText, Sun, BookOpen, Calendar as CalendarIcon } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Select2 from '../../../components/ui/Select2';
+import DateInput from '../../../components/ui/DateInput';
 import DataTableCard from '../../../components/DataTableCard';
 import { fetchDataPaginated, makeOptionLoader } from '../../../services/api';
 import { swalError, swalConfirmAction } from '../../../utils/swal';
@@ -31,7 +32,7 @@ export default function ExamAttendenceTab() {
   const [attendDate, setAttendDate] = useState(today);
 
   /* ── lazy loaders ── */
-  const academicLoader = useMemo(() => makeOptionLoader('academic_options', null, { labelKey: 'academic_name' }), []);
+  const academicLoader = useMemo(() => makeOptionLoader('academic_options', null, { labelKey: 'academic_name', sortByActiveState: true }), []);
   const roomLoader = useMemo(() => makeOptionLoader('room_options', null, { labelKey: 'room_name' }), []);
   const examLoader = useMemo(() => makeOptionLoader('exam_options'), []);
   const shiftLoader = useMemo(() => makeOptionLoader('shift_options'), []);
@@ -139,14 +140,6 @@ export default function ExamAttendenceTab() {
       {/* ── Filter card: header + grouped selects + actions row ── */}
       <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-900/50 shadow-sm shadow-slate-200/40 dark:shadow-slate-900/30 overflow-hidden">
         <div className="h-[3px] bg-gradient-to-r from-[#0B3C5D] via-[#0f4a6f] to-[#0D9488]" />
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/40">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0B3C5D]/10 dark:bg-[#0B3C5D]/30 text-[#0B3C5D] dark:text-teal-300">
-            <Filter className="w-3.5 h-3.5" />
-          </span>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {t('examAttendence.filtersTitle', { defaultValue: 'Filters' })}
-          </span>
-        </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <label className={labelCls}><CalendarDays className={labelIconCls} /><span>{t('select.academicYear')}</span></label>
@@ -170,8 +163,7 @@ export default function ExamAttendenceTab() {
           </div>
           <div>
             <label className={labelCls}><CalendarIcon className={labelIconCls} /><span>{t('examAttendence.fields.date', 'Date')}</span></label>
-            <input
-              type="date"
+            <DateInput
               value={attendDate}
               onChange={(e) => setAttendDate(e.target.value)}
               className="w-full h-[42px] px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f3d5e]/20 focus:border-[#0f3d5e]"

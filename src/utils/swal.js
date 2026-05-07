@@ -97,7 +97,102 @@ const MESSAGE_MAP = [
   { re: /^\s*tani\s+waxay\s+ansixisaa\s+dhammaan\s+saxnaaynta\s+sugaya\s+ee\s+fasalka\b.*$/i, key: 'entity.confirmApproveByClass' },
   { re: /^\s*tani\s+waxay\s+ansixisaa\s+(?:DHAMMAAN|dhammaan)\s+saxnaaynta\s+sugaya\s+ee\s+fasalada\b.*$/i, key: 'entity.confirmApproveAll' },
   { re: /^\s*tani\s+waxay\s+tirtirtaa\s+(?:DHAMMAAN|dhammaan)\s+saxnaaynta\s+sugaya\b.*$/i, key: 'entity.confirmCancelAll' },
+
+  // ─── PostgreSQL / DB error translations (system-wide) ─────────────────
+  // Order matters: more specific patterns first so they win over generic ones.
+
+  // INSERT/UPDATE referencing a non-existent parent row (e.g. user submitted
+  // l_ty_id=0 because they didn't pick a Level Type, or chose a value that no
+  // longer exists). PG emits: "insert or update on table ... violates foreign
+  // key constraint ...". This is a DIFFERENT failure mode from a DELETE that
+  // is blocked by children — the message must reflect that.
+  {
+    re: /insert\s+or\s+update[\s\S]*?violates\s+foreign\s+key/i,
+    key: 'dbErrors.fkInvalidReference',
+  },
+  // DELETE/UPDATE blocked by referencing rows — names the referencing table.
+  // The `update or delete` / `still referenced` prefix distinguishes this from
+  // the insert/update case above. Some SPs prepend "0Update or 11Delete" — the
+  // initial `\d*` allows that.
+  {
+    re: /(?:\d*\s*update\s+or\s+\d*\s*delete|still\s+referenced)[\s\S]*?violates\s+(?:restrict\s+setting\s+of\s+)?(?:foreign\s*key|no\s+action)[\s\S]*?on\s+table\s+["']([^"']+)["']/i,
+    key: 'dbErrors.fkViolationNamed',
+    transform: (m) => ({ table: humanizeName(m[1]) }),
+  },
+  // Postgres v2 phrasing: "still referenced from table \"Y\"" (delete-blocked)
+  {
+    re: /still\s+referenced\s+from\s+table\s+["']([^"']+)["']/i,
+    key: 'dbErrors.fkViolationNamed',
+    transform: (m) => ({ table: humanizeName(m[1]) }),
+  },
+  // Generic FK fallback for delete-blocked cases that don't match the patterns
+  // above. Insert/update cases were already caught at the top.
+  {
+    re: /(?:\d*\s*update\s+or\s+\d*\s*delete)[\s\S]*?violates\s+(?:restrict|foreign\s*key|no\s+action)|still\s+referenced\s+from\s+table/i,
+    key: 'dbErrors.fkViolation',
+  },
+  // Unique constraint
+  {
+    re: /duplicate\s+key\s+value|violates\s+unique\s+constraint/i,
+    key: 'dbErrors.uniqueViolation',
+  },
+  // NOT NULL
+  {
+    re: /null\s+value\s+in\s+column\s+["']?([a-zA-Z0-9_]+)["']?\s+(?:of\s+relation\s+["']?[a-zA-Z0-9_]+["']?\s+)?violates\s+not[-\s]?null/i,
+    key: 'dbErrors.notNull',
+    transform: (m) => ({ column: humanizeName(m[1]) }),
+  },
+  // CHECK constraint
+  {
+    re: /violates\s+check\s+constraint/i,
+    key: 'dbErrors.checkViolation',
+  },
+  // Invalid type / syntax — e.g. "invalid input syntax for type integer"
+  {
+    re: /invalid\s+input\s+(?:syntax|value)\s+for\s+(?:type\s+)?(\w+)/i,
+    key: 'dbErrors.invalidInput',
+    transform: (m) => ({ type: m[1] }),
+  },
+  // Value too long for varchar(N)
+  {
+    re: /value\s+too\s+long\s+for\s+type\s+\w+\s*\(\s*(\d+)\s*\)/i,
+    key: 'dbErrors.valueTooLong',
+    transform: (m) => ({ max: m[1] }),
+  },
+  // Permission denied
+  {
+    re: /permission\s+denied/i,
+    key: 'dbErrors.permissionDenied',
+  },
+  // Connection / network
+  {
+    re: /(?:connection\s+(?:refused|reset|terminated)|could\s+not\s+connect|econnrefused|enotfound|etimedout|network\s+error|fetch\s+failed)/i,
+    key: 'dbErrors.connectionFailed',
+  },
+  // Deadlock / serialization
+  {
+    re: /deadlock\s+detected|could\s+not\s+serialize\s+access/i,
+    key: 'dbErrors.deadlock',
+  },
+  // Generic server-side wrap that the backend prepends
+  {
+    re: /^\s*khalad\s+server\s*[:\-]?\s*(.*)$/i,
+    key: 'dbErrors.serverError',
+  },
 ];
+
+/** Convert snake_case / camelCase identifier to a human label.
+    "class_formaster" → "Class Formaster". */
+function humanizeName(raw) {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
 
 /**
  * Replace any known DB value (Active, Inactive, Male, Refugee, etc.) embedded
@@ -140,6 +235,10 @@ function translateMessage(msg) {
       if (entry.countGroup) {
         return t(entry.key, { count: Number(m[entry.countGroup]) || 0 });
       }
+      if (entry.transform) {
+        // transform(match) → object passed straight to i18n interpolation
+        return t(entry.key, entry.transform(m));
+      }
       if (entry.groups) {
         // groups: { <regex group index>: <i18n placeholder name> }
         const args = {};
@@ -168,8 +267,8 @@ export function swalSuccess(title, text) {
   if (isAlreadyExists(combined)) {
     return Swal.fire({
       icon: 'warning',
-      title: t('swal.titles.alreadyExists'),
-      text: translateMessage(rawText) || translateMessage(rawTitle),
+      title: t('swal.titles.notSucceeded'),
+      text: t('swal.texts.alreadyExists'),
       confirmButtonText: t('swal.buttons.ok'),
       customClass: swalClass,
     });
@@ -193,15 +292,17 @@ export function swalError(title, text) {
   const fullMsg = titleMsg + (textMsg ? (titleMsg ? ' ' : '') + textMsg : '');
   const alreadyExists = isAlreadyExists(fullMsg);
   const translatedTitle = translateMessage(titleMsg);
-  const finalTitle = titleMsg
-    ? translatedTitle
-    : alreadyExists
-      ? t('swal.titles.alreadyExists')
-      : t('swal.titles.error');
+  // For already-exists we override BOTH title and text with explicit keys so
+  // the message reads naturally: "Laguma guuleysan" / "Xogtaan horay ayey u
+  // jirtay" instead of the same phrase twice.
+  const finalTitle = alreadyExists
+    ? t('swal.titles.notSucceeded')
+    : (titleMsg ? translatedTitle : t('swal.titles.error'));
+  const finalText = alreadyExists ? t('swal.texts.alreadyExists') : translateMessage(textMsg);
   return Swal.fire({
     icon: alreadyExists ? 'warning' : 'error',
     title: finalTitle,
-    text: translateMessage(textMsg),
+    text: finalText,
     confirmButtonText: t('swal.buttons.ok'),
     customClass: swalClass,
   });

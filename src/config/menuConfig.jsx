@@ -1,13 +1,17 @@
 import {
   LayoutDashboard,
   BookOpen,
-  Users,
-  ClipboardList,
-  BookMarked,
+  GraduationCap,
+  Activity,
+  ShieldCheck,
   Video,
   FileCheck,
   MessageSquare,
   CalendarClock,
+  Settings2,
+  ArrowLeftRight,
+  BookMarked,
+  ListChecks,
 } from 'lucide-react';
 import { createExamSection } from './exam/createExam';
 import { examServiceSection } from './exam/examService';
@@ -25,9 +29,9 @@ export const defaultMenuItems = [
     children: [
       {
         id: 'AcademicSetup',
-        label: 'Academic setup',
+        label: 'Academic Setup',
         labelKey: 'menu.academicSetup',
-        icon: BookMarked,
+        icon: Settings2,
         path: '/AcademicSetup',
         tabs: [
           {
@@ -36,12 +40,12 @@ export const defaultMenuItems = [
             "labelKey": "tabs.class",
             "entityKey": "ClassSetup",
             "modalKey": "ClassSetup",
-            "icon": "Database",
+            "icon": "GraduationCap",
             "queryName": "ClassSetup",
             "hiddenColumns": ["lev_id", "gr_id", "sh_id", "br_id", "u_br_id"],
             "loadButtons": [
-              { "id": "ClassSetup", "label": "Class Setup", "labelKey": "tabs.classSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassSetup" }
+              { "id": "ClassSetup", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassSetup" }
             ]
           },
           {
@@ -50,13 +54,13 @@ export const defaultMenuItems = [
             "labelKey": "tabs.classFormaster",
             "entityKey": "ClassFormaster",
             "modalKey": "ClassFormaster",
-            "icon": "Database",
+            "icon": "Users",
             "queryName": "ClassFormaster",
             "showAcademicYearSelect": true,
             "hiddenColumns": ["cl_id", "emp_id", "std_id", "a_y_id", "state", "academic_name"],
             "loadButtons": [
-              { "id": "ClassFormaster", "label": "Go to Academic Transfer", "labelKey": "tabs.classFormaster", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassFormaster" }
+              { "id": "ClassFormaster", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassFormaster" }
             ]
           },
           {
@@ -65,11 +69,11 @@ export const defaultMenuItems = [
             "labelKey": "tabs.subjectsSetup",
             "entityKey": "SubjectsSetup",
             "modalKey": "SubjectsSetup",
-            "icon": "Database",
+            "icon": "BookMarked",
             "queryName": "SubjectsSetup",
             "loadButtons": [
-              { "id": "SubjectsSetup", "label": "Show Subjects", "labelKey": "tabs.subjectsSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectsSetup" }
+              { "id": "SubjectsSetup", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectsSetup" }
             ]
           },
           {
@@ -78,14 +82,14 @@ export const defaultMenuItems = [
             "labelKey": "tabs.subjectClassSetup",
             "entityKey": "SubjectClassSetup",
             "modalKey": "SubjectClassSetup",
-            "icon": "Database",
+            "icon": "BookOpen",
             "queryName": "SubjectClassSetup",
             "showAcademicYearSelect": true,
             "showClassSelect": true,
             "hiddenColumns": ["cl_id", "sub_id", "emp_id", "u_br_id", "a_y_id", "academic_name"],
             "loadButtons": [
-              { "id": "SubjectClassSetup", "label": "Subject Class Setup", "labelKey": "tabs.subjectClassSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "isBulkAction": true }
+              { "id": "SubjectClassSetup", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "SubjectClassSetup", "isBulkAction": true }
             ]
           },
           {
@@ -94,12 +98,12 @@ export const defaultMenuItems = [
             "labelKey": "tabs.levelSetup",
             "entityKey": "LevelSetup",
             "modalKey": "LevelSetup",
-            "icon": "Database",
+            "icon": "Layers",
             "queryName": "LevelSetup",
             "hiddenColumns": ["l_ty_id"],
             "loadButtons": [
-              { "id": "LevelSetup", "label": "Level Setup", "labelKey": "tabs.levelSetup", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "LevelSetup" }
+              { "id": "LevelSetup", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "LevelSetup" }
             ]
           },
           {
@@ -108,11 +112,11 @@ export const defaultMenuItems = [
             "labelKey": "tabs.academicYear",
             "entityKey": "academicYeartab",
             "modalKey": "academicYeartab",
-            "icon": "Database",
+            "icon": "CalendarDays",
             "queryName": "academicYeartab",
             "loadButtons": [
-              { "id": "academicYeartab", "label": "Academic Year", "labelKey": "tabs.academicYear", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "academicYeartab" }
+              { "id": "academicYeartab", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "academicYeartab" }
             ]
           }
         ]
@@ -120,9 +124,9 @@ export const defaultMenuItems = [
       },
       {
         id: 'AcademicTransfer',
-        label: 'Academic transfer',
+        label: 'Academic Transfer',
         labelKey: 'menu.academicTransfer',
-        icon: BookMarked,
+        icon: ArrowLeftRight,
         path: '/AcademicTransfer',
         tabs: [
           {
@@ -131,11 +135,11 @@ export const defaultMenuItems = [
             "labelKey": "tabs.branchTransfer",
             "entityKey": "BranchTransfer",
             "modalKey": "BranchTransfer",
-            "icon": "Database",
+            "icon": "Building2",
             "queryName": "BranchTransfer",
             "loadButtons": [
-              { "id": "BranchTransfer", "label": "Branch Transfer", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "BranchTransfer" }
+              { "id": "BranchTransfer", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "BranchTransfer" }
             ]
           },
           {
@@ -144,11 +148,11 @@ export const defaultMenuItems = [
             "labelKey": "tabs.academicTransfer",
             "entityKey": "AcademicTransfer",
             "modalKey": "AcademicTransfer",
-            "icon": "Database",
+            "icon": "ArrowLeftRight",
             "queryName": "AcademicTransfer",
             "loadButtons": [
-              { "id": "AcademicTransfer", "label": "Academic Transfer", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "AcademicTransfer" }
+              { "id": "AcademicTransfer", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "AcademicTransfer" }
             ]
           },
           {
@@ -157,13 +161,13 @@ export const defaultMenuItems = [
             "labelKey": "tabs.classTransfer",
             "entityKey": "ClassTransfer",
             "modalKey": "ClassTransfer",
-            "icon": "Database",
+            "icon": "Layers",
             "queryName": "ClassTransfer",
             "loadButtons": [
-              { "id": "ClassTransfer", "label": "Class Transfer", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "ClassTransfer" }
+              { "id": "ClassTransfer", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ClassTransfer" }
             ]
-          } 
+          }
         ]
         ,
       },
@@ -178,7 +182,7 @@ export const defaultMenuItems = [
             "id": "TeacherSyllabus",
             "label": "Teacher Syllabus",
             "labelKey": "tabs.teacherSyllabus",
-            "icon": "Database"
+            "icon": "BookOpen"
           }
         ]
         ,
@@ -187,20 +191,20 @@ export const defaultMenuItems = [
         id: 'LessonPlan',
         label: 'Lesson Plan',
         labelKey: 'menu.lessonPlan',
-        icon: BookMarked,
+        icon: ListChecks,
         path: '/LessonPlan',
         tabs: [
           {
             "id": "LessonActivityMarks",
-            "label": "Lesson Activity Mark",
+            "label": "Lesson Activity Marks",
             "labelKey": "tabs.lessonActivityMarks",
             "entityKey": "LessonActivityMark",
             "modalKey": "LessonActivityMark",
-            "icon": "Database",
+            "icon": "BarChart3",
             "queryName": "LessonActivityMark",
             "loadButtons": [
-              { "id": "LessonActivityMark", "label": "Lesson Activity Mark", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "LessonActivityMark" }
+              { "id": "LessonActivityMark", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "LessonActivityMark" }
             ]
           },
           {
@@ -209,11 +213,11 @@ export const defaultMenuItems = [
             "labelKey": "tabs.lessonActivityResults",
             "entityKey": "LessonActivityResults",
             "modalKey": "LessonActivityResults",
-            "icon": "Database",
+            "icon": "ClipboardCheck",
             "queryName": "LessonActivityResults",
             "loadButtons": [
-              { "id": "LessonActivityResults", "label": "Lesson Activity Results", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "LessonActivityResults" }
+              { "id": "LessonActivityResults", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "LessonActivityResults" }
             ]
           }
         ]
@@ -225,13 +229,13 @@ export const defaultMenuItems = [
     id: 'StudentsOffice',
     label: 'Students Office',
     labelKey: 'menu.studentsOffice',
-    icon: BookOpen,
+    icon: GraduationCap,
     children: [
       {
         id: 'StudentsOffice',
         label: 'Students',
         labelKey: 'menu.students',
-        icon: BookMarked,
+        icon: GraduationCap,
         path: '/StudentsOffice',
         tabs: [
           {
@@ -240,16 +244,15 @@ export const defaultMenuItems = [
             "labelKey": "tabs.students",
             "entityKey": "Students",
             "modalKey": "Students",
-            "icon": "Database",
+            "icon": "GraduationCap",
             "queryName": "Students",
             "loadButtons": [
-              
-              { "id": "ShowStudents", "label": "Show Students", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "Students" },
-              { "id": "Addimage", "label": "Add image", "icon": "Plus", "modalKey": "Students" },
-              { "id": "EditAllResponsible", "label": "Edit All Responsible", "icon": "Plus", "modalKey": "Students" },
-              { "id": "Editallemail", "label": "Edit all email", "icon": "Plus", "modalKey": "Students" },
-              { "id": "IMORTEXCEL ", "label": "imort Excel file", "icon": "Plus", "modalKey": "Students" },
+              { "id": "ShowStudents", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "Students" },
+              { "id": "Addimage", "label": "Add Image", "labelKey": "students.addImage", "icon": "Image", "modalKey": "Students" },
+              { "id": "EditAllResponsible", "label": "Edit All Responsible", "labelKey": "students.editAllResponsibles", "icon": "Users", "modalKey": "Students" },
+              { "id": "Editallemail", "label": "Edit All Email", "labelKey": "students.editAllEmail", "icon": "Mail", "modalKey": "Students" },
+              { "id": "ImportExcel", "label": "Import Excel", "labelKey": "students.importExcel", "icon": "Upload", "modalKey": "Students" }
             ]
           },
           {
@@ -258,17 +261,17 @@ export const defaultMenuItems = [
             "labelKey": "tabs.responsible",
             "entityKey": "Responsible",
             "modalKey": "ResponsibleModal",
-            "icon": "Database",
+            "icon": "UserCheck",
             "queryName": "Responsible",
             "showResponsibleSelect": true,
             "hiddenColumns": ["state"],
             "loadButtons": [
-              { "id": "StudentResponsible", "label": "SHOW DATA", "labelKey": "action.showData", "icon": "Database" },
-              { "id": "allResponsible", "label": "ALL", "labelKey": "responsible.all", "icon": "Database" },
-              { "id": "change_Responsible", "label": "CHANGE", "labelKey": "responsible.change", "icon": "Plus", "isBulkAction": true },
-              { "id": "showprentwithnostudents", "label": "SHOW PARENT WITH NO STUDENTS", "labelKey": "responsible.showParentWithNoStudents", "icon": "Database" },
-              { "id": "Deleteprentwithnostudents", "label": "DELETE PARENT WITH NO STUDENTS", "labelKey": "responsible.deleteParentWithNoStudents", "icon": "Plus", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
-              { "id": "Add_new_responsible", "label": "ADD NEW", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ResponsibleModal" }
+              { "id": "StudentResponsible", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "allResponsible", "label": "All", "labelKey": "responsible.all", "icon": "LayoutGrid" },
+              { "id": "change_Responsible", "label": "Change", "labelKey": "responsible.change", "icon": "RefreshCw", "isBulkAction": true },
+              { "id": "showprentwithnostudents", "label": "Show Parent With No Students", "labelKey": "responsible.showParentWithNoStudents", "icon": "UserX" },
+              { "id": "Deleteprentwithnostudents", "label": "Delete Parent With No Students", "labelKey": "responsible.deleteParentWithNoStudents", "icon": "Trash2", "deleteAction": "del_responsible_with_no_std_spv", "previewQueryId": "showprentwithnostudents" },
+              { "id": "Add_new_responsible", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "ResponsibleModal" }
             ]
           },
           {
@@ -277,13 +280,12 @@ export const defaultMenuItems = [
             "labelKey": "tabs.studentState",
             "entityKey": "studentstate",
             "modalKey": "studentstate",
-            "icon": "Database",
+            "icon": "Activity",
             "queryName": "studentstate",
             "loadButtons": [
-              { "id": "addnew", "label": "ADD NEW", "icon": "Database" },
-              { "id": "mergestudent", "label": "Merge Student", "icon": "Plus", "modalKey": "studentstate" },
-              { "id": "showdatastudentstate", "label": "Show data student", "icon": "Plus", "modalKey": "studentstate" },
-              
+              { "id": "showdatastudentstate", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addnew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus" },
+              { "id": "mergestudent", "label": "Merge Student", "labelKey": "studentStateTab.mergeStudent", "icon": "GitMerge", "modalKey": "studentstate" }
             ]
           },
           {
@@ -292,12 +294,12 @@ export const defaultMenuItems = [
             "labelKey": "tabs.bus",
             "entityKey": "bus",
             "modalKey": "bus",
-            "icon": "Database",
+            "icon": "Bus",
             "queryName": "bus",
             "hiddenColumns": ["emp_id", "u_br_id"],
             "loadButtons": [
-              { "id": "bus", "label": "Show Bus", "icon": "Database" },
-              { "id": "addNew", "label": "Add new", "icon": "Plus", "modalKey": "bus" }
+              { "id": "bus", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "bus" }
             ]
           },
           {
@@ -306,28 +308,27 @@ export const defaultMenuItems = [
             "labelKey": "tabs.updateSchool",
             "entityKey": "update school",
             "modalKey": "update school",
-            "icon": "Database",
+            "icon": "Building2",
             "queryName": "update school",
             "hideDelete": true,
             "hideAddNew": true,
             "loadButtons": [
-              { "id": "update school", "label": "Show Schools", "icon": "Database" }
+              { "id": "update school", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" }
             ]
           },
           {
             "id": "Studentinfo",
-            "label": "Student info",
+            "label": "Student Info",
             "labelKey": "tabs.studentInfo",
             "entityKey": "Studentinfo",
             "modalKey": "Studentinfo",
-            "icon": "Database",
+            "icon": "User",
             "queryName": "Studentinfo",
             "showStudentSelect": true,
             "loadButtons": [
-              { "id": "showdata_Studentinfo", "label": "Show data Studentinfo", "icon": "Plus", "modalKey": "Studentinfo" },
-              
+              { "id": "showdata_Studentinfo", "label": "Show Data", "labelKey": "action.showData", "icon": "Eye", "modalKey": "Studentinfo" }
             ]
-          },
+          }
         ],
       },
     ],
@@ -336,13 +337,13 @@ export const defaultMenuItems = [
     id: 'ActivityManagement',
     label: 'Activity Management',
     labelKey: 'menu.activityManagement',
-    icon: ClipboardList,
+    icon: Activity,
     children: [
       {
         id: 'ActivityManagement',
         label: 'Activity',
         labelKey: 'menu.activity',
-        icon: BookMarked,
+        icon: Activity,
         path: '/ActivityManagement',
         tabs: [
           {
@@ -351,7 +352,7 @@ export const defaultMenuItems = [
             "labelKey": "tabs.performance",
             "entityKey": "Performance",
             "modalKey": "Performance",
-            "icon": "Database",
+            "icon": "Activity",
             "queryName": "Performance",
             "loadButtons": [
               { "id": "Performance", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
@@ -364,7 +365,7 @@ export const defaultMenuItems = [
             "labelKey": "tabs.studentPerformance",
             "entityKey": "StudentPerformance",
             "modalKey": "StudentPerformance",
-            "icon": "Database",
+            "icon": "BarChart3",
             "queryName": "StudentPerformance",
             "showStudentSelect": true,
             "studentOptionsQuery": "StudentPerformance_body_query",
@@ -378,7 +379,7 @@ export const defaultMenuItems = [
             "id": "StudentPerformanceEdit",
             "label": "Student Performance Edit",
             "labelKey": "tabs.studentPerformanceEdit",
-            "icon": "Database"
+            "icon": "Pencil"
           }
         ],
       },
@@ -386,7 +387,7 @@ export const defaultMenuItems = [
   },
   {
     id: 'ComplainManagement',
-    label: 'Complain Managment',
+    label: 'Complaint Management',
     labelKey: 'menu.complainManagement',
     icon: MessageSquare,
     path: '/ComplainManagement',
@@ -397,19 +398,19 @@ export const defaultMenuItems = [
         labelKey: 'tabs.complain',
         entityKey: 'Complain',
         modalKey: 'Complain',
-        icon: 'Users',
+        icon: 'MessageSquare',
         queryName: 'Complain',
         hiddenColumns: ['username'],
         loadButtons: [
           { id: 'Complain', label: 'Show Data', labelKey: 'action.showData', icon: 'Database' },
-          { id: 'addNew',   label: 'Add new',  labelKey: 'entity.addNew',   icon: 'Plus', modalKey: 'Complain' },
+          { id: 'addNew',   label: 'Add New',  labelKey: 'entity.addNew',   icon: 'Plus', modalKey: 'Complain' },
         ],
       },
       {
         id: 'ComplainDone',
-        label: 'Complain Done',
+        label: 'Complaint Done',
         labelKey: 'tabs.complainDone',
-        icon: 'Timer',
+        icon: 'CheckCircle2',
       },
     ],
   },
@@ -424,7 +425,7 @@ export const defaultMenuItems = [
         id: 'MeetingMinutes',
         label: 'Meeting Minutes',
         labelKey: 'tabs.meetingMinutes',
-        icon: 'Users',
+        icon: 'CalendarClock',
       },
     ],
   },
@@ -443,9 +444,9 @@ export const defaultMenuItems = [
   },
   {
     id: 'userPrivilege',
-    label: 'User Privillage',
+    label: 'User Privilege',
     labelKey: 'menu.userPrivilege',
-    icon: Users,
+    icon: ShieldCheck,
     path: '/user-privilege',
   },
   {
