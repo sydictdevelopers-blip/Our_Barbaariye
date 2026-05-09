@@ -172,7 +172,7 @@ export default function StudentStateModal({ isOpen, onClose, onSuccess }) {
 
   const FieldWrap = ({ label, error, children }) => (
     <div className="space-y-1">
-      {label && <label className="block text-sm font-medium text-emerald-700 dark:text-emerald-400">{label}</label>}
+      {label && <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
       {children}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

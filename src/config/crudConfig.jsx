@@ -26,8 +26,11 @@ function generateCrudConfig(schema) {
   const fromRow = (row) => {
     const out = { id: row[idKey] ?? row.id };
     fields.forEach((f) => {
-      // Try value, rowKey, name so both l_ty_id and l_ty_id_sp (and level_name) work from DB
-      const keyCandidates = [f.value, f.rowKey, f.name].filter(Boolean);
+      // Try value, rowKey(s), name so both l_ty_id and l_ty_id_sp (and level_name)
+      // work from DB. `rowKeys` (array) lets a field accept multiple column names
+      // — useful when the same modal opens from views with differently-named columns.
+      const altKeys = Array.isArray(f.rowKeys) ? f.rowKeys : [];
+      const keyCandidates = [f.value, f.rowKey, ...altKeys, f.name].filter(Boolean);
       const keys = [...new Set([...keyCandidates, f.name])];
       let val = keys.map((k) => row[k]).find((v) => v != null);
       if (val == null) {
@@ -42,8 +45,11 @@ function generateCrudConfig(schema) {
       }
       out[f.name] = val;
       const nameKey = f.nameKey ?? f.labelRowKey;
-      if (f.optionsKey && nameKey && row[nameKey] != null) {
-        out[`${f.name}_label`] = row[nameKey];
+      if (f.optionsKey) {
+        const altNameKeys = Array.isArray(f.nameKeys) ? f.nameKeys : [];
+        const nameKeysToTry = [nameKey, ...altNameKeys].filter(Boolean);
+        const labelVal = nameKeysToTry.map((k) => row[k]).find((v) => v != null && v !== '-');
+        if (labelVal != null) out[`${f.name}_label`] = labelVal;
       }
     });
     return out;
@@ -207,6 +213,8 @@ const ENTITIES = [
     key: 'ResponsibleModal',
     title: 'crud.responsible.title',
     fn: 'responsible_sp',
+    // res_id is the primary id, but vw_responsible exposes it as just "id". Listing
+    // both lets fromRow grab either when the modal opens from different row shapes.
     idKey: 'res_id',
     omitPId: true,
     omitPUsrId: true,
@@ -214,13 +222,13 @@ const ENTITIES = [
     gridCols: 2,
     fields: [
       { name: 'p_id_sp', type: 'hidden', param: 'p_id_sp', rowKey: 'p_id', default: 0 },
-      { name: 'p_name_sp', label: 'crud.responsible.fields.name', placeholder: 'crud.responsible.ph.name', type: 'text', required: true, rowKey: 'responsible_name', param: 'p_name_sp' },
-      { name: 'tel_sp', label: 'crud.responsible.fields.tel', placeholder: 'crud.responsible.ph.tel', type: 'text', rowKey: 'tel', param: 'tel_sp' },
-      { name: 'phone_sp', label: 'crud.responsible.fields.phone', placeholder: 'crud.responsible.ph.phone', type: 'text', rowKey: 'phone', param: 'phone_sp' },
-      { name: 'sex_sp', label: 'crud.responsible.fields.sex', type: 'select', rowKey: 'sex', param: 'sex_sp',
-        options: [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }], default: 'Male' },
-      { name: 'ad_id_sp', label: 'crud.responsible.fields.address', placeholder: 'crud.responsible.ph.address', type: 'select', rowKey: 'ad_id', param: 'ad_id_sp',
-        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', default: '' },
+      { name: 'p_name_sp', label: 'crud.responsible.fields.name', placeholder: 'crud.responsible.ph.name', type: 'text', required: true, rowKey: 'responsible_name', rowKeys: ['responsible', 'p_name', 'name'], param: 'p_name_sp' },
+      { name: 'tel_sp', label: 'crud.responsible.fields.tel', placeholder: 'crud.responsible.ph.tel', type: 'text', rowKey: 'tel', rowKeys: ['phone1', 'phone_one'], param: 'tel_sp', default: '61' },
+      { name: 'phone_sp', label: 'crud.responsible.fields.phone', placeholder: 'crud.responsible.ph.phone', type: 'text', rowKey: 'phone', rowKeys: ['phone2', 'phone_two'], param: 'phone_sp', default: '61' },
+      { name: 'sex_sp', label: 'crud.responsible.fields.sex', type: 'select', rowKey: 'sex', param: 'sex_sp', placeholder: 'select.sex',
+        options: [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }], default: '' },
+      { name: 'ad_id_sp', label: 'crud.responsible.fields.address', placeholder: 'crud.responsible.ph.address', type: 'select', rowKey: 'ad_id', rowKeys: ['add_id', 'address_id'], param: 'ad_id_sp',
+        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', nameKeys: ['address', 'addr_name'], default: '' },
       { name: 'state_sp', type: 'hidden', param: 'state_sp', rowKey: 'state', default: 'Active' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
@@ -561,18 +569,18 @@ const ENTITIES = [
       // Row 1: ID. (read-only) | EMIS NO. | Student name.
       { name: 'std_id_display',    label: 'students.registerForm.fields.id',           type: 'number', omitFromParams: true, rowKey: 'std_id', default: 0, props: { readOnly: true, disabled: true } },
       { name: 'emis_id_sp',        label: 'students.registerForm.fields.emisId',       type: 'text',                    rowKey: 'emis_id',      param: 'emis_id_sp',        default: '0' },
-      { name: 'p_name_sp',         label: 'students.registerForm.fields.fullName',     type: 'text',   required: true,  rowKey: 'student_name', param: 'p_name_sp',         placeholder: 'students.registerForm.ph.fullName' },
+      { name: 'p_name_sp',         label: 'students.registerForm.fields.fullName',     type: 'text',   required: true,  rowKey: 'student_name', param: 'p_name_sp',         placeholder: 'students.registerForm.fields.fullName' },
 
       // Row 2: Student Phone. | Address | Sex
-      { name: 'tel_sp',            label: 'students.registerForm.fields.phone',        type: 'text',   required: true,  rowKey: 'phone',        param: 'tel_sp',            placeholder: 'students.registerForm.ph.phone' },
+      { name: 'tel_sp',            label: 'students.registerForm.fields.phone',        type: 'text',   required: true,  rowKey: 'phone',        param: 'tel_sp',            placeholder: 'students.registerForm.ph.phone', default: '61' },
       { name: 'ad_id_sp',          label: 'students.registerForm.fields.address',      type: 'select', required: true,  rowKey: 'ad_id',        param: 'ad_id_sp',
         optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', placeholder: 'students.registerForm.ph.address', default: '' },
-      { name: 'sex_sp',            label: 'students.registerForm.fields.sex',          type: 'select', required: true,  rowKey: 'sex',          param: 'sex_sp',            default: 'Male',
+      { name: 'sex_sp',            label: 'students.registerForm.fields.sex',          type: 'select', required: true,  rowKey: 'sex',          param: 'sex_sp',            placeholder: 'select.sex', default: '',
         options: [{ value: 'Male', label: 'students.registerForm.opts.male' }, { value: 'Female', label: 'students.registerForm.opts.female' }] },
 
       // Row 3: Mother name. | Mother Phone. | POB.
       { name: 'mothername_sp',     label: 'students.registerForm.fields.motherName',   type: 'text',                    rowKey: 'mothername',   param: 'mothername_sp',     placeholder: 'students.registerForm.ph.motherName' },
-      { name: 'mother_phone_sp',   label: 'students.registerForm.fields.motherPhone',  type: 'text',                    rowKey: 'mother_phone', param: 'mother_phone_sp',   placeholder: 'students.registerForm.ph.motherPhone' },
+      { name: 'mother_phone_sp',   label: 'students.registerForm.fields.motherPhone',  type: 'text',                    rowKey: 'mother_phone', param: 'mother_phone_sp',   placeholder: 'students.registerForm.ph.motherPhone', default: '61' },
       { name: 'pob_sp',            label: 'students.registerForm.fields.pob',          type: 'text',                    rowKey: 'pob',          param: 'pob_sp',            placeholder: 'students.registerForm.ph.pob' },
 
       // Row 4: DOB. | Responsible (with inline + Add New) — Academic Year removed:
@@ -581,9 +589,19 @@ const ENTITIES = [
       { name: 'res_id_sp',         label: 'students.registerForm.fields.responsible',  type: 'select', required: true,  rowKey: 'res_id',       param: 'res_id_sp',
         optionsKey: 'responsible_options', value: 'res_id', nameKey: 'p_name', placeholder: 'students.registerForm.ph.responsible', default: '',
         // When the searched responsible is not found, show "+ Add New" — opens
-        // the ResponsibleModal CRUD pre-filled with the search text. After save
-        // the parent dropdown is refetched and the new row is auto-selected.
-        addNewConfigKey: 'ResponsibleModal', addNewSearchKey: 'p_name_sp' },
+        // the ResponsibleModal CRUD pre-filled with whichever input the search
+        // text best fits: digits → tel_sp (phone), otherwise → p_name_sp (name).
+        // After save the parent dropdown is refetched and the new row is auto-
+        // selected.
+        addNewConfigKey: 'ResponsibleModal',
+        addNewSeed: (q) => {
+          const trimmed = String(q || '').trim();
+          // "Mostly digits" heuristic: allow spaces / dashes / + as common phone
+          // formatting (+252 61 ... ), but require ≥ 4 digits to count.
+          const digits = (trimmed.match(/\d/g) || []).length;
+          const isPhone = digits >= 4 && /^[\d+\-\s()]+$/.test(trimmed);
+          return isPhone ? { tel_sp: trimmed } : { p_name_sp: trimmed };
+        } },
 
       // Row 5: Relation | Enrollment Type | Transferred School. (hidden unless Transfer)
       { name: 'r_r_id_sp',         label: 'students.registerForm.fields.relation',     type: 'select', required: true,  rowKey: 'r_r_id',       param: 'r_r_id_sp',

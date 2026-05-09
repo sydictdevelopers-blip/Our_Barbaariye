@@ -42,7 +42,7 @@ const multiSelectStyles = {
 // Hawl-galka run-time-ka waxay ku salaysan tahay loop-yo aside-ka SP-yada hore u jira.
 
 const FieldLabel = ({ children }) => (
-  <label className="block text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
+  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
     {children}
   </label>
 );

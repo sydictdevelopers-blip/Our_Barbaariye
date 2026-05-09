@@ -35,6 +35,20 @@ module.exports = {
     sql: `SELECT * FROM vw_responsible(${Number(p?.br_id) || 0})`,
     prePaginated: true,
   }),
+  // Single-row fetch for the Responsible edit modal. vw_responsible only exposes
+  // {id, responsible, phone1, phone2} — not enough to populate the full edit form
+  // (sex, ad_id, p_id). This query joins people + address to return everything
+  // the modal needs, keyed off res_id.
+  ResponsibleEdit: (p) => ({
+    sql: `SELECT r.res_id, r.p_id, p.p_name AS responsible_name, p.tel, r.phone, p.sex,
+                 p.ad_id, p.ad_id AS add_id,
+                 (SELECT concat(a.district, ' - ', a.village) FROM address a WHERE a.add_id = p.ad_id) AS address_name,
+                 r.state
+            FROM responsible r
+            JOIN people p ON p.p_id = r.p_id
+           WHERE r.res_id = ${Number(p?.res_id) || 0}`,
+    prePaginated: true,
+  }),
   StudentResponsible: (p) => ({
     sql: `SELECT * FROM student_responsible(0, ${Number(p?.res_id) || 0}, 'show', ${Number(p?.u_br_id) || 0})`,
     prePaginated: true,
@@ -42,6 +56,17 @@ module.exports = {
   showprentwithnostudents: 'SELECT * FROM responsible_with_no_student_show()',
   studentstate: (p) => `SELECT * FROM vw_student_state(${Number(p?.br_id) || 0})`,
   bus: (p) => `SELECT * FROM vw_bus(${Number(p?.br_id) || 0})`,
+  // Single-row fetch for the Bus edit modal. vw_bus exposes display labels
+  // (driver_name, plot_no) but not the FK columns the form needs (emp_id,
+  // targo). This query returns the raw bus row + a joined employee_name so
+  // the dropdown can show the driver's name as the selected label.
+  BusEdit: (p) => ({
+    sql: `SELECT b.bus_id, b.bus_name, b.emp_id, b.targo, b.u_br_id,
+                 (SELECT pe.p_name FROM employee e JOIN people pe ON pe.p_id = e.p_id WHERE e.emp_id = b.emp_id) AS employee_name
+            FROM bus b
+           WHERE b.bus_id = ${Number(p?.bus_id) || 0}`,
+    prePaginated: true,
+  }),
   Studentinfo: (p) => ({
     sql: `SELECT * FROM studentinfo_show(${Number(p?.std_id) || 0}, '${sqlText(p?.search)}', ${Number(p?.limit) || 10}, ${offsetOf(p, 10)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,

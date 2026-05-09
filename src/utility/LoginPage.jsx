@@ -69,7 +69,7 @@ export default function LoginPage() {
         branchUserType = result?.user_type ?? branchUserType;
         branchUBrId = result?.u_br_id ?? branchUBrId;
       } catch (e) {
-        setError(e?.message || 'Branch switch failed');
+        setError(e?.message || t('login.errors.branchSwitch'));
         return;
       }
     }
@@ -101,7 +101,7 @@ export default function LoginPage() {
     try {
       const resp = await loginUser(user, pass);
       if (!resp?.success) {
-        setError(resp?.message || 'Login waa fashilmay');
+        setError(resp?.message || t('login.errors.loginFailed'));
         return;
       }
       const u = resp.user || {};
@@ -372,7 +372,7 @@ export default function LoginPage() {
           </nav>
           <p className="text-center sm:text-right">
             ©2017- {new Date().getFullYear()}, {t('footer.rights')}{' '}
-            <span className="text-rose-400">♥</span> by{' '}
+            <span className="text-rose-400">♥</span> {t('footer.by')}{' '}
             <span className="font-semibold text-white">SYD ICT SOLUTIONS</span> {t('footer.slogan')}
           </p>
         </div>

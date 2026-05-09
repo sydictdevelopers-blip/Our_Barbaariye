@@ -266,7 +266,7 @@ export const defaultMenuItems = [
             "showResponsibleSelect": true,
             "hiddenColumns": ["state"],
             "loadButtons": [
-              { "id": "StudentResponsible", "label": "Show Data", "labelKey": "action.showData", "icon": "Database" },
+              { "id": "StudentResponsible", "label": "Show Data", "labelKey": "action.showData", "icon": "Database", "viewOnly": true },
               { "id": "allResponsible", "label": "All", "labelKey": "responsible.all", "icon": "LayoutGrid" },
               { "id": "change_Responsible", "label": "Change", "labelKey": "responsible.change", "icon": "RefreshCw", "isBulkAction": true },
               { "id": "showprentwithnostudents", "label": "Show Parent With No Students", "labelKey": "responsible.showParentWithNoStudents", "icon": "UserX" },

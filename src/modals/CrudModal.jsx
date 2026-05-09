@@ -11,6 +11,7 @@ import { useSelector } from 'react-redux';
 import { crud, fetchSelectOptions, fetchModuleHelp, uploadNewStudentImage } from '../services/api';
 import { CRUD_CONFIG } from '../config/crudConfig';
 import { selectIsReadOnlyBranch } from '../slices/uiSlice';
+import { resizeImageToBudget } from '../utils/resizeImage';
 
 /** Auto-detect valueKey (first *_id) iyo labelKey (first *_name ama column 2) */
 function detectKeys(columns, row) {
@@ -134,14 +135,20 @@ function ImageUploadField({ name, value, label, error, onChange, t, disabled }) 
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (!f.type.startsWith('image/')) {
-      setErrMsg(t('crudModal.imageOnly', { defaultValue: 'Only image files are allowed' }));
+    const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png'];
+    const ALLOWED_EXT = /\.(jpe?g|png)$/i;
+    const MAX_BYTES = 300 * 1024;
+    if (!ALLOWED_MIME.includes(String(f.type || '').toLowerCase()) || !ALLOWED_EXT.test(f.name || '')) {
+      setErrMsg(t('crudModal.imageOnly', { defaultValue: 'Only JPG, JPEG, or PNG images are allowed' }));
       return;
     }
     setErrMsg('');
     setBusy(true);
     try {
-      const resp = await uploadNewStudentImage(f);
+      // Auto-shrink oversized photos client-side before upload — phone cams
+      // routinely emit multi-MB files and the backend hard-caps at 300 KB.
+      const uploadFile = f.size > MAX_BYTES ? await resizeImageToBudget(f, MAX_BYTES) : f;
+      const resp = await uploadNewStudentImage(uploadFile);
       const url = resp?.image || '';
       onChange({ target: { name, value: url } });
     } catch (err) {
@@ -161,7 +168,7 @@ function ImageUploadField({ name, value, label, error, onChange, t, disabled }) 
         <input
           id={inputId}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,.jpg,.jpeg,.png"
           disabled={busy || disabled}
           onChange={handleFile}
           className="text-sm text-slate-700 dark:text-slate-200 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-[#0f3d5e] file:text-white file:cursor-pointer hover:file:bg-[#0d3553] disabled:opacity-60"
@@ -435,12 +442,21 @@ export default function CrudModal({
       const handleCreate = f.addNewConfigKey
         ? (q) => {
             if (!q) return;
+            // Two seed strategies:
+            //   * f.addNewSeed (function) returns a {field: value} object — lets
+            //     the caller route the typed text to different inputs based on
+            //     content (e.g. "612345" → tel_sp, "Cali Maxamed" → p_name_sp).
+            //   * f.addNewSearchKey (string, legacy) names a single field to
+            //     receive the full search text.
+            const seedFromFn = typeof f.addNewSeed === 'function' ? f.addNewSeed(q) : null;
+            const seedObj = (seedFromFn && typeof seedFromFn === 'object')
+              ? seedFromFn
+              : { [f.addNewSearchKey || 'p_name_sp']: q };
             setSubModal({
               open: true,
               configKey: f.addNewConfigKey,
               returnField: f,
-              searchText: q,
-              seedField: f.addNewSearchKey || 'p_name_sp',
+              seedObj,
             });
           }
         : undefined;
@@ -628,7 +644,7 @@ export default function CrudModal({
           isOpen={helpOpen}
           onClose={() => setHelpOpen(false)}
           moduleKey={helpKey}
-          moduleLabel={config.title || helpKey}
+          moduleLabel={tr(config.title) || helpKey}
         />
       )}
 
@@ -640,7 +656,7 @@ export default function CrudModal({
           isOpen={true}
           onClose={() => setSubModal({ open: false })}
           config={CRUD_CONFIG[subModal.configKey]}
-          initialForm={{ [subModal.seedField || 'p_name_sp']: subModal.searchText || '' }}
+          initialForm={subModal.seedObj || { p_name_sp: '' }}
           mode="insert"
           onSuccess={handleSubModalSuccess}
           moduleKey={subModal.configKey}

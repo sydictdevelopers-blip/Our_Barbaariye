@@ -156,7 +156,7 @@ export default function ModuleHelpModal({ isOpen, onClose, moduleKey, moduleLabe
             placeholder={moduleLabel || moduleKey}
           />
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('help.description', { defaultValue: 'Description / Usage' })}
             </label>
             <textarea
@@ -169,7 +169,7 @@ export default function ModuleHelpModal({ isOpen, onClose, moduleKey, moduleLabe
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <Youtube className="w-4 h-4" />
                 {t('help.videoUrl', { defaultValue: 'Video URL (YouTube / Vimeo)' })}
               </label>
@@ -181,7 +181,7 @@ export default function ModuleHelpModal({ isOpen, onClose, moduleKey, moduleLabe
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <Upload className="w-4 h-4" />
                 {t('help.uploadVideo', { defaultValue: 'Upload video file' })}
               </label>

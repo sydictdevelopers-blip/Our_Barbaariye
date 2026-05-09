@@ -292,7 +292,7 @@ export default function ModuleVideosPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 {t('help.module', { defaultValue: 'Module' })}
               </label>
               <Select2
@@ -305,7 +305,7 @@ export default function ModuleVideosPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 {t('navbar.language')}
               </label>
               <Select2
@@ -325,7 +325,7 @@ export default function ModuleVideosPage() {
           />
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('help.description', { defaultValue: 'Description / Usage' })}
             </label>
             <textarea
@@ -337,7 +337,7 @@ export default function ModuleVideosPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <Youtube className="w-4 h-4" /> {t('help.videoUrl', { defaultValue: 'Video URL (YouTube / Vimeo)' })}
               </label>
               <input
@@ -348,7 +348,7 @@ export default function ModuleVideosPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <Upload className="w-4 h-4" /> {t('help.uploadVideo', { defaultValue: 'Upload video file' })}
               </label>
               <input

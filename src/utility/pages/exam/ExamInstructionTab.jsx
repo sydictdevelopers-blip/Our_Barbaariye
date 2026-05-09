@@ -239,7 +239,7 @@ export default function ExamInstructionTab() {
           <div className="space-y-4">
             {['a', 'b', 'c', 'd'].map((key) => (
               <div key={key} className="space-y-1">
-                <label className="text-emerald-600 font-medium">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                   {t('examInstruction.instructionLabel', { letter: key.toUpperCase() })}
                 </label>
                 <textarea
@@ -253,7 +253,7 @@ export default function ExamInstructionTab() {
           </div>
         ) : (
           <div className="space-y-1">
-            <label className="text-emerald-600 font-medium">{t('examInstruction.instructionLabelSingle')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('examInstruction.instructionLabelSingle')}</label>
             <textarea
               rows={4}
               value={editBody}

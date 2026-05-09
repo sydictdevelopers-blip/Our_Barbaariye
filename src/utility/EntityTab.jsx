@@ -88,6 +88,7 @@ function EntityTab({
   showStudentSelect = false,
   studentOptionsQuery,
   hideEdit = false,
+  hideDelete = false,
   hideAddNew = false,
   hiddenColumns,
   extraRowActions,
@@ -116,11 +117,21 @@ function EntityTab({
 
   const entity = useSelector(selectEntity(activeEntityKey)) ?? {};
   const rawColumns = useSelector(selectColumns(activeEntityKey));
+  // Per-button hiddenColumns merge with entity-level — the active load button
+  // can hide more (e.g. Show Data hides "responsible" since one is preselected).
+  const activeBtnHidden = useMemo(() => {
+    const btn = (loadButtons || []).find((b) => b.id === activeEntityKey);
+    return btn?.hiddenColumns ?? [];
+  }, [loadButtons, activeEntityKey]);
+  const effectiveHidden = useMemo(
+    () => [...(hiddenColumns || []), ...activeBtnHidden],
+    [hiddenColumns, activeBtnHidden]
+  );
   // Stable ref: tanstack-table treats `columns` change as a column rebuild,
   // which can remount editable cells (loses input focus mid-typing).
   const columns = useMemo(
-    () => (hiddenColumns?.length ? (rawColumns || []).filter((c) => !hiddenColumns.includes(c.key)) : rawColumns),
-    [rawColumns, hiddenColumns]
+    () => (effectiveHidden.length ? (rawColumns || []).filter((c) => !effectiveHidden.includes(c.key)) : rawColumns),
+    [rawColumns, effectiveHidden]
   );
   const rawPaginatedData = useSelector(selectPaginatedData(activeEntityKey));
   // SP fallback row pattern: 1 row with no PK → treat as empty + extract message from
@@ -354,6 +365,19 @@ function EntityTab({
           params.sub_id
         );
       },
+      // Re-fetch the currently active query+filters. Parent uses this after a
+      // CRUD modal save so the visible table reflects the change without the
+      // user re-clicking a load button. No-op when nothing has been loaded yet.
+      refresh() {
+        if (!activeEntityKey) return;
+        dispatch(loadData(loadPayload(
+          activeEntityKey,
+          entity.currentPage || 1,
+          limit,
+          entity.searchQuery || '',
+          activeExtra,
+        )));
+      },
     }),
     [
       onShowData,
@@ -362,6 +386,12 @@ function EntityTab({
       showBatchSelect,
       showExamSelect,
       showLevelSelect,
+      activeEntityKey,
+      activeExtra,
+      entity.currentPage,
+      entity.searchQuery,
+      limit,
+      dispatch,
     ]
   );
 
@@ -448,6 +478,11 @@ function EntityTab({
     [activeEntityKey, dispatch, activeExtra, entity.searchQuery, isFullyLoaded]
   );
 
+  // Per-button viewOnly: a load button can opt out of edit/delete row actions
+  // (e.g. Show Data scoped to one parent) while siblings (e.g. "All") keep them.
+  const activeLoadBtn = loadBtns.find((b) => b.id === activeEntityKey);
+  const isViewOnly = !!activeLoadBtn?.viewOnly;
+
   const renderActions = useCallback(
     (row) => {
       // "All" branch is read-only — keep extra row actions (e.g. View/Eye)
@@ -483,24 +518,26 @@ function EntityTab({
       return (
         <div className="flex justify-center gap-1">
           {extraRowActions && extraRowActions(row)}
-          {!hideEdit && (
+          {!hideEdit && !isViewOnly && (
             <ActionButton variant="edit" aria-label="Edit" onClick={() => onEdit(modalKey)(row, { cl_id: classIdForLoad, b_id: batchIdForLoad, lev_id: levelIdForLoad, ex_id: examIdForLoad, academicYearId: academicYearIdForLoad })}>
               <Pencil className="w-4 h-4" />
             </ActionButton>
           )}
-          <ActionButton
-            variant="delete"
-            aria-label="Delete"
-            onClick={async () => {
-              if (await confirmDelete({ id: row.id, label })) doDelete(row);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </ActionButton>
+          {!hideDelete && !isViewOnly && (
+            <ActionButton
+              variant="delete"
+              aria-label="Delete"
+              onClick={async () => {
+                if (await confirmDelete({ id: row.id, label })) doDelete(row);
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </ActionButton>
+          )}
         </div>
       );
     },
-    [isReadOnly, isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit, label]
+    [isReadOnly, isApproveExam, doApproveRow, modalKey, onEdit, doDelete, extraRowActions, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, academicYearIdForLoad, hideEdit, hideDelete, isViewOnly, label]
   );
 
   const headerActions = (
@@ -951,9 +988,10 @@ function EntityTab({
       renderActions={
         isMarksEntry
           ? undefined
-          // Read-only "All" branch: drop the Actions column entirely unless the
-          // host tab still wants to show row-level extras (e.g. View/Eye).
-          : (isReadOnly && !extraRowActions ? undefined : renderActions)
+          // Read-only "All" branch + per-button viewOnly: drop the Actions
+          // column entirely unless the host tab still wants row-level extras
+          // (e.g. View/Eye).
+          : ((isReadOnly || isViewOnly) && !extraRowActions ? undefined : renderActions)
       }
       editableColumns={editableColumns}
       editableMaxField={editableMaxField}

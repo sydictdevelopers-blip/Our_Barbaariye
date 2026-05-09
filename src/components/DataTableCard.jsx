@@ -14,7 +14,7 @@ import {
   flexRender,
 } from '@tanstack/react-table';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, X, ChevronsUpDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Search, X, ChevronsUpDown, Inbox } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Card from './ui/Card';
 import EmptyState from './ui/EmptyState';
@@ -221,8 +221,11 @@ function DataTableCard({
 
   const from = total > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const to = total > 0 ? Math.min(currentPage * itemsPerPage, total) : 0;
-  const isEmpty = !columns?.length && !filteredData?.length;
-  const hasData = columns?.length && filteredData?.length;
+  // Empty when there are no data rows, regardless of whether the backend
+  // supplied a column schema. Old check required both to be missing, which
+  // meant a successful query with 0 rows hid the empty state entirely.
+  const isEmpty = !filteredData?.length;
+  const hasData = !!filteredData?.length;
 
   // tableColumns intentionally excludes `editValues` from deps — the cell uses
   // EditableCell's local state so we don't need to rebuild columns on every keystroke.
@@ -251,6 +254,11 @@ function DataTableCard({
               onChange={(v) => onEditChange?.(rid, col.key, v)}
             />
           );
+        }
+        // Per-column custom renderer takes precedence over the generic formatter
+        // — lets callers turn a count cell into a clickable badge, etc.
+        if (typeof col.render === 'function') {
+          return col.render(row.original, row.original[col.key]);
         }
         return formatCell(col, row.original);
       },
@@ -349,9 +357,13 @@ function DataTableCard({
         {showDataPanel && error && <ErrorAlert message={error} hint={errorHint} />}
         {showDataPanel && !error && isEmpty && !isLoading && (
           <EmptyState
-            icon={emptyIcon}
-            title={(searchValue && String(searchValue).trim() !== '') ? resolvedNoResultTitle : emptyTitle}
-            description={(searchValue && String(searchValue).trim() !== '') ? resolvedNoResultDesc : emptyDescription}
+            icon={emptyIcon ?? Inbox}
+            title={(searchValue && String(searchValue).trim() !== '')
+              ? resolvedNoResultTitle
+              : (emptyTitle || t('dataTable.emptyDataTitle', { defaultValue: 'No data found' }))}
+            description={(searchValue && String(searchValue).trim() !== '')
+              ? resolvedNoResultDesc
+              : (emptyDescription || t('dataTable.emptyDataDesc', { defaultValue: 'No records exist in the database for this view yet.' }))}
           />
         )}
         {showDataPanel && !error && (hasData || isLoading) && (

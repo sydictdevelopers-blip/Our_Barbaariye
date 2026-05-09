@@ -12,6 +12,7 @@ import {
 import Card from '../../../components/ui/Card';
 import { dedupeRequest, fetchDataPaginated } from '../../../services/api';
 import { swalError } from '../../../utils/swal';
+import { resizeImageToBudget } from '../../../utils/resizeImage';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
@@ -107,16 +108,30 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
 
   const uploadOne = async (stdId, file) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      swalError(t('studentImages.errOnlyImages'));
+    const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png'];
+    const ALLOWED_EXT = /\.(jpe?g|png)$/i;
+    const MAX_BYTES = 300 * 1024;
+    if (!ALLOWED_MIME.includes(String(file.type || '').toLowerCase()) || !ALLOWED_EXT.test(file.name || '')) {
+      swalError(t('studentImages.errOnlyImages', { defaultValue: 'Only JPG, JPEG, or PNG images are allowed' }));
       return;
     }
-    const previewUrl = URL.createObjectURL(file);
+    // Auto-resize oversized photos client-side instead of rejecting them —
+    // phone cameras routinely produce 3–10 MB files and we cap at 300 KB.
+    let uploadFile = file;
+    if (file.size > MAX_BYTES) {
+      try {
+        uploadFile = await resizeImageToBudget(file, MAX_BYTES);
+      } catch {
+        swalError(t('studentImages.errFileTooLarge', { defaultValue: 'Image must be smaller than 300 KB' }));
+        return;
+      }
+    }
+    const previewUrl = URL.createObjectURL(uploadFile);
     beginUpload(stdId, previewUrl);
     try {
       const fd = new FormData();
       fd.append('std_id', String(stdId));
-      fd.append('file', file);
+      fd.append('file', uploadFile);
       const resp = await fetch(`${API_BASE}/student-image/upload`, { method: 'POST', body: fd });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) throw new Error(json?.error || 'Upload failed');
@@ -352,7 +367,7 @@ export default function StudentImagesPanel({ cl_id, b_id, a_y_id, onClose }) {
                       <input
                         id={inputId}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,.jpg,.jpeg,.png"
                         className="hidden"
                         disabled={isUploading}
                         onChange={(e) => {

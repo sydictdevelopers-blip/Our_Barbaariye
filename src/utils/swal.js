@@ -45,6 +45,56 @@ const MESSAGE_MAP = [
   { re: /this (information|record|data) (has been|is) (correctly )?(registered|inserted|saved|added|created)( correctly)?\.?/i, key: 'swal.texts.saved' },
   { re: /(record|data|row) (registered|inserted|saved|created)( successfully| correctly)?\.?/i, key: 'swal.texts.saved' },
 
+  // Alerts table (DB-ga gudaha — body kasta oo SP-yadu soo celiyaan):
+  // "This information is not registered" — hits NotRegDelete & NotRegUpdate
+  { re: /this\s+(information|record|data|user(?:name)?)\s+is\s+not\s+(?:registered|reg)\b/i, key: 'swal.texts.notRegistered' },
+  { re: /(your\s+)?username\s+is\s+not\s+registered/i, key: 'swal.texts.notRegistered' },
+  // "This Information Was Not Found!"
+  { re: /this\s+(information|record|data)\s+was\s+not\s+found/i, key: 'swal.texts.notFound' },
+  // "This information has been already exist" (note: missing 's')
+  { re: /this\s+(information|record|data)\s+(has\s+been\s+)?already\s+exists?\b/i, key: 'swal.titles.alreadyExists' },
+  // "This information did not make any changes"
+  { re: /this\s+(information|record|data)\s+did\s+not\s+make\s+any\s+changes?/i, key: 'swal.texts.noChanges' },
+  // "This information can not be deleted" / "cannot be deleted"
+  { re: /this\s+(information|record|data)\s+can\s*not\s+be\s+deleted/i, key: 'swal.texts.cantDelete' },
+  // "Nothing to delete"
+  { re: /^\s*nothing\s+to\s+delete\s*$/i, key: 'swal.texts.nothingToDelete' },
+  // "This operation has been already activated" / "already inactivated"
+  { re: /this\s+operation\s+(has\s+been\s+)?already\s+activated/i, key: 'swal.texts.alreadyActivated' },
+  { re: /this\s+operation\s+(has\s+been\s+)?already\s+inactivated/i, key: 'swal.texts.alreadyInactivated' },
+  // "This operation has been activated" / "inactivated"
+  { re: /this\s+operation\s+(has\s+been\s+)?activated\s*$/i, key: 'swal.texts.activated' },
+  { re: /this\s+operation\s+(has\s+been\s+)?inactivated\s*$/i, key: 'swal.texts.inactivated' },
+  // "This Month Already Charged"
+  { re: /this\s+month\s+already\s+charged/i, key: 'swal.texts.alreadyCharged' },
+  // "Charged Successfully"
+  { re: /^\s*charged\s+successfully\s*$/i, key: 'swal.texts.charged' },
+  // "Invalid Date"
+  { re: /^\s*invalid\s+date\s*$/i, key: 'swal.texts.invalidDate' },
+  // "Sorry Charge Date did not Reach"
+  { re: /sorry\s+charge\s+date\s+did\s+not\s+reach/i, key: 'swal.texts.chargeDateNotReached' },
+  // "Please complete the information correctly" — Fill alert
+  { re: /please\s+complete\s+the\s+information\s+correctly/i, key: 'swal.texts.fillCorrectly' },
+  // "Your Password Has been Changed"
+  { re: /your\s+password\s+(has\s+been\s+)?changed/i, key: 'swal.texts.passwordChanged' },
+  // "This user is already locked"
+  { re: /this\s+user\s+is\s+already\s+locked/i, key: 'swal.texts.userAlreadyLocked' },
+  // "This student can not be changed in this class"
+  { re: /this\s+student\s+can\s*not\s+be\s+(?:changed|transferred)\s+in\s+this\s+class/i, key: 'swal.texts.studentCannotTransfer' },
+  // "Room Assigned teacher Successfully"
+  { re: /room\s+assigned\s+teacher\s+successfully/i, key: 'swal.texts.roomTeacherAssigned' },
+  // "this Room Reached Limit Number"
+  { re: /(this\s+)?room\s+reached\s+limit\s+number/i, key: 'swal.texts.roomFull' },
+  // "Room Collected Students Successfully"
+  { re: /room\s+collected\s+students\s+successfully/i, key: 'swal.texts.roomStudentsAssigned' },
+  // "There is No Teacher Registered this room"
+  { re: /there\s+is\s+no\s+teacher\s+registered\s+this\s+room/i, key: 'swal.texts.roomNoTeacher' },
+  // "There is No students Registered this room"
+  { re: /there\s+is\s+no\s+students?\s+registered\s+this\s+room/i, key: 'swal.texts.roomNoStudents' },
+  // student_marge_sp — "Cannot merge — students are in different Clases"
+  { re: /cannot\s+merge.*students?\s+(are\s+)?in\s+different\s+cla[sc]e?s/i, key: 'swal.texts.mergeDifferentClasses' },
+  { re: /^\s*merge\s+completed\s+successfully\s*$/i, key: 'swal.texts.mergeSuccess' },
+
   // hardcoded Somali-ga oo callers isticmaalaan
   { re: /^\s*(wa la guulaystey|guul)\s*$/i, key: 'swal.titles.success' },
   { re: /^\s*(khalad( ayaa dhacay)?|qalad( nidaamka)?)\s*$/i, key: 'swal.titles.error' },
@@ -216,19 +266,44 @@ function tDbInline(text) {
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // \b only behaves well for ASCII — for keys with spaces or non-ASCII chars
     // (Arabic/Somali) fall back to lookahead/lookbehind on whitespace/punct.
-    const re = /^[\w]/.test(key) && /[\w]$/.test(key)
-      ? new RegExp(`\\b${escaped}\\b`, 'g')
-      : new RegExp(`(^|[\\s,.;:!?()\\[\\]"'])${escaped}(?=$|[\\s,.;:!?()\\[\\]"'])`, 'g');
-    result = result.replace(re, (match, prefix) => (prefix != null ? `${prefix}${translated}` : translated));
+    // The non-ASCII branch captures the boundary char (group 1); the ASCII \b
+    // branch has no capture group, so the replacer must distinguish: when the
+    // callback's second arg is a number (offset, not a string capture), there
+    // was no prefix to preserve.
+    const hasPrefixCapture = !(/^[\w]/.test(key) && /[\w]$/.test(key));
+    const re = hasPrefixCapture
+      ? new RegExp(`(^|[\\s,.;:!?()\\[\\]"'])${escaped}(?=$|[\\s,.;:!?()\\[\\]"'])`, 'g')
+      : new RegExp(`\\b${escaped}\\b`, 'g');
+    result = result.replace(re, (...args) => {
+      if (!hasPrefixCapture) return translated;
+      const prefix = args[1];
+      return prefix ? `${prefix}${translated}` : translated;
+    });
   }
   return result;
+}
+
+/** Some PG SPs prepend a numeric counter to the operation word before passing
+    it back to a swal title/text (e.g. "25Delete" instead of "Delete"). The
+    digits leak through translation and look like garbage to the user. Strip
+    them before any pattern matching so the message reads cleanly.
+    Avoids lookbehind for older Safari/iOS compat — uses a capture group
+    + replacement callback instead. */
+function stripOpDigits(str) {
+  // Match: optional non-letter boundary char, captured, then digits, then operation word.
+  // Replacement keeps the boundary char + operation word, drops the digits.
+  return String(str).replace(
+    /(^|[^A-Za-z])\d+(Delete|Update|Insert|Activate|Inactivate|Approve|Cancel|Edit|Remove)\b/gi,
+    '$1$2'
+  );
 }
 
 /** U rog fariinta la soo diray i18n haddii ay la mid tahay pattern aan aqoono. */
 function translateMessage(msg) {
   if (msg == null) return '';
-  const str = String(msg);
-  if (!str.trim()) return '';
+  const raw = String(msg);
+  if (!raw.trim()) return '';
+  const str = stripOpDigits(raw);
   for (const entry of MESSAGE_MAP) {
     const m = str.match(entry.re);
     if (m) {
@@ -252,7 +327,9 @@ function translateMessage(msg) {
   }
   // No template match — best-effort: translate any DB value embedded in the
   // raw message (e.g. SP returns "Status changed to Active" → "...Firfircoon").
-  return tDbInline(str);
+  // Strip again on output: tDbInline may turn a lowercased "delete" into "Delete"
+  // alongside a leftover numeric prefix from a different code path.
+  return stripOpDigits(tDbInline(str));
 }
 
 function isAlreadyExists(text) {

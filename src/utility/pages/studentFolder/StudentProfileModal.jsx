@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Printer, FileSpreadsheet, User, Phone, MapPin, Calendar, Heart, UserCheck,
   GraduationCap, School, DollarSign, Accessibility, Globe, ImageIcon, Hash,
-  IdCard, Users,
+  IdCard, Users, X,
 } from 'lucide-react';
 import Modal from '../../../components/ui/Modal';
 import { fetchDataPaginated } from '../../../services/api';
@@ -51,10 +51,10 @@ function buildClassLine(p, batchLabel, naLabel) {
 function ProfileRow({ icon: Icon, label, value, missingMarker }) {
   const isMissing = value === missingMarker;
   return (
-    <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-100 last:border-0 hover:bg-cyan-50/30 transition-colors print:hover:bg-transparent">
-      <Icon className="w-4 h-4 text-[#0B3C5D]/70 shrink-0 print:text-black" />
-      <div className="text-xs font-semibold text-slate-600 w-[44%] truncate print:text-black">{label}</div>
-      <div className={`text-xs flex-1 truncate ${isMissing ? 'text-slate-400 italic' : 'text-slate-800'} print:text-black print:font-medium`}>
+    <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-cyan-50/30 dark:hover:bg-slate-700/30 transition-colors print:hover:bg-transparent">
+      <Icon className="w-4 h-4 text-[#0B3C5D]/70 dark:text-teal-300/80 shrink-0 print:text-black" />
+      <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 w-[44%] truncate print:text-black">{label}</div>
+      <div className={`text-xs flex-1 truncate ${isMissing ? 'text-slate-400 dark:text-slate-500 italic' : 'text-slate-800 dark:text-slate-100'} print:text-black print:font-medium`}>
         {value}
       </div>
     </div>
@@ -230,9 +230,20 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
         bodyClassName="p-0"
         className="!max-w-5xl student-profile-print-root modal-card-print"
       >
-        <div className="bg-white text-slate-800 rounded-2xl overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-2xl overflow-hidden">
+          {/* Floating close button — modal hides the default header so we add
+              an explicit X here. Always visible (never print). */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close', 'Close')}
+            className="absolute top-3 right-3 z-10 p-2 rounded-xl text-slate-500 hover:bg-slate-200/80 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 dark:hover:text-slate-200 transition-colors print:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
           {/* Action bar */}
-          <div className="flex flex-wrap gap-3 px-6 pt-5 print:hidden">
+          <div className="flex flex-wrap gap-3 px-6 pt-5 pr-14 print:hidden">
             <button
               type="button"
               onClick={handlePrint}
@@ -252,24 +263,24 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
           </div>
 
           {/* Branded header */}
-          <div className="relative px-6 pt-4 pb-3 mt-2 border-b-[3px] border-double border-[#0B3C5D]/30 print:border-b-2 print:border-solid print:border-black">
-            <div className="absolute top-1.5 right-6 text-[10px] uppercase tracking-wider text-slate-400 print:text-black">
-              <span className="font-semibold text-slate-500 print:text-black">{t('studentProfile.poweredBy', 'Powered by')}</span> [SYD] — {t('studentProfile.callPhone', 'Call 2238')}
+          <div className="relative px-6 pt-4 pb-3 mt-2 border-b-[3px] border-double border-[#0B3C5D]/30 dark:border-teal-400/30 print:border-b-2 print:border-solid print:border-black">
+            <div className="absolute top-1.5 right-6 text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 print:text-black">
+              <span className="font-semibold text-slate-500 dark:text-slate-400 print:text-black">{t('studentProfile.poweredBy', 'Powered by')}</span> [SYD] — {t('studentProfile.callPhone', 'Call 2238')}
             </div>
             <div className="flex items-center justify-center gap-4">
-              <div className="w-16 h-16 rounded-full border-[3px] border-[#0B3C5D] flex items-center justify-center font-black text-[#0B3C5D] shadow-inner bg-gradient-to-br from-white to-slate-100 print:shadow-none">
+              <div className="w-16 h-16 rounded-full border-[3px] border-[#0B3C5D] dark:border-teal-400 flex items-center justify-center font-black text-[#0B3C5D] dark:text-teal-300 shadow-inner bg-gradient-to-br from-white to-slate-100 dark:from-slate-700 dark:to-slate-800 print:shadow-none">
                 SYD
               </div>
               <div className="text-center">
-                <div className="text-xl md:text-2xl font-extrabold tracking-[0.18em] text-[#0B3C5D] print:text-black">
+                <div className="text-xl md:text-2xl font-extrabold tracking-[0.18em] text-[#0B3C5D] dark:text-teal-300 print:text-black">
                   {t('studentProfile.schoolName', 'SYD ICT SOLUTIONS')}
                 </div>
-                <div className="text-[10px] md:text-xs tracking-[0.42em] text-[#0B3C5D]/80 font-semibold mt-0.5 print:text-black">
+                <div className="text-[10px] md:text-xs tracking-[0.42em] text-[#0B3C5D]/80 dark:text-teal-300/80 font-semibold mt-0.5 print:text-black">
                   {t('studentProfile.schoolType', 'PRIMARY & SECONDARY SCHOOL')}
                 </div>
               </div>
             </div>
-            <div className="text-right text-[11px] text-cyan-600 font-medium mt-2 print:text-black">
+            <div className="text-right text-[11px] text-cyan-600 dark:text-cyan-400 font-medium mt-2 print:text-black">
               {t('studentProfile.printDate', 'Print Date')}: {today}
             </div>
           </div>
@@ -277,13 +288,13 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
           {/* Body */}
           <div className="px-6 py-5">
             {loading && (
-              <div className="text-center py-12 text-slate-500">
-                <div className="inline-block w-8 h-8 border-[3px] border-[#0B3C5D]/20 border-t-[#0B3C5D] rounded-full animate-spin" />
+              <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                <div className="inline-block w-8 h-8 border-[3px] border-[#0B3C5D]/20 dark:border-teal-400/20 border-t-[#0B3C5D] dark:border-t-teal-400 rounded-full animate-spin" />
                 <p className="mt-3 text-sm">{t('studentProfile.loading', 'Loading profile…')}</p>
               </div>
             )}
             {error && !loading && (
-              <div className="text-center py-10 text-red-600 bg-red-50 border border-red-200 rounded-xl">
+              <div className="text-center py-10 text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl">
                 {error}
               </div>
             )}
@@ -291,16 +302,16 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
             {!loading && !error && profile && (
               <>
                 {/* Top hero — photo + identity */}
-                <div className="flex flex-wrap items-center gap-5 pb-4 mb-4 border-b border-slate-200 print:border-black">
+                <div className="flex flex-wrap items-center gap-5 pb-4 mb-4 border-b border-slate-200 dark:border-slate-700 print:border-black">
                   <div className="relative shrink-0">
                     {profile.image && /^https?:\/\//i.test(profile.image) ? (
                       <img
                         src={profile.image}
                         alt={profile.student_name || t('studentProfile.cols.name', 'Student')}
-                        className="w-24 h-24 object-cover rounded-xl border-4 border-white ring-2 ring-[#0B3C5D]/20 shadow-md print:shadow-none print:ring-1 print:ring-black"
+                        className="w-24 h-24 object-cover rounded-xl border-4 border-white dark:border-slate-700 ring-2 ring-[#0B3C5D]/20 dark:ring-teal-400/30 shadow-md print:shadow-none print:ring-1 print:ring-black"
                       />
                     ) : (
-                      <div className="w-24 h-24 rounded-xl border-4 border-white ring-2 ring-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 shadow-md print:shadow-none print:ring-1 print:ring-black">
+                      <div className="w-24 h-24 rounded-xl border-4 border-white dark:border-slate-700 ring-2 ring-slate-200 dark:ring-slate-600 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 shadow-md print:shadow-none print:ring-1 print:ring-black">
                         <ImageIcon className="w-8 h-8 mb-1 opacity-50" />
                         <span className="text-[9px] font-semibold tracking-wider uppercase">{t('studentProfile.noImage', 'No Image')}</span>
                       </div>
@@ -315,20 +326,20 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
                     )}
                   </div>
                   <div className="flex-1 min-w-[200px]">
-                    <div className="text-2xl font-extrabold text-slate-800 leading-tight print:text-black">
+                    <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight print:text-black">
                       {profile.student_name || '—'}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 print:border print:border-black print:!bg-white">
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 print:border print:border-black print:!bg-white">
                         <Hash className="w-3 h-3" /> {t('studentProfile.cols.id', 'ID')}: {profile.std_id}
                       </span>
                       {profile.id_card && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 print:border print:border-black print:!bg-white">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 print:border print:border-black print:!bg-white">
                           <IdCard className="w-3 h-3" /> {profile.id_card}
                         </span>
                       )}
                       {profile.class_name && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-[#0B3C5D]/10 text-[#0B3C5D] font-semibold print:border print:border-black print:!bg-white print:!text-black">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-[#0B3C5D]/10 dark:bg-teal-400/15 text-[#0B3C5D] dark:text-teal-300 font-semibold print:border print:border-black print:!bg-white print:!text-black">
                           <GraduationCap className="w-3 h-3" /> {buildClassLine(profile, batchLabel, naLabel)}
                         </span>
                       )}
@@ -337,12 +348,12 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
                 </div>
 
                 {/* Two-column profile grid */}
-                <div className="rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60 overflow-hidden print:shadow-none print:border-black">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm shadow-slate-200/60 dark:shadow-slate-900/40 overflow-hidden print:shadow-none print:border-black">
                   <div className="bg-gradient-to-r from-[#0B3C5D] to-[#0D9488] text-white text-center font-semibold py-2 tracking-wide print:!bg-white print:!text-black print:border-b print:border-black">
                     {t('studentProfile.title', 'Student Profile')}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2">
-                    <div className="md:border-r border-slate-200 print:border-r print:border-black">
+                    <div className="md:border-r border-slate-200 dark:border-slate-700 print:border-r print:border-black">
                       {COL_LEFT.map(({ key, labelKey, icon }) => (
                         <ProfileRow
                           key={key}
@@ -368,17 +379,17 @@ export default function StudentProfileModal({ isOpen, onClose, stdId }) {
                 </div>
 
                 {/* Footer meta */}
-                <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500 print:text-black print:border-black">
+                <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400 print:text-black print:border-black">
                   <div>
                     {t('studentProfile.registered', 'Registered')}:&nbsp;
-                    <span className="text-slate-700 font-medium print:text-black">
+                    <span className="text-slate-700 dark:text-slate-200 font-medium print:text-black">
                       {profile.reg_date ? new Date(profile.reg_date).toLocaleDateString() : '—'}
                     </span>
                     <span className="mx-2">·</span>
                     {t('studentProfile.by', 'By')}:&nbsp;
-                    <span className="text-slate-700 font-medium print:text-black">{profile.username || '—'}</span>
+                    <span className="text-slate-700 dark:text-slate-200 font-medium print:text-black">{profile.username || '—'}</span>
                   </div>
-                  <div className="text-slate-400 print:text-black">
+                  <div className="text-slate-400 dark:text-slate-500 print:text-black">
                     {t('studentProfile.generatedBy', 'Generated by Barbaariye Admin')}
                   </div>
                 </div>

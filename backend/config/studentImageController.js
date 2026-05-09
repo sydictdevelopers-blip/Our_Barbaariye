@@ -29,12 +29,21 @@ const s3 = new S3Client({
   },
 });
 
+// Allow only JPG/JPEG/PNG (by both MIME and extension) and cap at 300 KB.
+// Both checks run server-side as the source of truth — frontend `accept`
+// attribute is just a UX hint that users can bypass.
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_IMAGE_EXT = /\.(jpe?g|png)$/i;
+const MAX_IMAGE_BYTES = 300 * 1024; // 300 KB
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: MAX_IMAGE_BYTES },
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
+    const mimeOk = ALLOWED_IMAGE_MIME.includes(String(file.mimetype || '').toLowerCase());
+    const extOk = ALLOWED_IMAGE_EXT.test(file.originalname || '');
+    if (!mimeOk || !extOk) {
+      return cb(new Error('Only JPG, JPEG, or PNG images are allowed'));
     }
     cb(null, true);
   },
@@ -161,11 +170,28 @@ async function handleUpload(req, res) {
   }
 }
 
+// Multer rejects oversized / wrong-format files via cb(err) — Express forwards
+// them as plain 500s with cryptic messages. This wrapper translates the most
+// common multer errors into a friendly JSON response with the right status.
+function uploadOrRespond(field) {
+  const handler = upload.single(field);
+  return (req, res, next) => handler(req, res, (err) => {
+    if (!err) return next();
+    let msg = err.message || 'Upload failed';
+    let status = 400;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      msg = 'Image must be smaller than 300 KB';
+      status = 413;
+    }
+    return res.status(status).json({ error: msg });
+  });
+}
+
 function register(app) {
   // requireAuth runs first so unauth'd uploads get rejected before multer
   // buffers the (potentially large) file in memory.
-  app.post('/api/student-image/upload', requireAuth, upload.single('file'), handleUpload);
-  app.post('/api/student-image/upload-new', requireAuth, upload.single('file'), handleUploadNew);
+  app.post('/api/student-image/upload', requireAuth, uploadOrRespond('file'), handleUpload);
+  app.post('/api/student-image/upload-new', requireAuth, uploadOrRespond('file'), handleUploadNew);
 }
 
 module.exports = { register };

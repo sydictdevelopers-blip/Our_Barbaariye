@@ -87,7 +87,7 @@ export default function MergeStudentsModal({ isOpen, onClose, onSuccess }) {
 
   const FieldWrap = ({ label, htmlFor, error, children }) => (
     <div className="space-y-1">
-      {label && <label htmlFor={htmlFor} className="block text-sm font-medium text-emerald-700 dark:text-emerald-400">{label}</label>}
+      {label && <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>}
       {children}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

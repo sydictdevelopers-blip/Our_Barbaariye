@@ -17,7 +17,7 @@ import { swalSuccess, swalError } from '../utils/swal';
 // Copy / Print — sida sawirka.
 
 const FieldLabel = ({ children }) => (
-  <label className="block text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
+  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
     {children}
   </label>
 );

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,8 @@ import StudentInfoTab from './StudentInfoTab';
 import StudentStateTab from './StudentStateTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
+import { fetchDataPaginated } from '../../../services/api';
+import { swalError } from '../../../utils/swal';
 import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
 import { getModalEntities, getQueryForModalKey } from '../../../utils/tabModalUtils';
 import { resolveTabIcon, resolveButtonIcon } from '../../../utils/iconRegistry';
@@ -37,6 +39,10 @@ export default function StudentofficeTabs() {
   const location = useLocation();
   const dispatch = useDispatch();
   const [modal, setModal] = useState({ entityKey: null, editRow: null });
+  // Ref to the currently mounted EntityTab so the modal's onSuccess can call
+  // refresh() — the tab-level queryName in menuConfig isn't always a real backend
+  // query (e.g. "Responsible"), so refreshing via getQueryForModalKey 404s.
+  const entityTabRef = useRef(null);
 
   const rawTabs = useTabsForPath(location.pathname);
   const tabs = useMemo(
@@ -56,9 +62,28 @@ export default function StudentofficeTabs() {
     }
   }, [location.pathname, tabs, activeTab, dispatch]);
 
-  const openModal = (entityKey) => (row = null) => {
+  // Some list views expose display labels (e.g. driver_name, plot_no) but not
+  // the FK columns the edit form needs (emp_id, targo). Map modalKey → the
+  // single-row fetch query + its id param so we hydrate the row before opening.
+  const editFetchByModal = {
+    ResponsibleModal: { queryName: 'ResponsibleEdit', idParam: 'res_id' },
+    bus:              { queryName: 'BusEdit',         idParam: 'bus_id' },
+  };
+  const openModal = (entityKey) => async (row = null) => {
     const config = CRUD_CONFIG[entityKey];
-    const editRow = row && config?.fromRow ? config.fromRow(row) : row;
+    let workingRow = row;
+    const fetchSpec = editFetchByModal[entityKey];
+    if (fetchSpec && row?.id) {
+      try {
+        const res = await fetchDataPaginated({ queryName: fetchSpec.queryName, [fetchSpec.idParam]: row.id });
+        const full = res?.data?.[0];
+        if (full) workingRow = full;
+      } catch (err) {
+        swalError(t('swal.titles.error'), err?.message || '');
+        return;
+      }
+    }
+    const editRow = workingRow && config?.fromRow ? config.fromRow(workingRow) : workingRow;
     setModal({ entityKey, editRow });
   };
 
@@ -91,6 +116,7 @@ export default function StudentofficeTabs() {
       return (
         <motion.div key={activeTab} {...motionProps}>
           <EntityTab
+            ref={entityTabRef}
             entityKey={cfg.entityKey}
             modalKey={cfg.modalKey}
             icon={cfg.icon}
@@ -101,6 +127,7 @@ export default function StudentofficeTabs() {
             academicYearOptionsQuery={cfg.academicYearOptionsQuery}
             showResponsibleSelect={cfg.showResponsibleSelect}
             hiddenColumns={cfg.hiddenColumns}
+            hideEdit={cfg.hideEdit}
             hideDelete={cfg.hideDelete}
             hideAddNew={cfg.hideAddNew}
             bulkForm={cfg.entityKey === 'Responsible'
@@ -158,6 +185,13 @@ export default function StudentofficeTabs() {
             initialForm={editRow || {}}
             mode={editRow ? 'update' : 'insert'}
             onSuccess={() => {
+              // Refresh whichever load-button result is currently visible — this
+              // works for "All", "Show Data", etc. Falls back to the tab-level
+              // queryName only if the EntityTab hasn't mounted/loaded anything.
+              if (entityTabRef.current?.refresh) {
+                entityTabRef.current.refresh();
+                return;
+              }
               const q = getQueryForModalKey(tabs, entityKey);
               if (q) {
                 const tabCfg = tabs.find((t) => t.modalKey === entityKey);

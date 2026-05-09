@@ -527,7 +527,7 @@ export default function QuestionsTableTab() {
       {view === 'form' && mode === 'circle' && (
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-emerald-600 font-medium">{t('questionsTable.form.questionLabel')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('questionsTable.form.questionLabel')}</label>
             <textarea
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
@@ -636,7 +636,7 @@ export default function QuestionsTableTab() {
       >
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-emerald-600 font-medium">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               {t('questionsTable.editModal.questionLabel')}
             </label>
             <textarea

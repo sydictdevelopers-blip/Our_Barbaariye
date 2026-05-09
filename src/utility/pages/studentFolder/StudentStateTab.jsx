@@ -93,7 +93,7 @@ export default function StudentStateTab() {
           {t('entity.addNew', { defaultValue: 'Add New' })}
         </Button>
         <Button size="sm" variant="primary" leftIcon={<GitMerge className="w-4 h-4" />} onClick={handleMergeStudent} className={`${compactBtn} shrink-0`}>
-          {t('studentState.mergeStudent', { defaultValue: 'Merge Student' })}
+          {t('studentStateTab.mergeStudent', { defaultValue: 'Merge Student' })}
         </Button>
       </div>
     </div>
@@ -134,8 +134,9 @@ export default function StudentStateTab() {
         isOpen={mergeModalOpen}
         onClose={() => setMergeModalOpen(false)}
         onSuccess={() => {
+          // Just close the modal — no table reload. Merge is a stand-alone
+          // op; the user can hit Show Data manually when they want to verify.
           setMergeModalOpen(false);
-          if (tableLoaded) handleShowData();
         }}
       />
     </div>

@@ -150,6 +150,7 @@ export default function DateInput({
   id,
   className = '',
   placeholder,
+  defaultToToday = true,
   ...rest
 }) {
   const { i18n } = useTranslation();
@@ -160,6 +161,19 @@ export default function DateInput({
   const [draft, setDraft] = useState(() => isoToArDisplay(value));
   const [popOpen, setPopOpen] = useState(false);
   const [popPos, setPopPos] = useState({ top: 0, left: 0 });
+
+  // Default to today on first mount if no value supplied. App-wide preference:
+  // every date field shows today by default (filters, forms, ranges) so users
+  // don't have to manually pick the current date for the common case. Caller
+  // can opt out with defaultToToday={false} (e.g. a DOB field where blank is
+  // intentional).
+  useEffect(() => {
+    if (defaultToToday && (value == null || value === '')) {
+      fireChange(onChange, name, todayIso());
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setDraft(isoToArDisplay(value));

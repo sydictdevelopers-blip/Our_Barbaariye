@@ -145,6 +145,12 @@ const dataSlice = createSlice({
           dedupedRows.push(r);
         }
         const normalized = dedupedRows.map((r) => normalizeRow(r, columns, idKey));
+        // Hide columns where every visible row is empty/"-" — these only add
+        // visual noise (e.g. SP "result" column that returns nothing). Keep
+        // when there are no rows yet, so column shape isn't lost on empty page.
+        const visibleColumns = normalized.length > 0
+          ? columns.filter((c) => !normalized.every((r) => r[c.key] === '-' || r[c.key] === '' || r[c.key] == null))
+          : columns;
         // ATOMIC REPLACE: dhis entity-ga oo dhan oo cusub si Immer aanu u sii
         // hayn references-ka qadiimiga ah. Tani waxay xal-bisaa ciladda data
         // ay ku sii qabsaday array-ga hore.
@@ -152,7 +158,7 @@ const dataSlice = createSlice({
         state.entities[queryName] = {
           ...defaultEntity,
           searchQuery: prev.searchQuery,
-          columns,
+          columns: visibleColumns,
           data: normalized,
           originalData: [...normalized],
           currentPage: pagination.page ?? prev.currentPage,

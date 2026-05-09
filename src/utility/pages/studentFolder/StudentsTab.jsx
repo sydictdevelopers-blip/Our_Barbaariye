@@ -340,6 +340,17 @@ export default function StudentsTab() {
   return (
     <div className="space-y-4">
       {filterToolbar}
+      {/* CrudModal lives outside the viewMode switch so Add New / Edit can open
+          the Student Register form even from the Image/Responsibles/EMIS panels. */}
+      <CrudModal
+        isOpen={registerOpen}
+        onClose={() => setRegisterOpen(false)}
+        config={registerConfig}
+        initialForm={registerInitial}
+        mode={registerMode}
+        onSuccess={handleRegisterSuccess}
+        moduleKey="StudentRegister"
+      />
       {viewMode === 'images' ? (
         <StudentImagesPanel
           cl_id={filterClass}
@@ -364,16 +375,6 @@ export default function StudentsTab() {
           onClose={() => setViewMode('students')}
         />
       ) : (
-        <>
-        <CrudModal
-          isOpen={registerOpen}
-          onClose={() => setRegisterOpen(false)}
-          config={registerConfig}
-          initialForm={registerInitial}
-          mode={registerMode}
-          onSuccess={handleRegisterSuccess}
-          moduleKey="StudentRegister"
-        />
         <DataTableCard
           showDataPanel={tableLoaded}
           searchPlaceholder={t('common.search')}
@@ -395,7 +396,6 @@ export default function StudentsTab() {
           onPageClick={(p) => setCurrentPage(p)}
           onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
         />
-        </>
       )}
       <StudentProfileModal
         isOpen={!!profileStdId}

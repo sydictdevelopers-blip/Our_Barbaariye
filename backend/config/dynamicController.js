@@ -39,6 +39,9 @@ const PROCEDURE_PARAM_ORDER = {
   schools_sp: ['num', 'sname', 'reg_no', 'user_id', 'oper'],
   student_state_sp: ['ids', 'clas', 'academic', 'reason', 'oper_fee', 'fee_amount', 'account_pr', 'to_class', 'description_sp', 'date_sp', 'user_id'],
   student_responsible: ['p_num', 'p_waalid', 'p_operation', 'p_user_id'],
+  // Inline state/batch update for the Student Info table. Pass 0 / '' to skip
+  // a field; SP no-op detects when both match the existing values.
+  student_class_inline_update_sp: ['p_std_cl_id', 'p_b_id', 'p_state', 'p_u_br_id'],
   del_responsible_with_no_std_spv: [],
   exam_sp: ['ex_id_sp', 'exam_sp_v', 'ordering_sp', 'u_br_id_sp', 'oper'],
   exam_reg_sp: ['ex_reg_id_sp', 'a_y_id_sp', 'ex_id_sp', 'exam_type_sp', 'marks_sp', 'start_date_sp', 'end_date_sp', 'deadline_sp', 'br_id_sp', 'exam_status_sp', 'attendance_marks_sp', 'u_br_id_sp', 'oper'],
@@ -231,13 +234,6 @@ function assertSafeSelect(query) {
   const bad = stripQuoted(q).match(FORBIDDEN_RE);
   if (bad) throw new Error(`Forbidden: ${bad[1]}`);
 }
-
-/** Run SELECT query (api/showdata) */
-exports.runSelectQuery = async (query) => {
-  assertSafeSelect(query);
-  const result = await db.query(query);
-  return result.rows || [];
-};
 
 /**
  * Run SELECT directly with no wrap (api/data, prePaginated entries) – returns

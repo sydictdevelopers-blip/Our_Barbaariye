@@ -131,46 +131,57 @@ export default function Select2({
     setDefaultOpts(false);
   }, [sessionBrId]);
 
-  // Wraps loadOptions to inject a synthetic "+ Add New" option whenever the
-  // typed text doesn't match any existing item. We bypass react-select-creatable
-  // entirely — its create affordance has reliability issues with our async +
-  // cached setup. Returning a sentinel option (value = ADD_NEW_VALUE) is simpler
-  // and lets us intercept the click in onChange to open the sub-modal instead
-  // of selecting it as a value.
-  const wrappedLoadOptions = useMemo(() => {
-    if (!loadOptions) return undefined;
-    if (!onCreate) return loadOptions;
-    return async (inputValue) => {
-      const opts = (await loadOptions(inputValue)) || [];
-      const trimmed = String(inputValue ?? '').trim();
-      if (!trimmed) return opts;
-      const lc = trimmed.toLowerCase();
-      const exists = opts.some((o) => String(o.label ?? '').toLowerCase() === lc);
-      if (exists) return opts;
-      const label = createLabel ? createLabel(trimmed) : `+ Add New "${trimmed}"`;
-      return [{ value: ADD_NEW_VALUE, label, __addNew__: true, __searchText: trimmed }, ...opts];
-    };
-  }, [loadOptions, onCreate, createLabel]);
-
   const handleMenuOpen = useCallback(async () => {
     onMenuOpen?.();
     if (defaultOpts !== false) return; // already loaded once
-    if (!wrappedLoadOptions) return;
+    if (!loadOptions) return;
     try {
-      const opts = await wrappedLoadOptions('');
+      const opts = await loadOptions('');
       setDefaultOpts(Array.isArray(opts) ? opts : []);
     } catch {
       setDefaultOpts([]);
     }
-  }, [defaultOpts, wrappedLoadOptions, onMenuOpen]);
+  }, [defaultOpts, loadOptions, onMenuOpen]);
+
+  // Custom NoOptionsMessage component — reads the inputValue from selectProps
+  // (react-select's source of truth) and renders a clickable Add-New affordance
+  // when onCreate is wired. Going through `components.NoOptionsMessage` is
+  // more reliable than the `noOptionsMessage` prop, which tab callers often
+  // override via {...f.props} at the end of their JSX, silently masking ours.
+  const customComponents = useMemo(() => {
+    if (!onCreate) return undefined;
+    const NoOptionsMessage = (innerProps) => {
+      const inputValue = innerProps.selectProps?.inputValue ?? '';
+      const trimmed = String(inputValue).trim();
+      if (!trimmed) {
+        return (
+          <div className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500 text-center">
+            {props.noOptionsMessage ? props.noOptionsMessage({ inputValue }) : 'No matching results'}
+          </div>
+        );
+      }
+      const label = createLabel ? createLabel(trimmed) : `+ Add New "${trimmed}"`;
+      return (
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCreate(trimmed); }}
+          className="w-full text-left px-3 py-2 text-sm text-[#0f3d5e] dark:text-teal-300 font-semibold hover:bg-[#0f3d5e]/5 dark:hover:bg-teal-400/10 transition-colors"
+        >
+          {label}
+        </button>
+      );
+    };
+    return { NoOptionsMessage };
+  }, [onCreate, createLabel, props.noOptionsMessage]);
 
   const common = {
     ...props,
     value: displayValue,
     onChange: (v) => {
       if (v?.isHint || v?.value === '__hint__') return;
-      // Sentinel "+ Add New" option — open the caller's create flow instead of
-      // selecting it as a value.
+      // AsyncCreatableSelect emits __addNew__ via getNewOptionData; intercept
+      // the click here so we open the caller's create flow instead of
+      // committing the synthetic option as the field's value.
       if (v?.__addNew__ || v?.value === ADD_NEW_VALUE) {
         onCreate?.(String(v?.__searchText ?? '').trim());
         return;
@@ -195,20 +206,15 @@ export default function Select2({
     return (
       <div className={className}>
         <AsyncSelect
-          // Remount when the session branch changes — drops react-select's
-          // internal cacheOptions cache so the next open hits the backend
-          // with the new branch context. Also include the creatable-mode flag
-          // so switching between modes doesn't reuse a stale cache that
-          // pre-dates the synthetic "+ Add New" option injection.
+          // Remount when the session branch changes so cached options scoped
+          // to the previous branch are dropped.
           key={`brh-${sessionBrId}-${onCreate ? 'create' : 'plain'}`}
           {...common}
-          loadOptions={wrappedLoadOptions}
+          loadOptions={loadOptions}
           defaultOptions={defaultOpts}
           onMenuOpen={handleMenuOpen}
-          // cacheOptions is disabled in creatable mode so the synthetic
-          // "+ Add New 'X'" option gets recomputed for every keystroke
-          // (otherwise an earlier empty cache entry hides the affordance).
           cacheOptions={!onCreate}
+          components={customComponents}
           getOptionLabel={(opt) => {
             const raw = opt?.label != null ? String(opt.label) : opt?.value != null ? String(opt.value) : '';
             return tDb(raw);

@@ -7,11 +7,30 @@ import Layout from './components/layout/Layout';
 import Dashboard from './utility/Dashboard';
 import LoginPage from './utility/LoginPage';
 import UserPrivilegePage from './utility/UserPrivilegePage';
-import AcademicSetup from './utility/pages/academicfolder/AcademicSetup';
 import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
 import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
+// Per-route page components — each lives in src/utility/pages/routes/ so
+// future page-specific changes touch a single file without bleeding into
+// neighbouring routes.
+import AcademicSetupPage from './utility/pages/routes/AcademicSetupPage';
+import AcademicTransferPage from './utility/pages/routes/AcademicTransferPage';
+import AcademicSaylapusPage from './utility/pages/routes/AcademicSaylapusPage';
+import LessonPlanPage from './utility/pages/routes/LessonPlanPage';
+import StudentSetupPage from './utility/pages/routes/StudentSetupPage';
+import ClassesPage from './utility/pages/routes/ClassesPage';
+import StudentRegisterPage from './utility/pages/routes/StudentRegisterPage';
+import PeopleSectionPage from './utility/pages/routes/PeopleSectionPage';
+import StudentAttendancePage from './utility/pages/routes/StudentAttendancePage';
+import StudentMarksPage from './utility/pages/routes/StudentMarksPage';
+import ActivityManagementPage from './utility/pages/routes/ActivityManagementPage';
+import CreateExamPage from './utility/pages/routes/CreateExamPage';
+import ExamServicePage from './utility/pages/routes/ExamServicePage';
+import ExamSettingPage from './utility/pages/routes/ExamSettingPage';
+import ExamSetupPage from './utility/pages/routes/ExamSetupPage';
+import ManageResultPage from './utility/pages/routes/ManageResultPage';
+import AppUsersPage from './utility/pages/routes/AppUsersPage';
 import SessionExpiredModal from './components/SessionExpiredModal';
 import { switchBranch, setUserBranches } from './slices/uiSlice';
 import { fetchUserBranches } from './services/api';
@@ -105,28 +124,26 @@ function AppContent() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/AcademicSetup" element={<AcademicSetup />} />
-                   <Route path="/AcademicTransfer" element={<AcademicSetup />} />
-                  <Route path="/AcademicSaylapus" element={<AcademicSetup />} />
-                  <Route path="/LessonPlan" element={<AcademicSetup />} />
-                  <Route path="/StudentSetup" element={<AcademicSetup />} />
-                  <Route path="/classes" element={<AcademicSetup />} />
-                  <Route path="/student_register" element={<AcademicSetup />} />
-                  <Route path="/people_section" element={<AcademicSetup />} />
-                  <Route path="/student_attendence" element={<AcademicSetup />} />
-                  <Route path="/student_marks" element={<AcademicSetup />} />
+                  <Route path="/AcademicSetup" element={<AcademicSetupPage />} />
+                  <Route path="/AcademicTransfer" element={<AcademicTransferPage />} />
+                  <Route path="/AcademicSaylapus" element={<AcademicSaylapusPage />} />
+                  <Route path="/LessonPlan" element={<LessonPlanPage />} />
+                  <Route path="/StudentSetup" element={<StudentSetupPage />} />
+                  <Route path="/classes" element={<ClassesPage />} />
+                  <Route path="/student_register" element={<StudentRegisterPage />} />
+                  <Route path="/people_section" element={<PeopleSectionPage />} />
+                  <Route path="/student_attendence" element={<StudentAttendancePage />} />
+                  <Route path="/student_marks" element={<StudentMarksPage />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
-                  <Route path="/ActivityManagement" element={<AcademicSetup />} />
+                  <Route path="/ActivityManagement" element={<ActivityManagementPage />} />
                   <Route path="/ComplainManagement" element={<ComplainManagementPage />} />
                   <Route path="/MeetingMinutes" element={<MeetingMinutesPage />} />
-                  <Route path="/CreateExam" element={<AcademicSetup />} />
-                  <Route path="/ExamService" element={<AcademicSetup />} />
-                  <Route path="/ExamSetting" element={<AcademicSetup />} />
-                  <Route path="/ExamSetup" element={<AcademicSetup />} />
-                  <Route path="/CreateExam" element={<AcademicSetup />} />
-                  <Route path="/ExamService" element={<AcademicSetup />} />
-                  <Route path="/ManageResult" element={<AcademicSetup />} />
-                  <Route path="/AppUsers" element={<AcademicSetup />} />
+                  <Route path="/CreateExam" element={<CreateExamPage />} />
+                  <Route path="/ExamService" element={<ExamServicePage />} />
+                  <Route path="/ExamSetting" element={<ExamSettingPage />} />
+                  <Route path="/ExamSetup" element={<ExamSetupPage />} />
+                  <Route path="/ManageResult" element={<ManageResultPage />} />
+                  <Route path="/AppUsers" element={<AppUsersPage />} />
                   <Route path="/user-privilege" element={<UserPrivilegePage />} />
                   <Route path="/module-videos" element={<ModuleVideosPage />} />
                   <Route path="*" element={<Navigate to="/" replace />}/>
