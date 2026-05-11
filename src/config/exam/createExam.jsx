@@ -61,9 +61,10 @@ export const createExamSection = {
       "showBatchSelect": true,
       "showAcademicYearSelect": true,
       "hiddenColumns": ["ID", "Result", "er_id", "cl_id", "b_id"],
+      "hideEdit": true,
+      "hideDelete": true,
+      "hideAddNew": true,
       "loadButtons": [
-        { "id": "addNew", "label": "Add New", "labelKey": "entity.addNew", "icon": "Plus", "modalKey": "AssignClassExam", "isBulkAction": true, "requiresAcademic": true },
-        { "id": "GenerateAssignClassExam", "label": "Generate", "labelKey": "examCopy.generate", "icon": "Sparkles", "actionModal": "GenerateExam" },
         { "id": "AssignClassExamState", "label": "Exam State", "labelKey": "tabs.examState", "icon": "Activity", "actionModal": "ExamState" },
         { "id": "AssignClassExam", "label": "Show", "labelKey": "action.show", "icon": "Database" },
         { "id": "AssignClassExamShowAll", "label": "Show All", "labelKey": "action.showAll", "icon": "LayoutGrid", "requires": ["academic"] },

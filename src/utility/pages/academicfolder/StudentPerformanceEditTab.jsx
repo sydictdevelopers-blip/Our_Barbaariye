@@ -289,7 +289,7 @@ export default function StudentPerformanceEditTab() {
               onChange={(e) => { setFilterBatch(e.target.value); setFilterBatchLabel(e.target.label || ''); }}
               loadOptions={batchLoader}
               isDisabled={!filterClass}
-              placeholder={filterClass ? t('select.batch') : t('select.pickClassFirst')}
+              placeholder={t('select.batch')}
             />
           </div>
           <div className="flex justify-end">

@@ -31,7 +31,7 @@ module.exports = {
     prePaginated: true,
   }),
   subject_options: 'SELECT sub_id, name FROM subjects ORDER BY name',
-  subject_class_options: (p) => `SELECT sub_cl_id, subject_name FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}) ORDER BY subject_name`,
+  subject_class_options: (p) => `SELECT id, subject_name FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}) ORDER BY subject_name`,
   shift_options: 'SELECT * FROM shift',
   student_options: (p) => `SELECT * FROM student_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0})`,
   academic_options: 'SELECT a_y_id, academic_name, state FROM academic_year ORDER BY a_y_id DESC',

@@ -136,6 +136,12 @@ function generateCrudConfig(schema) {
     ...(typeof f.showWhen === 'function' && { showWhen: f.showWhen }),
     ...(f.dependsOn && { dependsOn: f.dependsOn }),
     ...(f.props && { props: f.props }),
+    // Inline "+ Add New" wiring — CrudModal reads these to flip Select2 into
+    // creatable mode. Without forwarding them here, the field arrives at the
+    // modal without onCreate and the dropdown only ever shows "No results".
+    ...(f.addNewConfigKey && { addNewConfigKey: f.addNewConfigKey }),
+    ...(typeof f.addNewSeed === 'function' && { addNewSeed: f.addNewSeed }),
+    ...(f.addNewSearchKey && { addNewSearchKey: f.addNewSearchKey }),
   }));
 
   return {
@@ -210,6 +216,21 @@ const ENTITIES = [
     ],
   },
   {
+    key: 'AddressModal',
+    title: 'crud.address.title',
+    fn: 'address_sp',
+    idKey: 'add_id',
+    omitPId: true,
+    omitPUsrId: true,
+    idParam: 'ad_id_sp',
+    gridCols: 2,
+    fields: [
+      { name: 'district_sp', label: 'crud.address.fields.district', placeholder: 'crud.address.ph.district', type: 'text', required: true, rowKey: 'district', param: 'district_sp' },
+      { name: 'village_sp',  label: 'crud.address.fields.village',  placeholder: 'crud.address.ph.village',  type: 'text', required: true, rowKey: 'village',  param: 'village_sp' },
+      { name: 'u_br_id_sp',  type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+  {
     key: 'ResponsibleModal',
     title: 'crud.responsible.title',
     fn: 'responsible_sp',
@@ -228,7 +249,16 @@ const ENTITIES = [
       { name: 'sex_sp', label: 'crud.responsible.fields.sex', type: 'select', rowKey: 'sex', param: 'sex_sp', placeholder: 'select.sex',
         options: [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }], default: '' },
       { name: 'ad_id_sp', label: 'crud.responsible.fields.address', placeholder: 'crud.responsible.ph.address', type: 'select', rowKey: 'ad_id', rowKeys: ['add_id', 'address_id'], param: 'ad_id_sp',
-        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', nameKeys: ['address', 'addr_name'], default: '' },
+        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', nameKeys: ['address', 'addr_name'], default: '',
+        addNewConfigKey: 'AddressModal',
+        addNewSeed: (q) => {
+          const trimmed = String(q || '').trim();
+          const parts = trimmed.split(/\s+-\s+/);
+          if (parts.length >= 2) {
+            return { district_sp: parts[0], village_sp: parts.slice(1).join(' - ') };
+          }
+          return { district_sp: trimmed };
+        } },
       { name: 'state_sp', type: 'hidden', param: 'state_sp', rowKey: 'state', default: 'Active' },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
@@ -507,7 +537,7 @@ const ENTITIES = [
     omitPUsrId: true,
     idParam: 'ex_id_sp',
     fields: [
-      { name: 'exam_sp_v', label: 'crud.exam.fields.examName', placeholder: 'crud.exam.ph.examName', type: 'text', required: true, rowKey: 'exam', param: 'exam_sp_v' },
+      { name: 'exam_sp_v', label: 'crud.exam.fields.examName', placeholder: 'crud.exam.ph.examName', type: 'text', required: true, rowKey: 'exam_name', param: 'exam_sp_v' },
       { name: 'ordering_sp', label: 'crud.exam.fields.ordering', placeholder: 'crud.exam.ph.ordering', type: 'number', required: true, rowKey: 'ordering', param: 'ordering_sp', default: 1, props: { min: 1 } },
       { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
     ],
@@ -574,7 +604,20 @@ const ENTITIES = [
       // Row 2: Student Phone. | Address | Sex
       { name: 'tel_sp',            label: 'students.registerForm.fields.phone',        type: 'text',   required: true,  rowKey: 'phone',        param: 'tel_sp',            placeholder: 'students.registerForm.ph.phone', default: '61' },
       { name: 'ad_id_sp',          label: 'students.registerForm.fields.address',      type: 'select', required: true,  rowKey: 'ad_id',        param: 'ad_id_sp',
-        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', placeholder: 'students.registerForm.ph.address', default: '' },
+        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', placeholder: 'students.registerForm.ph.address', default: '',
+        // Inline + Add New — when no match the user clicks "+ Add Cinwaan" and
+        // the AddressModal opens pre-filled. Most addresses are "<district> -
+        // <village>" so split the typed text on " - " when present; otherwise
+        // seed it as the district.
+        addNewConfigKey: 'AddressModal',
+        addNewSeed: (q) => {
+          const trimmed = String(q || '').trim();
+          const parts = trimmed.split(/\s+-\s+/);
+          if (parts.length >= 2) {
+            return { district_sp: parts[0], village_sp: parts.slice(1).join(' - ') };
+          }
+          return { district_sp: trimmed };
+        } },
       { name: 'sex_sp',            label: 'students.registerForm.fields.sex',          type: 'select', required: true,  rowKey: 'sex',          param: 'sex_sp',            placeholder: 'select.sex', default: '',
         options: [{ value: 'Male', label: 'students.registerForm.opts.male' }, { value: 'Female', label: 'students.registerForm.opts.female' }] },
 

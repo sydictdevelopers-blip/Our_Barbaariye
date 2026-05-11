@@ -233,9 +233,18 @@ function DataTableCard({
   // falling back to the backend-supplied label. Lets the backend keep returning
   // English column names while the UI shows them in the active language.
   const resolveHeader = (col) => {
-    const key = `tableHeaders.${col.key}`;
-    const translated = t(key, { defaultValue: '' });
-    return translated || col.label;
+    // Try the exact key first, then a lowercased fallback — SPs that return
+    // TitleCase columns (Class, Exam, State) should still hit our lowercase
+    // i18n entries (tableHeaders.class, .exam, .state) without duplication.
+    const raw = String(col.key || '');
+    const exact = t(`tableHeaders.${raw}`, { defaultValue: '' });
+    if (exact) return exact;
+    const lower = raw.toLowerCase();
+    if (lower && lower !== raw) {
+      const fallback = t(`tableHeaders.${lower}`, { defaultValue: '' });
+      if (fallback) return fallback;
+    }
+    return col.label;
   };
 
   const tableColumns = useMemo(() => {

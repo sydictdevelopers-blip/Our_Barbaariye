@@ -119,7 +119,10 @@ export default function Select2({
       }, {})
     : baseStyles;
   const selectedOpt = options?.find((o) => String(o.value) === String(value));
-  const displayValue = selectedOpt ?? (value != null && value !== '' ? { value, label: selectedLabel ?? String(value) } : null);
+  // Marka aan options-ka weli la rarin (lazy-load), ka soo qaad selectedLabel.
+  // `||` halkii `??`: haddii label-ku madhan yahay, isticmaal value sida fallback,
+  // si dropdown-ku uusan u bannaan ahaan oo user-ku u garan waayo waxa la doortay.
+  const displayValue = selectedOpt ?? (value != null && value !== '' ? { value, label: (selectedLabel && String(selectedLabel)) || String(value) } : null);
   // Lazy: don't fetch dropdown data on mount. Only when the user opens the
   // menu — avoids a wave of background requests when a tab loads.
   const [defaultOpts, setDefaultOpts] = useState(false);

@@ -209,6 +209,7 @@ export default function CrudModal({
   mode = 'insert',
   onSuccess,
   moduleKey,
+  children,
 }) {
   if (!config) return null;
 
@@ -457,6 +458,12 @@ export default function CrudModal({
               configKey: f.addNewConfigKey,
               returnField: f,
               seedObj,
+              // Preserve the original typed text so handleSubModalSuccess can
+              // search for the freshly-saved row even when the seed routed the
+              // input into a field name that doesn't match savedForm's lookup
+              // key (e.g. address: typed "Hodan" → seeded as district_sp; the
+              // default seedField 'p_name_sp' isn't on AddressModal at all).
+              searchText: q,
             });
           }
         : undefined;
@@ -637,6 +644,9 @@ export default function CrudModal({
             .filter((f) => !f.showWhen || f.showWhen(form))
             .map((f) => renderField(f))}
         </form>
+        {/* Extra inline content rendered below the grid — used by parents to
+            attach related sub-forms (e.g. assign-classes section ee Exam Reg). */}
+        {children && <div className="mt-4">{children}</div>}
       </Modal>
 
       {helpKey && (

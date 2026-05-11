@@ -30,6 +30,11 @@ const PROCEDURE_PARAM_ORDER = {
   users_sp: ['usr_id_sp', 'p_id_sp', 'username_sp', 'password_sp', 'br_id_sp', 'state_sp', 'lock_user_sp', 'oper'],
   user_privilege_sp: ['usr_id_sp', 'privalage_sp', 'oper'],
   responsible_sp: ['res_id_sp', 'p_id_sp', 'p_name_sp', 'tel_sp', 'phone_sp', 'sex_sp', 'ad_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  // address_sp: ku dar / wax-ka-bedel cinwaano (district + village). Loo isticmaalo
+  // "+ Add New" inline-ka student-ka iyo responsible-ka. Si ay u shaqayso, SP-gan
+  // waa in la abuuro DB-ga (haddii uusan jirin) — qaab caadi ah:
+  //   address_sp(p_ad_id INT, p_district TEXT, p_village TEXT, p_u_br_id INT, p_oper TEXT)
+  address_sp: ['ad_id_sp', 'district_sp', 'village_sp', 'u_br_id_sp', 'oper'],
   bus_sp: ['bus_id_sp', 'bus_name_sp', 'emp_id_sp', 'targo_sp', 'u_br_id_sp', 'oper'],
   complain_sp: ['com_id_sp', 'comp_type_sp', 'student_sp', 'teacher_sp', 'name_sp', 'phone_sp', 'cabasho_sp', 'reg_date_sp', 'u_br_id_sp', 'oper'],
   meeting_agenda_sp: ['m_ag_id_sp', 'agenda_sp', 'participance_sp', 'comments_sp', 'decisions_sp', 'meet_date_sp', 'u_br_id_sp', 'reg_date_sp', 'language_sp', 'oper'],
@@ -42,10 +47,31 @@ const PROCEDURE_PARAM_ORDER = {
   // Inline state/batch update for the Student Info table. Pass 0 / '' to skip
   // a field; SP no-op detects when both match the existing values.
   student_class_inline_update_sp: ['p_std_cl_id', 'p_b_id', 'p_state', 'p_u_br_id'],
+  // Class Update modal — move a single Continue student into a new class.
+  // The SP UPDATEs the existing student_class row in place (one row per
+  // active student) instead of inserting a fresh row.
+  student_class_change_sp: ['p_std_id', 'p_cl_id', 'p_b_id', 'p_u_br_id', 'oper'],
+  // Bulk CSV import — one row per student. Server-side: find-or-create the
+  // address (district + village), find-or-create the responsible (name +
+  // phone), then insert into people / student / student_class atomically.
+  // Same column order as the import CSV template; SP creates the SP must
+  // exist on the DB (see the snippet shipped alongside this commit).
+  bulk_student_import_sp: [
+    'p_id_card_sp', 'p_student_name_sp', 'p_telephone_sp',
+    'p_district_sp', 'p_village_sp', 'p_gender_sp',
+    'p_mother_name_sp', 'p_birth_place_sp', 'p_birth_date_sp',
+    'p_responsible_name_sp', 'p_responsible_telephone_sp',
+    'p_orphan_status_sp', 'p_disability_status_sp', 'p_refugee_status_sp',
+    'p_cl_id_sp', 'p_u_br_id_sp', 'oper',
+  ],
   del_responsible_with_no_std_spv: [],
   exam_sp: ['ex_id_sp', 'exam_sp_v', 'ordering_sp', 'u_br_id_sp', 'oper'],
   exam_reg_sp: ['ex_reg_id_sp', 'a_y_id_sp', 'ex_id_sp', 'exam_type_sp', 'marks_sp', 'start_date_sp', 'end_date_sp', 'deadline_sp', 'br_id_sp', 'exam_status_sp', 'attendance_marks_sp', 'u_br_id_sp', 'oper'],
   assign_class_exam_sp: ['a_c_e_id_sp', 'er_id_sp', 'cl_id_sp', 'b_id_sp', 'u_br_id_sp', 'oper'],
+  // Per-row state toggle ee Assign Class Exam — kaliya UPDATE state by a_c_ex.
+  // Loo wacaa actionka 'toggle state' ee safka kasta. SP installation: see
+  // backend/scripts/install-assign-class-exam-set-state-sp.js.
+  assign_class_exam_set_state_sp: ['p_a_c_ex_sp', 'p_state_sp', 'oper'],
   remove_assign_class_byclass_sp: ['cl_id_sp', 'b_id_sp', 'a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
   remove_assign_class_byexam_sp: ['a_y_id_sp', 'ex_id_sp', 'u_br_id_sp', 'br_id_sp'],
   // Exam State Form (assign_class_exam): set state to Active/Inactive for er_id.
@@ -83,6 +109,14 @@ const PROCEDURE_PARAM_ORDER = {
   result_approve_sp: ['p_id', 'p_user_id', 'oper'],
   result_approve_bulk_sp: ['p_class', 'p_user_id', 'oper'],
 };
+
+/**
+ * SP name aliases — caller fn → SQL function name mid kale ah. Loo isticmaalo
+ * PostgreSQL overload-yada kuwa magacooda mid yahay laakiin tirada arg-yadu
+ * ay kala duwan tahay. Hadda waxa banaan; geli halkan haddii loo baahdo.
+ */
+const SP_NAME_ALIAS = {};
+exports.SP_NAME_ALIAS = SP_NAME_ALIAS;
 
 /**
  * handleDynamicRequest() – U waca PostgreSQL stored procedures maraya /api/all
@@ -170,9 +204,13 @@ exports.handleDynamicRequest = async (req, res) => {
          *         Ma isku xireyno (concatenate) qiimayaasha. Kaliya waxaan galineynaa magaca habraaca la xaqiijiyay.
          */
         const paramPlaceholders = params.map((_, index) => `$${index + 1}`).join(', ');
-        const query = `SELECT * FROM ${procedureName}(${paramPlaceholders})`;
+        // Marka SP-ga magaca-isku-mid leh laakiin arg-tirooyin kala duwan
+        // (overload), alias-ka ayaa loo bedelaa magaca dhabta ah ka hor
+        // intaan SQL la dirin. Param order-kii ayaa horeey loo doortay.
+        const sqlSpName = SP_NAME_ALIAS[procedureName] || procedureName;
+        const query = `SELECT * FROM ${sqlSpName}(${paramPlaceholders})`;
         console.log(query);
-        console.log(`[api/all] ${procedureName} params(${params.length}):`, params.map((p, i) => `$${i + 1}=${String(p).slice(0, 40)}`).join(' '));
+        console.log(`[api/all] ${procedureName}${sqlSpName !== procedureName ? ` (alias→${sqlSpName})` : ''} params(${params.length}):`, params.map((p, i) => `$${i + 1}=${String(p).slice(0, 40)}`).join(' '));
 
         /**
          * Step 7: Fuli Weydiinta (Execute Query)

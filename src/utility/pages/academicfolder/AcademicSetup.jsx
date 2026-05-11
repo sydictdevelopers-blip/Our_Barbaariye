@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Power } from 'lucide-react';
+import { Power, ToggleLeft, ToggleRight } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Tabs from '../../../components/ui/Tabs';
 import ActionButton from '../../../components/ui/ActionButton';
@@ -11,6 +11,7 @@ import CrudModal from '../../../modals/CrudModal';
 import SubjectClassBulkForm from '../../../modals/SubjectClassBulkForm';
 import AssignClassExamBulkForm from '../../../modals/AssignClassExamBulkForm';
 import ExamScheduleBulkForm from '../../../modals/ExamScheduleBulkForm';
+import ExamRegClassAssignSection from '../../../modals/ExamRegClassAssignSection';
 import {
   GenerateExamFormModal,
   ExamStateFormModal,
@@ -21,7 +22,7 @@ import {
   CopyExamFormModal,
   PrintExamScheduleModal,
 } from '../../../modals/ExamScheduleActionModals';
-import { crud, getSessionUBrIdNum, getSessionBrIdNum } from '../../../services/api';
+import { crud, fetchDataPaginated, runBulk, getSessionUBrIdNum, getSessionBrIdNum } from '../../../services/api';
 import { swalConfirmAction, swalError } from '../../../utils/swal';
 import BranchTransferTab from './BranchTransferTab';
 import AcademicTransferTab from './AcademicTransferTab';
@@ -66,6 +67,16 @@ export default function AccountsPage() {
   const { t } = useTranslation();
   const [modal, setModal] = useState({ entityKey: null, editRow: null, context: {} });
   const [actionModal, setActionModal] = useState({ kind: null, context: null });
+  // Section-ka fasallada ku-dhejisan modalka Exam Registration. Parent ayaa hayaa
+  // state-ka si onSuccess-ka modalka markuu dhaco uu u akhriyo doorashada ugu
+  // dambeysay (mode + selected pairs) si uu u kaydiyo assign_class_exam-ka.
+  const [examRegAssign, setExamRegAssign] = useState({
+    mode: 'all',
+    selected: [],
+    options: [],
+    loaded: false,
+    loading: false,
+  });
   const entityTabRef = useRef(null);
 
   const rawTabs = useTabsForPath(location.pathname);
@@ -90,6 +101,22 @@ export default function AccountsPage() {
     const config = CRUD_CONFIG[entityKey];
     const editRow = row && config?.fromRow ? config.fromRow(row) : row;
     setModal({ entityKey, editRow, context });
+    // Reset the inline assign-classes section every time the ExamRegister
+    // modal opens — stale selections from a prior open must never leak in.
+    // For edit (row exists) the section fetches existing assignments on mount
+    // via its `examRegId` effect.
+    if (entityKey === 'ExamRegister') {
+      setExamRegAssign({
+        mode: row ? 'custom' : 'all',
+        selected: [],
+        original: [],
+        options: [],
+        optionsLoaded: false,
+        loading: false,
+        existingLoaded: false,
+        initialModeSet: false,
+      });
+    }
   };
 
   const closeModal = () => setModal({ entityKey: null, editRow: null, context: {} });
@@ -133,6 +160,54 @@ export default function AccountsPage() {
       </ActionButton>
     );
   }, [activateAcademicYear]);
+
+  // Assign Class Exam: actionka kaliya ee la oggol yahay waa beddelka state-ka
+  // (Active ↔ Inactive) safka kasta. Confirm dialog ayaa lagu xaqiijiyaa, ka
+  // dibna `assign_class_exam_set_state_sp(p_a_c_ex_sp, p_state_sp, oper)`
+  // ayaa lagu updateyaa hal a_c_ex. Refetch-ku wuxuu maraa entityTabRef.refresh()
+  // si filters-ka hadda firfircoon (academic/class/batch) loo isticmaalo
+  // dispatch(loadData) ka beddelkii oo aan filter-yada haysan.
+  const toggleAssignClassExamState = useCallback(async (row) => {
+    const aCEx = Number(row?.ID ?? row?.id ?? 0);
+    if (!aCEx) return;
+    const cur = String(row?.State ?? row?.state ?? '').toLowerCase();
+    const isActive = cur === 'active';
+    const next = isActive ? 'Inactive' : 'Active';
+    await swalConfirmAction({
+      title: t('assignClassExamToggle.confirmTitle', 'Beddel Xaaladda Imtixaanka?'),
+      text: isActive
+        ? t('assignClassExamToggle.confirmDeactivate', 'Diiwaangelinta waa la joojin doonaa (Inactive).')
+        : t('assignClassExamToggle.confirmActivate', 'Diiwaangelinta waa la firfircoonayn doonaa (Active).'),
+      confirmText: isActive
+        ? t('examStateForm.inactive', 'Aan firfircoonayn')
+        : t('examStateForm.active', 'Firfircoon'),
+      cancelText: t('common.cancel', 'Jooji'),
+      onConfirm: async () => {
+        const result = await crud({
+          operation: 'update',
+          fn: 'assign_class_exam_set_state_sp',
+          params: { p_a_c_ex_sp: aCEx, p_state_sp: next },
+        });
+        entityTabRef.current?.refresh();
+        return result; // swalConfirmAction renders result.message via translateMessage
+      },
+    });
+  }, [t]);
+
+  const assignClassExamRowActions = useCallback((row) => {
+    const cur = String(row?.State ?? row?.state ?? '').toLowerCase();
+    const isActive = cur === 'active';
+    return (
+      <ActionButton
+        variant={isActive ? 'warning' : 'success'}
+        aria-label={isActive ? 'Set Inactive' : 'Set Active'}
+        title={isActive ? t('examStateForm.inactive', 'Aan firfircoonayn') : t('examStateForm.active', 'Firfircoon')}
+        onClick={() => toggleAssignClassExamState(row)}
+      >
+        {isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+      </ActionButton>
+    );
+  }, [toggleAssignClassExamState, t]);
 
   const reloadEntity = (entityKey) => {
     const q = getQueryForModalKey(tabs, entityKey);
@@ -283,9 +358,16 @@ export default function AccountsPage() {
             showStudentSelect={cfg.showStudentSelect}
             studentOptionsQuery={cfg.studentOptionsQuery}
             hideEdit={cfg.hideEdit}
+            hideDelete={cfg.hideDelete}
             hideAddNew={cfg.hideAddNew}
             hiddenColumns={cfg.hiddenColumns}
-            extraRowActions={cfg.entityKey === 'academicYeartab' ? academicYearRowActions : undefined}
+            extraRowActions={
+              cfg.entityKey === 'academicYeartab'
+                ? academicYearRowActions
+                : cfg.entityKey === 'AssignClassExam'
+                ? assignClassExamRowActions
+                : undefined
+            }
             bulkForm={
               cfg.entityKey === 'SubjectClassSetup'
                 ? ({ context, onSuccess }) => (
@@ -382,16 +464,146 @@ export default function AccountsPage() {
             config={config}
             initialForm={editRow || {}}
             mode={editRow ? 'update' : 'insert'}
-            onSuccess={() => {
+            onSuccess={async (form) => {
               // StudentPerformance is gated on a Student selection; auto-reload
               // after save would re-run the SP with stale/missing context. The
               // user wants to click "Show Data" themselves to refresh.
               if (entityKey === 'StudentPerformance') return;
               reloadEntity(entityKey);
+
+              // ExamRegister: after exam_reg_sp finishes, sync the
+              // assign_class_exam rows for this er_id in ONE bulk transaction
+              // (atomic + single round-trip). Insert path resolves the new
+              // ex_reg_id via exam_reg_lookup; edit path uses editRow.id.
+              if (entityKey === 'ExamRegister') {
+                try {
+                  const ayId = Number(form?.a_y_id_sp) || 0;
+                  const exId = Number(form?.ex_id_sp) || 0;
+                  if (!ayId || !exId) return;
+                  // u_br_id at index 4 is overridden from JWT by the bulk
+                  // controller; the 0 placeholder is safe.
+                  const keyOf = (x) => `${x.cl_id}-${x.b_id}`;
+
+                  // Build the list of intended (cl_id, b_id) target pairs.
+                  let targetPairs = [];
+                  if (examRegAssign.mode === 'all') {
+                    targetPairs = (examRegAssign.options || []).map((o) => ({
+                      cl_id: o.cl_id,
+                      b_id: o.b_id,
+                    }));
+                    // Insert mode + no preloaded options (user never opened
+                    // Custom) → fetch them inline so 'All' still works.
+                    if (!editRow && !targetPairs.length) {
+                      const res = await fetchDataPaginated({
+                        queryName: 'add_assing_class_exam_show',
+                        page: 1,
+                        limit: 1000,
+                        academicYearId: ayId,
+                      });
+                      targetPairs = (res?.data || [])
+                        .filter((r) => r.cl_id != null && r.Result == null)
+                        .map((r) => ({ cl_id: r.cl_id, b_id: r.b_id }));
+                    }
+                  } else {
+                    targetPairs = (examRegAssign.selected || []).map((o) => ({
+                      cl_id: o.cl_id,
+                      b_id: o.b_id,
+                    }));
+                  }
+
+                  const original = examRegAssign.original || [];
+                  const origByKey = new Map(original.map((o) => [keyOf(o), o]));
+                  const targetKeys = new Set(targetPairs.map(keyOf));
+                  // Delete originals not in target (edit only — insert mode
+                  // has no original rows).
+                  const toDelete = editRow
+                    ? original.filter((o) => !targetKeys.has(keyOf(o)))
+                    : [];
+                  // Insert targets not already present.
+                  const toInsert = targetPairs.filter((p) => !origByKey.has(keyOf(p)));
+                  if (!toDelete.length && !toInsert.length) return;
+
+                  const steps = [];
+                  let erRef = null;
+                  if (editRow) {
+                    erRef = Number(editRow.id) || 0;
+                    if (!erRef) return;
+                  } else {
+                    // Resolve the new ex_reg_id inside the same bulk
+                    // transaction so it stays consistent with the insert.
+                    steps.push({
+                      type: 'select',
+                      query: 'exam_reg_lookup',
+                      queryParams: { academicYearId: ayId, ex_id: exId },
+                      pick: 'ex_reg_id',
+                      saveAs: 'new_er_id',
+                    });
+                  }
+                  if (toDelete.length) {
+                    steps.push({
+                      type: 'forEach',
+                      source: toDelete.map((o) => ({
+                        a_c_ex: o.a_c_ex,
+                        cl_id: o.cl_id,
+                        b_id: o.b_id,
+                      })),
+                      step: {
+                        type: 'sp',
+                        fn: 'assign_class_exam_sp',
+                        params: [
+                          { refIter: 'a_c_ex' },
+                          erRef ?? { ref: 'new_er_id' },
+                          { refIter: 'cl_id' },
+                          { refIter: 'b_id' },
+                          0,
+                          'delete',
+                        ],
+                      },
+                    });
+                  }
+                  if (toInsert.length) {
+                    steps.push({
+                      type: 'forEach',
+                      source: toInsert.map((p) => ({ cl_id: p.cl_id, b_id: p.b_id })),
+                      step: {
+                        type: 'sp',
+                        fn: 'assign_class_exam_sp',
+                        params: [
+                          0,
+                          erRef ?? { ref: 'new_er_id' },
+                          { refIter: 'cl_id' },
+                          { refIter: 'b_id' },
+                          0,
+                          'insert',
+                        ],
+                      },
+                    });
+                  }
+                  if (steps.length) await runBulk(steps);
+                } catch (_) {
+                  // Haddii bulk-ka fashilmo, ma muujineyno qalad gaar ah —
+                  // exam_reg-ka ayaa horeey loo kaydiyay. User-ku waxa uu
+                  // mar kale isku dayi karaa edit.
+                }
+              }
             }}
-          />
+          >
+            {entityKey === 'ExamRegister' && (
+              <ExamRegClassAssignSection
+                academicYearId={
+                  Number(editRow?.a_y_id_sp) ||
+                  Number(modal.context?.academicYearId) ||
+                  null
+                }
+                examRegId={editRow ? Number(editRow.id) || null : null}
+                value={examRegAssign}
+                onChange={setExamRegAssign}
+              />
+            )}
+          </CrudModal>
         );
       })}
+
 
       <GenerateExamFormModal
         isOpen={actionModal.kind === 'GenerateExam'}

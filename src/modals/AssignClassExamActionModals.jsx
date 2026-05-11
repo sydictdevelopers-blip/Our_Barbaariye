@@ -267,8 +267,8 @@ export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
 
   const handleUpdate = async () => {
     if (!ay.id) return swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
-    if (!er.id) return swalError('Fadlan dooro Exam', '');
-    if (!state) return swalError('Fadlan dooro State', '');
+    if (!er.id) return swalError(t('examStateForm.errSelectExam', 'Fadlan dooro Imtixaan'), '');
+    if (!state) return swalError(t('examStateForm.errSelectState', 'Fadlan dooro Xaaladda'), '');
     setBusy(true);
     try {
       const br_id = getSessionBrIdNum();
@@ -281,11 +281,11 @@ export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
           p_state_sp: state,
         },
       });
-      await swalSuccess('Waa la guulaystey', result?.message || '');
+      await swalSuccess(t('swal.titles.success'), result?.message || '');
       onSuccess?.({ academicYearId: ay.id, academicYearLabel: ay.label });
       onClose?.();
     } catch (err) {
-      swalError(err?.message || 'Khalad ayaa dhacay', '');
+      swalError(err?.message || t('swal.titles.error'), '');
     } finally {
       setBusy(false);
     }
@@ -295,47 +295,49 @@ export function ExamStateFormModal({ isOpen, onClose, onSuccess, context }) {
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Exam state Form"
+      title={t('examStateForm.title', 'Foomka Xaaladda Imtixaanka')}
       footer={
         <div className="flex justify-end gap-2 w-full">
           <Button type="button" onClick={handleUpdate} disabled={busy}>
-            {busy ? '...' : 'Update'}
+            {busy ? '...' : t('common.update', 'Cusboonaysii')}
           </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t('common.close', 'Xir')}
+          </Button>
         </div>
       }
     >
       <div>
-        <FieldLabel>Academic</FieldLabel>
+        <FieldLabel>{t('examStateForm.academic', 'Sanadka Waxbarasho')}</FieldLabel>
         <Select2
           value={ay.id}
           selectedLabel={ay.label}
           onChange={(e) => setAy({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={acadLoader}
-          placeholder="Select academic"
+          placeholder={t('entity.selectAcademic', 'Dooro Sanadka Waxbarasho')}
         />
       </div>
       <div>
-        <FieldLabel>Exam</FieldLabel>
+        <FieldLabel>{t('examStateForm.exam', 'Imtixaan')}</FieldLabel>
         <Select2
           value={er.id}
           selectedLabel={er.label}
           onChange={(e) => setEr({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={examLoader}
-          placeholder="Select Exam"
+          placeholder={t('entity.selectExam', 'Dooro Imtixaan')}
           isDisabled={!ay.id}
         />
       </div>
       <div>
-        <FieldLabel>State</FieldLabel>
+        <FieldLabel>{t('examStateForm.state', 'Xaalad')}</FieldLabel>
         <Select2
           value={state}
           onChange={(e) => setState(e.target.value)}
           options={[
-            { value: 'Active', label: 'Active' },
-            { value: 'Inactive', label: 'Inactive' },
+            { value: 'Active', label: t('examStateForm.active', 'Firfircoon') },
+            { value: 'Inactive', label: t('examStateForm.inactive', 'Aan firfircoonayn') },
           ]}
-          placeholder="Select State"
+          placeholder={t('examStateForm.selectState', 'Dooro Xaalad')}
           isSearchable={false}
         />
       </div>
@@ -396,10 +398,10 @@ export function RemoveByClassModal({ isOpen, onClose, onSuccess, context }) {
   );
 
   const handleRemove = async () => {
-    if (!cl.id) return swalError('Fadlan dooro Class', '');
-    if (!b.id) return swalError('Fadlan dooro Batch', '');
+    if (!cl.id) return swalError(t('removeAssignClassExam.errSelectClass', 'Fadlan dooro Fasal'), '');
+    if (!b.id) return swalError(t('removeAssignClassExam.errSelectBatch', 'Fadlan dooro Wajiga'), '');
     if (!ay.id) return swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
-    if (!ex.id) return swalError('Fadlan dooro Exam', '');
+    if (!ex.id) return swalError(t('removeAssignClassExam.errSelectExam', 'Fadlan dooro Imtixaan'), '');
     setBusy(true);
     try {
       const u_br_id = getSessionUBrIdNum();
@@ -416,11 +418,11 @@ export function RemoveByClassModal({ isOpen, onClose, onSuccess, context }) {
           br_id_sp: br_id,
         },
       });
-      await swalSuccess('Waa la guulaystey', result?.message || '');
+      await swalSuccess(t('swal.titles.success'), result?.message || '');
       onSuccess?.({ academicYearId: ay.id, academicYearLabel: ay.label });
       onClose?.();
     } catch (err) {
-      swalError(err?.message || 'Khalad ayaa dhacay', '');
+      swalError(err?.message || t('swal.titles.error'), '');
     } finally {
       setBusy(false);
     }
@@ -430,55 +432,57 @@ export function RemoveByClassModal({ isOpen, onClose, onSuccess, context }) {
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Remove Assign Class Exam By Class"
+      title={t('removeAssignClassExam.titleByClass', 'Tirtir Diiwaangelinta Fasalka')}
       footer={
         <div className="flex justify-end gap-2 w-full">
           <Button type="button" onClick={handleRemove} disabled={busy}>
-            {busy ? '...' : 'Remove'}
+            {busy ? '...' : t('swal.buttons.remove', 'Tirtir')}
           </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t('common.close', 'Xir')}
+          </Button>
         </div>
       }
     >
       <div>
-        <FieldLabel>Class</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.class', 'Fasal')}</FieldLabel>
         <Select2
           value={cl.id}
           selectedLabel={cl.label}
           onChange={(e) => setCl({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={classLoader}
-          placeholder="Select Class"
+          placeholder={t('entity.selectClass', 'Dooro Fasal')}
         />
       </div>
       <div key={`b-${cl.id || 'none'}`}>
-        <FieldLabel>Batch</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.batch', 'Wajiga')}</FieldLabel>
         <Select2
           value={b.id}
           selectedLabel={b.label}
           onChange={(e) => setB({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={batchLoader}
-          placeholder="Select Batch"
+          placeholder={t('entity.selectBatch', 'Dooro Wajiga')}
           isDisabled={!cl.id}
         />
       </div>
       <div>
-        <FieldLabel>Academic Year</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.academicYear', 'Sanadka Waxbarasho')}</FieldLabel>
         <Select2
           value={ay.id}
           selectedLabel={ay.label}
           onChange={(e) => setAy({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={acadLoader}
-          placeholder="Select Academic Year"
+          placeholder={t('entity.selectAcademic', 'Dooro Sanadka Waxbarasho')}
         />
       </div>
       <div key={`ex-${cl.id}-${b.id}-${ay.id}`}>
-        <FieldLabel>Exam</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.exam', 'Imtixaan')}</FieldLabel>
         <Select2
           value={ex.id}
           selectedLabel={ex.label}
           onChange={(e) => setEx({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={examLoader}
-          placeholder="Select Exam"
+          placeholder={t('entity.selectExam', 'Dooro Imtixaan')}
           isDisabled={!cl.id || !b.id || !ay.id}
         />
       </div>
@@ -519,7 +523,7 @@ export function RemoveByExamModal({ isOpen, onClose, onSuccess, context }) {
 
   const handleRemove = async () => {
     if (!ay.id) return swalError(t('entity.selectAcademic', 'Fadlan dooro Academic Year'), '');
-    if (!ex.id) return swalError('Fadlan dooro Exam', '');
+    if (!ex.id) return swalError(t('removeAssignClassExam.errSelectExam', 'Fadlan dooro Imtixaan'), '');
     setBusy(true);
     try {
       const u_br_id = getSessionUBrIdNum();
@@ -534,11 +538,11 @@ export function RemoveByExamModal({ isOpen, onClose, onSuccess, context }) {
           br_id_sp: br_id,
         },
       });
-      await swalSuccess('Waa la guulaystey', result?.message || '');
+      await swalSuccess(t('swal.titles.success'), result?.message || '');
       onSuccess?.({ academicYearId: ay.id, academicYearLabel: ay.label });
       onClose?.();
     } catch (err) {
-      swalError(err?.message || 'Khalad ayaa dhacay', '');
+      swalError(err?.message || t('swal.titles.error'), '');
     } finally {
       setBusy(false);
     }
@@ -548,34 +552,36 @@ export function RemoveByExamModal({ isOpen, onClose, onSuccess, context }) {
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Remove Assign Class Exam By Exam"
+      title={t('removeAssignClassExam.titleByExam', 'Tirtir Diiwaangelinta Imtixaanka')}
       footer={
         <div className="flex justify-end gap-2 w-full">
           <Button type="button" onClick={handleRemove} disabled={busy}>
-            {busy ? '...' : 'Remove'}
+            {busy ? '...' : t('swal.buttons.remove', 'Tirtir')}
           </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t('common.close', 'Xir')}
+          </Button>
         </div>
       }
     >
       <div>
-        <FieldLabel>Academic Year</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.academicYear', 'Sanadka Waxbarasho')}</FieldLabel>
         <Select2
           value={ay.id}
           selectedLabel={ay.label}
           onChange={(e) => setAy({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={acadLoader}
-          placeholder="Select Academic Year"
+          placeholder={t('entity.selectAcademic', 'Dooro Sanadka Waxbarasho')}
         />
       </div>
       <div key={`ex-${ay.id || 'none'}`}>
-        <FieldLabel>Exam</FieldLabel>
+        <FieldLabel>{t('removeAssignClassExam.exam', 'Imtixaan')}</FieldLabel>
         <Select2
           value={ex.id}
           selectedLabel={ex.label}
           onChange={(e) => setEx({ id: e.target.value, label: e.target.label || '' })}
           loadOptions={examLoader}
-          placeholder="Select Exam"
+          placeholder={t('entity.selectExam', 'Dooro Imtixaan')}
           isDisabled={!ay.id}
         />
       </div>
