@@ -359,6 +359,21 @@ export async function uploadNewStudentImage(file) {
   return body;
 }
 
+/** deleteImageByUrl — best-effort cleanup of an orphaned S3 object. The
+ *  endpoint silently no-ops on URLs outside our bucket and never throws, so
+ *  callers can fire-and-forget after a successful replace. */
+export async function deleteImageByUrl(url) {
+  if (!url || typeof url !== 'string') return;
+  try {
+    await fetch(`${API_BASE}/image/delete`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+  } catch (_) { /* swallow — cleanup is non-essential to the user flow */ }
+}
+
 /** Upload video file → soo celi { url, filename }. file waa File object. */
 export async function uploadModuleVideo(file, onProgress) {
   if (!file) throw new Error('No file');

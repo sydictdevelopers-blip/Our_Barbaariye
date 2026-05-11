@@ -11,6 +11,9 @@ import StudentofficeTabs from './utility/pages/studentFolder/studentofficeTabs';
 import ComplainManagementPage from './utility/pages/complainfolder/ComplainManagementPage';
 import MeetingMinutesPage from './utility/pages/meetingfolder/MeetingMinutesPage';
 import ModuleVideosPage from './utility/pages/ModuleVideosPage';
+import EmployeeOfficeTabs from './utility/pages/hrmFolder/EmployeeOfficeTabs';
+import EmployeeSchedulePage from './utility/pages/hrmFolder/EmployeeSchedulePage';
+import EmployeeVocationPage from './utility/pages/hrmFolder/EmployeeVocationPage';
 // Per-route page components — each lives in src/utility/pages/routes/ so
 // future page-specific changes touch a single file without bleeding into
 // neighbouring routes.
@@ -135,6 +138,9 @@ function AppContent() {
                   <Route path="/student_attendence" element={<StudentAttendancePage />} />
                   <Route path="/student_marks" element={<StudentMarksPage />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
+                  <Route path="/EmployeeOffice" element={<EmployeeOfficeTabs />} />
+                  <Route path="/EmployeeSchedule" element={<EmployeeSchedulePage />} />
+                  <Route path="/EmployeeVocation" element={<EmployeeVocationPage />} />
                   <Route path="/ActivityManagement" element={<ActivityManagementPage />} />
                   <Route path="/ComplainManagement" element={<ComplainManagementPage />} />
                   <Route path="/MeetingMinutes" element={<MeetingMinutesPage />} />

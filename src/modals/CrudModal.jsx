@@ -346,12 +346,28 @@ export default function CrudModal({
     if (!runValidation()) return;
     setLoading(true);
     try {
+      // crud() returns the SP's first-column reply as a plain string, e.g.
+      // "This information is correctly registered" or "This information has
+      // been already exist". translateMessage in swal.js pattern-matches that
+      // text to the active language; the result-string is also accepted as an
+      // {message} object for legacy callers.
       const result = await submitOperation(config, form, operation);
+      const replyText = typeof result === 'string' ? result : (result?.message || '');
+      // "Already exists" / "not registered" are not real successes — show them
+      // as warnings so the user notices the record was rejected by the SP.
+      const isWarning = /already\s+exists?|not\s+registered|in\s+use|cannot\s+(?:delete|change)/i.test(replyText);
       onClose();
-      // Pass the saved form so a parent CrudModal (in the Add-New flow) can find
-      // the newly created row by name + phone after a refetch.
+      // Pass the saved form so a parent CrudModal (in the Add-New flow) can
+      // find the newly created row by name + phone after a refetch.
       onSuccess?.(form, result);
-      await swal.swalSuccess('Wa la guulaystey', result?.message || '');
+      if (isWarning) {
+        // SP rejected the operation (already exists, in use, not registered).
+        // "Laguma guuleysan" / "Not succeeded" / "لم يتم بنجاح" header makes
+        // it visually distinct from a success.
+        await swal.swalError(t('swal.titles.notSucceeded', { defaultValue: 'Not succeeded' }), replyText);
+      } else {
+        await swal.swalSuccess(t('swal.titles.success', { defaultValue: 'Success' }), replyText);
+      }
     } catch (err) {
       const msg = err?.message || '';
       const isConnectionError = /failed to fetch|networkerror|load failed|econnrefused|err_network|connection/i.test(msg);

@@ -12,6 +12,9 @@ import {
   ArrowLeftRight,
   BookMarked,
   ListChecks,
+  UserCog,
+  CalendarDays,
+  Plane,
 } from 'lucide-react';
 import { createExamSection } from './exam/createExam';
 import { examServiceSection } from './exam/examService';
@@ -330,6 +333,85 @@ export const defaultMenuItems = [
             ]
           }
         ],
+      },
+    ],
+  },
+  {
+    id: 'HRM',
+    label: 'HRM',
+    labelKey: 'menu.hrm',
+    icon: UserCog,
+    children: [
+      {
+        id: 'EmployeeOffice',
+        label: 'Employee',
+        labelKey: 'menu.employeeOffice',
+        icon: UserCog,
+        path: '/EmployeeOffice',
+        tabs: [
+          {
+            id: 'Employees',
+            label: 'Employee',
+            labelKey: 'tabs.employees',
+            entityKey: 'Employees',
+            modalKey: 'Employees',
+            icon: 'UserCog',
+            queryName: 'Employees',
+            // emp_id muujiyay (waa muhiim si user-ku u arko); p_id/sh_id/j_id/tt_id-da raw FK ah ayaa la qariyay
+            hiddenColumns: ['p_id', 'sh_id', 'j_id', 'tt_id', 'br_id', 'u_br_id', 'ad_id', 'image'],
+            loadButtons: [
+              { id: 'Employees', label: 'Show Data', labelKey: 'action.showData', icon: 'Database' },
+              { id: 'addNew', label: 'Add New Employee', labelKey: 'hrm.employees.addNew', icon: 'Plus', modalKey: 'Employees' },
+            ],
+          },
+          {
+            id: 'Jobs',
+            label: 'Jobs',
+            labelKey: 'tabs.jobs',
+            entityKey: 'Jobs',
+            modalKey: 'Jobs',
+            icon: 'BookMarked',
+            queryName: 'Jobs',
+            hiddenColumns: [],
+            loadButtons: [
+              { id: 'Jobs', label: 'Show Data', labelKey: 'action.showData', icon: 'Database' },
+              { id: 'addNew', label: 'Add New Job', labelKey: 'hrm.jobs.addNew', icon: 'Plus', modalKey: 'Jobs' },
+            ],
+          },
+          {
+            id: 'TeacherStates',
+            label: 'Teacher State',
+            labelKey: 'tabs.teacherStates',
+            entityKey: 'TeacherStates',
+            modalKey: 'TeacherStates',
+            icon: 'ListChecks',
+            queryName: 'TeacherStates',
+            hiddenColumns: ['emp_id'],
+            // teacher_state_sp ku jira DB-da wuxuu kaliya maamulaa 'insert'.
+            // Update/Delete looga baahna, sidaa darteed actions-ka safka ayaa
+            // la qariyay si row-ku la-ma-bedeli-karo u muuqdo.
+            hideEdit: true,
+            hideDelete: true,
+            loadButtons: [
+              { id: 'TeacherStates', label: 'Show Data', labelKey: 'action.showData', icon: 'Database' },
+              { id: 'addNew', label: 'Add New State', labelKey: 'hrm.teacherStates.addNew', icon: 'Plus', modalKey: 'TeacherStates' },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'EmployeeSchedule',
+        label: 'Employee Schedule',
+        labelKey: 'menu.employeeSchedule',
+        icon: CalendarDays,
+        path: '/EmployeeSchedule',
+      },
+      {
+        id: 'EmployeeVocation',
+        label: 'Employee Vocation',
+        labelKey: 'menu.employeeVocation',
+        icon: Plane,
+        path: '/EmployeeVocation',
       },
     ],
   },
