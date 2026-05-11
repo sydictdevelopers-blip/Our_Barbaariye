@@ -14,14 +14,15 @@
  *       (or callers accept that pagination total may be -1).
  */
 
-const dropdowns = require('./queries/dropdowns');
-const academic  = require('./queries/academic');
-const students  = require('./queries/students');
-const activity  = require('./queries/activity');
-const exam      = require('./queries/exam');
-const users     = require('./queries/users');
-const complain  = require('./queries/complain');
-const meeting   = require('./queries/meeting');
+const dropdowns  = require('./queries/dropdowns');
+const academic   = require('./queries/academic');
+const students   = require('./queries/students');
+const activity   = require('./queries/activity');
+const exam       = require('./queries/exam');
+const users      = require('./queries/users');
+const complain   = require('./queries/complain');
+const meeting    = require('./queries/meeting');
+const attendance = require('./queries/attendance');
 
 const QUERIES = {
   ...dropdowns,
@@ -32,6 +33,7 @@ const QUERIES = {
   ...users,
   ...complain,
   ...meeting,
+  ...attendance,
 };
 
 /**

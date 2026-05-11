@@ -12,6 +12,8 @@ import {
   ArrowLeftRight,
   BookMarked,
   ListChecks,
+  ClipboardCheck,
+  Users,
 } from 'lucide-react';
 import { createExamSection } from './exam/createExam';
 import { examServiceSection } from './exam/examService';
@@ -411,6 +413,49 @@ export const defaultMenuItems = [
         label: 'Complaint Done',
         labelKey: 'tabs.complainDone',
         icon: 'CheckCircle2',
+      },
+    ],
+  },
+  {
+    id: 'AttendanceManagement',
+    label: 'Attendance Management',
+    labelKey: 'menu.attendanceManagement',
+    icon: ClipboardCheck,
+    children: [
+      {
+        id: 'StudentAttendance',
+        label: 'Student',
+        labelKey: 'menu.studentAttendance',
+        icon: GraduationCap,
+        path: '/student_attendence',
+        tabs: [
+          {
+            id: 'StudentAttendance',
+            label: 'Student Attendance',
+            labelKey: 'tabs.studentAttendance',
+            icon: 'Users',
+          },
+          {
+            id: 'StudentAbsents',
+            label: 'Student Absents',
+            labelKey: 'tabs.studentAbsents',
+            icon: 'Clock',
+          },
+          {
+            id: 'AttendanceEdit',
+            label: 'Attendance Edit',
+            labelKey: 'tabs.attendanceEdit',
+            icon: 'Pencil',
+          },
+        ],
+      },
+      {
+        id: 'EmployeeAttendance',
+        label: 'Employee',
+        labelKey: 'menu.employeeAttendance',
+        icon: Users,
+        path: '/employee_attendence',
+        tabs: [],
       },
     ],
   },
