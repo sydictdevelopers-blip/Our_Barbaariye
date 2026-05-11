@@ -106,8 +106,10 @@ const MESSAGE_MAP = [
   { re: /in\s+use[\s\S]*cannot\s+delete[\s\S]*has\s+assignments?/i, key: 'swal.texts.cantDelete' },
   { re: /^\s*in\s+use\b.*$/i, key: 'swal.texts.cantDelete' },
 
-  // hardcoded Somali-ga oo callers isticmaalaan
-  { re: /^\s*(wa la guulaystey|guul)\s*$/i, key: 'swal.titles.success' },
+  // hardcoded Somali-ga oo callers isticmaalaan — qori dhammaan qaababka
+  // sax-loon ee ay ku qoraan tahay (waa/wa) iyo qoraal-yada `guulaystey`,
+  // `guulaysteen`, `guuleystey` si dhammaantood loogu rogo i18n.
+  { re: /^\s*(w?aa? la (guulaystey|guulaysteen|guuleystey)|guul)\s*$/i, key: 'swal.titles.success' },
   { re: /^\s*(khalad( ayaa dhacay)?|qalad( nidaamka)?)\s*$/i, key: 'swal.titles.error' },
   { re: /^\s*xogt(a|ada) waa la kaydiyay\.?\s*$/i, key: 'swal.texts.saved' },
   { re: /^\s*xogta waa la cusboonaysiiyay\.?\s*$/i, key: 'swal.texts.updated' },
@@ -310,7 +312,7 @@ function stripOpDigits(str) {
 }
 
 /** U rog fariinta la soo diray i18n haddii ay la mid tahay pattern aan aqoono. */
-function translateMessage(msg) {
+export function translateMessage(msg) {
   if (msg == null) return '';
   const raw = String(msg);
   if (!raw.trim()) return '';
@@ -442,15 +444,19 @@ export async function swalConfirmAction(options = {}) {
   const {
     title,
     text = '',
+    html,
     confirmText,
     cancelText,
     confirmColor = '#0f3d5e',
     onConfirm,
   } = options;
+  // `html` overrides `text` when provided so callers can render rich content
+  // (colored chips, multi-line layouts). Caller is responsible for escaping.
+  const bodyOpt = html ? { html } : { text: translateMessage(text) };
   const confirmed = await Swal.fire({
     icon: 'question',
     title: translateMessage(title ?? t('swal.titles.confirm')),
-    text: translateMessage(text),
+    ...bodyOpt,
     showCancelButton: true,
     confirmButtonColor: confirmColor,
     cancelButtonText: cancelText ?? t('swal.buttons.no'),

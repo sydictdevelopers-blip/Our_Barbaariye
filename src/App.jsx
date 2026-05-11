@@ -26,6 +26,7 @@ import ClassesPage from './utility/pages/routes/ClassesPage';
 import StudentRegisterPage from './utility/pages/routes/StudentRegisterPage';
 import PeopleSectionPage from './utility/pages/routes/PeopleSectionPage';
 import StudentAttendancePage from './utility/pages/routes/StudentAttendancePage';
+import EmployeeAttendancePage from './utility/pages/routes/EmployeeAttendancePage';
 import StudentMarksPage from './utility/pages/routes/StudentMarksPage';
 import ActivityManagementPage from './utility/pages/routes/ActivityManagementPage';
 import CreateExamPage from './utility/pages/routes/CreateExamPage';
@@ -136,6 +137,7 @@ function AppContent() {
                   <Route path="/student_register" element={<StudentRegisterPage />} />
                   <Route path="/people_section" element={<PeopleSectionPage />} />
                   <Route path="/student_attendence" element={<StudentAttendancePage />} />
+                  <Route path="/employee_attendence" element={<EmployeeAttendancePage />} />
                   <Route path="/student_marks" element={<StudentMarksPage />} />
                   <Route path="/StudentsOffice" element={<StudentofficeTabs />} />
                   <Route path="/EmployeeOffice" element={<EmployeeOfficeTabs />} />

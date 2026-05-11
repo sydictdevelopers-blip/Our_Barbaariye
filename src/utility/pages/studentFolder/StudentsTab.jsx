@@ -15,6 +15,8 @@ import StudentImagesPanel from './StudentImagesPanel';
 import StudentResponsiblesPanel from './StudentResponsiblesPanel';
 import StudentEmisPanel from './StudentEmisPanel';
 import StudentProfileModal from './StudentProfileModal';
+import ClassUpdateModal from '../../../modals/ClassUpdateModal';
+import ImportStudentsModal from '../../../modals/ImportStudentsModal';
 
 export default function StudentsTab() {
   const { t } = useTranslation();
@@ -134,7 +136,19 @@ export default function StudentsTab() {
 
   const placeholder = (label) => () => swalSuccess(label, t('students.featureInProgress'));
 
-  const handleStudentClassUpdate = placeholder(t('students.classUpdateLabel'));
+  // Class Update modal — moves a single Continue student into a new class.
+  // The SP updates the existing student_class row in place, so the table
+  // stays at one row per active student (no historical duplicates).
+  const [classUpdateOpen, setClassUpdateOpen] = useState(false);
+  const handleStudentClassUpdate = () => setClassUpdateOpen(true);
+  const handleClassUpdateSuccess = async () => {
+    if (filterClass && filterBatch && filterAcademic) {
+      try {
+        const rows = await fetchRows();
+        setTableData(rows.map((r, i) => ({ id: r.std_id ?? i, ...r })));
+      } catch { /* ignore: filter still informs UI */ }
+    }
+  };
 
   // ----- Student registration modal (StudentRegister CRUD config) -----
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -186,7 +200,19 @@ export default function StudentsTab() {
     }
     setViewMode('emis');
   };
-  const handleImportExcel = placeholder(t('students.importExcelLabel'));
+  // Bulk-import students from a CSV file. The modal owns the parsing, sample
+  // download, validation and per-row submission to bulk_student_import_sp;
+  // here we just open it and refresh the table on success.
+  const [importOpen, setImportOpen] = useState(false);
+  const handleImportExcel = () => setImportOpen(true);
+  const handleImportSuccess = async () => {
+    if (filterClass && filterBatch && filterAcademic) {
+      try {
+        const rows = await fetchRows();
+        setTableData(rows.map((r, i) => ({ id: r.std_id ?? i, ...r })));
+      } catch { /* ignore: filter still informs UI */ }
+    }
+  };
 
   const [profileStdId, setProfileStdId] = useState(null);
   const handleView = useCallback((row) => {
@@ -350,6 +376,16 @@ export default function StudentsTab() {
         mode={registerMode}
         onSuccess={handleRegisterSuccess}
         moduleKey="StudentRegister"
+      />
+      <ClassUpdateModal
+        isOpen={classUpdateOpen}
+        onClose={() => setClassUpdateOpen(false)}
+        onSuccess={handleClassUpdateSuccess}
+      />
+      <ImportStudentsModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={handleImportSuccess}
       />
       {viewMode === 'images' ? (
         <StudentImagesPanel

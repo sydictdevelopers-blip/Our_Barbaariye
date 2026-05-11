@@ -31,7 +31,7 @@ module.exports = {
     prePaginated: true,
   }),
   subject_options: 'SELECT sub_id, name FROM subjects ORDER BY name',
-  subject_class_options: (p) => `SELECT sub_cl_id, subject_name FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}) ORDER BY subject_name`,
+  subject_class_options: (p) => `SELECT id, subject_name FROM subject_class_show(${Number(p?.br_id) || 0}, ${Number(p?.cl_id) || 0}, ${Number(p?.a_y_id) || 0}) ORDER BY subject_name`,
   shift_options: 'SELECT * FROM shift',
   student_options: (p) => `SELECT * FROM student_options_show(${Number(p?.a_y_id) || 0}, ${Number(p?.cl_id) || 0})`,
   academic_options: 'SELECT a_y_id, academic_name, state FROM academic_year ORDER BY a_y_id DESC',
@@ -55,6 +55,23 @@ module.exports = {
   day_options: 'SELECT d_id, day FROM day ORDER BY d_id',
   period_options: 'SELECT pr_id, period FROM period ORDER BY pr_id',
   class_simple_options: (p) => `SELECT cl_id, class_name FROM class_show(${Number(p?.br_id) || 0}) ORDER BY class_name`,
+  // Attendance — class dropdown filtered to classes that participate in attendance
+  // (vw_cls_attendance_all(p_branch) returns id/label columns scoped by branch).
+  attendence_class_options: (p) => `SELECT * FROM vw_cls_attendance_all(${Number(p?.br_id) || 0})`,
+  // Student Absents tab — dedicated class dropdown. Currently wraps the same
+  // attendance class view; swap the SP here when the absents tab needs a
+  // different class scope (e.g. classes with absent students only).
+  absents_class_options: (p) => `SELECT * FROM vw_cls_attendance_all(${Number(p?.br_id) || 0})`,
+  // Attendance Edit tab — dedicated student dropdown. Currently wraps the
+  // generic all-students search; swap the SP here when the edit tab needs a
+  // narrower scope (e.g. only students with attendance records).
+  attendance_edit_student_options: (p) => ({
+    sql: `SELECT * FROM all_student_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
+    prePaginated: true,
+  }),
+  // State Attendance options — used by the Attendance Edit tab's inline State
+  // dropdown so the user can change Present/Absent/Sick/etc. per row.
+  state_attendance_options: 'SELECT st_att_id, state FROM state_attendance ORDER BY st_att_id',
   people_options: (p) => ({
     sql: `SELECT * FROM people_options_show('${sqlText(p?.search)}', ${Number(p?.limit) || 25}, ${offsetOf(p, 25)}, ${Number(p?.br_id) || 0})`,
     prePaginated: true,

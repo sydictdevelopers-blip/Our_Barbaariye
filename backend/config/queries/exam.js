@@ -27,8 +27,15 @@ module.exports = {
   AssignTeacherRoom: (p) => `SELECT * FROM assign_teacher_room_show(${Number(p?.emp_id) || 0}, ${Number(p?.ex_id) || 0}, ${Number(p?.br_id) || 0})`,
   ExamSetting: (p) => `SELECT * FROM exam_siting_show(${Number(p?.br_id)})`,
   Exam: (p) => `SELECT * FROM exam_show(${Number(p?.br_id)})`,
-  ExamRegister: (p) => `SELECT s.*, er.a_y_id, er.ex_id FROM exam_reg_show(${Number(p?.br_id)}, ${Number(p?.academicYearId)}) s LEFT JOIN exam_reg er ON er.ex_reg_id = s.ex_reg_id`,
+  ExamRegister: (p) => `SELECT * FROM exam_reg_show(${Number(p?.br_id)}, ${Number(p?.academicYearId)})`,
   AssignClassExam: (p) => `SELECT s.*, ass.er_id, ass.cl_id, ass.b_id FROM assign_class_exam_show_single(${Number(p?.cl_id)}, ${Number(p?.b_id)}, ${Number(p?.academicYearId)}, ${Number(p?.br_id)}) s LEFT JOIN assign_class_exam ass ON ass.a_c_ex = s."ID"`,
+  // Liiska (a_c_ex, cl_id, b_id) ee horeey loo xareeyey exam_reg gaar ah — loo
+  // isticmaalo edit-ka modal-ka Exam Registration. Si performance loo ilaaliyo
+  // ma joini meynno class/batch labels — frontend-ka ayaa ka heli doona labels-ka
+  // option list-ka (add_assing_class_exam_show) oo durba la rarayo.
+  assign_class_exam_by_er: (p) => `SELECT a_c_ex, cl_id, b_id
+                                     FROM assign_class_exam
+                                    WHERE er_id = ${Number(p?.er_id) || 0}`,
   // Show All button-ka tab-ka Assign Class Exam — academic + branch oo kaliya.
   AssignClassExamShowAll: (p) => ({
     sql: `SELECT s.*, ass.er_id, ass.cl_id, ass.b_id FROM assign_class_exam_show_all(${Number(p?.academicYearId)}, ${Number(p?.br_id)}) s LEFT JOIN assign_class_exam ass ON ass.a_c_ex = s."ID"`,

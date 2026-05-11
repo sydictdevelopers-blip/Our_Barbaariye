@@ -17,7 +17,15 @@ module.exports = {
 
   // Teacher syllabus / Lesson plan / Lesson activity
   TeacherSyllabus: (p) => `SELECT * FROM show_teacher_daily_sp(${Number(p?.cl_id)}, ${Number(p?.sub_cl_id)}, ${Number(p?.a_y_id)})`,
-  LessonPlanRow: (p) => `SELECT * FROM lesson_plan_row_show(${Number(p?.l_p_id)})`,
+  // Enriched: lesson_plan_row_show only returns IDs, so join people via the
+  // employee FK to surface the teacher's display name. The Edit modal needs
+  // teacher_label up front (the SP doesn't expose it on its own).
+  LessonPlanRow: (p) => `
+    SELECT lpr.*, pe.p_name AS teacher_name
+      FROM lesson_plan_row_show(${Number(p?.l_p_id)}) lpr
+      LEFT JOIN employee e  ON e.emp_id = lpr.emp_id
+      LEFT JOIN people   pe ON pe.p_id  = e.p_id
+  `,
   LessonActivity: (p) => `SELECT * FROM lesson_activity_show(${Number(p?.cl_id)}, ${Number(p?.a_y_id)})`,
   LessonActivityRow: (p) => `SELECT * FROM lesson_activity_row_show(${Number(p?.ac_t_id)})`,
   LessonActivityMark: 'SELECT * FROM lesson_activity_mark ORDER BY 1',

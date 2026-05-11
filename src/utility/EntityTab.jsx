@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { swalSuccess, swalConfirm, swalError, swalConfirmAction } from '../utils/swal';
+import { swalSuccess, swalConfirm, swalError, swalConfirmAction, translateMessage } from '../utils/swal';
 import { confirmDelete } from '../utils/confirmDelete';
 import { Plus, Pencil, Trash2, Save, Check, X, Filter } from 'lucide-react';
 import Button from '../components/ui/Button';
@@ -137,9 +137,12 @@ function EntityTab({
   // SP fallback row pattern: 1 row with no PK → treat as empty + extract message from
   // the first non-null string field (e.g. SP returns "This Information Was Not Found!").
   const isEmptyFallback = Array.isArray(rawPaginatedData) && rawPaginatedData.length === 1 && !rawPaginatedData[0]?.id;
-  const fallbackMessage = isEmptyFallback
+  const fallbackRaw = isEmptyFallback
     ? Object.values(rawPaginatedData[0]).find((v) => typeof v === 'string' && v.trim() !== '' && v.trim() !== '-')
     : null;
+  // SP returns English text — run it through translateMessage so the empty
+  // state honors the active locale (so/en/ar) like swal does.
+  const fallbackMessage = fallbackRaw ? translateMessage(fallbackRaw) : null;
   const paginatedData = isEmptyFallback ? [] : rawPaginatedData;
   const totalPages = useSelector(selectTotalPages(activeEntityKey));
   const rawTotalRows = useSelector(selectTotalRows(activeEntityKey)) ?? rawPaginatedData?.length ?? 0;
@@ -598,7 +601,7 @@ function EntityTab({
               setSelectedExamId(''); setSelectedExamLabel('');
             }}
             loadOptions={acadLoader}
-            placeholder={t('entity.selectAcademic')}
+            placeholder={t('entity.selectAcademic', 'Select Academic Year')}
             isClearable={false}
           />
         </div>
@@ -912,21 +915,27 @@ function EntityTab({
       filterSyncedRef.current = true;
       return;
     }
+    // Student & Responsible pickers are intentionally NON-reactive: switching
+    // them must not auto-fetch (the user explicitly clicks Show Data to apply).
+    // Re-use the last-applied std_cl_id / res_id from activeExtra so unrelated
+    // filter changes don't accidentally drop the student/responsible filter.
+    const studentIdApplied     = activeExtra?.std_cl_id ?? '';
+    const responsibleIdApplied = activeExtra?.res_id    ?? '';
     const newExtra = buildExtra(
       academicYearIdForLoad,
       classIdForLoad,
       batchIdForLoad,
       levelIdForLoad,
       examIdForLoad,
-      responsibleIdForLoad,
-      studentIdForLoad,
+      responsibleIdApplied,
+      studentIdApplied,
       subjectIdForLoad,
     );
     setActiveExtra(newExtra);
     dispatch(setCurrentPage({ entityKey: activeEntityKey, value: 1 }));
     dispatch(loadData(loadPayload(activeEntityKey, 1, limit, entity.searchQuery, newExtra)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, subjectIdForLoad, responsibleIdForLoad, studentIdForLoad]);
+  }, [academicYearIdForLoad, classIdForLoad, batchIdForLoad, levelIdForLoad, examIdForLoad, subjectIdForLoad]);
 
 
   if (bulkForm && viewMode === 'form') {

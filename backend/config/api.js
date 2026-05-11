@@ -140,14 +140,14 @@ function registerApiRoutes(app) {
            FROM user_branch ub
           WHERE ub.usr_id = $1
             AND ub.br_id = $2
-            AND LOWER(TRIM(COALESCE(ub.state, '')))     = 'active'
-            AND LOWER(TRIM(COALESCE(ub.lock_user, ''))) = 'unlocked'
+            AND ub.state     = 'Active'
+            AND ub.lock_user = 'Unlocked'
           LIMIT 1`,
         [usr_id, requested]
       );
       const owned = rows[0];
       if (!owned) {
-        return res.status(403).json({ success: false, message: 'Branch-kan uma jirto user-kan' });
+        return res.status(403).json({ success: false, message: `Branch-kan uma jirto user-kan ${usr_id} branch ${requested}` });
       }
       setSessionCookie(res, {
         usr_id,
