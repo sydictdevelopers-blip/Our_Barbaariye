@@ -416,15 +416,19 @@ export async function swalConfirmAction(options = {}) {
   const {
     title,
     text = '',
+    html,
     confirmText,
     cancelText,
     confirmColor = '#0f3d5e',
     onConfirm,
   } = options;
+  // `html` overrides `text` when provided so callers can render rich content
+  // (colored chips, multi-line layouts). Caller is responsible for escaping.
+  const bodyOpt = html ? { html } : { text: translateMessage(text) };
   const confirmed = await Swal.fire({
     icon: 'question',
     title: translateMessage(title ?? t('swal.titles.confirm')),
-    text: translateMessage(text),
+    ...bodyOpt,
     showCancelButton: true,
     confirmButtonColor: confirmColor,
     cancelButtonText: cancelText ?? t('swal.buttons.no'),

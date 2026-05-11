@@ -39,6 +39,9 @@ import ExamCopyTab from '../exam/ExamCopyTab';
 import AssignStudentRoomTab from '../exam/AssignStudentRoomTab';
 import ExamAttendenceTab from '../exam/ExamAttendanceTab';
 import AssignTeacherRoomTab from '../exam/AssignTeacherRoomTab';
+import StudentAttendanceTab from '../attendance/StudentAttendanceTab';
+import StudentAbsentsTab from '../attendance/StudentAbsentsTab';
+import AttendanceEditTab from '../attendance/AttendanceEditTab';
 import { EntityTab } from '../../index';
 import { CRUD_CONFIG } from '../../../config/crudConfig';
 import { useTabsForPath } from '../../../utils/usePrivilegedTabs';
@@ -329,6 +332,27 @@ export default function AccountsPage() {
       return (
         <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
           <AssignTeacherRoomTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'StudentAttendance' && location.pathname === '/student_attendence') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentAttendanceTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'StudentAbsents' && location.pathname === '/student_attendence') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <StudentAbsentsTab />
+        </motion.div>
+      );
+    }
+    if (activeTab === 'AttendanceEdit' && location.pathname === '/student_attendence') {
+      return (
+        <motion.div key={activeTab} {...motionProps} className="px-2 py-2">
+          <AttendanceEditTab />
         </motion.div>
       );
     }

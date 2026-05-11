@@ -104,6 +104,22 @@ const PROCEDURE_PARAM_ORDER = {
     'reg_date_sp', 'oper',
   ],
   result_sp: ['p_id', 'p_student', 'p_exam', 'p_subject', 'p_mark', 'p_user_id', 'oper'],
+  // student_attendance_sp positional sig (8 args):
+  //   (p_id, p_student, p_period, p_state, p_reason, p_reg_date, p_user_id, p_operation)
+  // The SP's `p_user_id` is semantically the u_br_id (it is matched against
+  // user_branch.u_br_id and inserted into student_attendance.u_br_id), so we
+  // use the `u_br_id_sp` key here — the JWT-injection block above auto-fills
+  // it with req.user.u_br_id, preventing client tampering.
+  student_attendance_sp: ['p_id', 'p_student', 'p_period', 'p_state', 'p_reason', 'p_reg_date', 'u_br_id_sp', 'oper'],
+  // period_attendancedelet_sp(p_class, p_period, p_date, p_user_id) — bulk
+  // tirtir attendance-ka hal period hal date hal fasal. SP's 4th param is
+  // named `p_user_id` but is matched against `user_branch.u_br_id`, so we map
+  // it to `u_br_id_sp` here to get JWT auto-injection (req.user.u_br_id).
+  period_attendancedelet_sp: ['p_class', 'p_period', 'p_date', 'u_br_id_sp'],
+  // class_attendancedelet_sp(p_class, p_date, p_user_id) — tirtir attendance
+  // dhammaan periods-yada fasal hal date. Same JWT-injection trick as above:
+  // 3rd SP param is `p_user_id` (semantically u_br_id) → map to `u_br_id_sp`.
+  class_attendancedelet_sp: ['p_class', 'p_date', 'u_br_id_sp'],
   class_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_user_id', 'oper'],
   subject_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_subject', 'p_user_id', 'oper'],
   result_approve_sp: ['p_id', 'p_user_id', 'oper'],
