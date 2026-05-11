@@ -187,11 +187,31 @@ function uploadOrRespond(field) {
   });
 }
 
+/**
+ * POST /api/image/delete — best-effort cleanup of an orphaned S3 object.
+ * Body: { url: '<public-url>' }. Returns 204 even when the URL is not from
+ * our bucket — caller does not need to discriminate, and we never want a
+ * cleanup failure to bubble up as a user-facing error.
+ */
+async function handleDeleteByUrl(req, res) {
+  const { url } = req.body || {};
+  const key = s3KeyFromUrl(url);
+  if (!key) return res.status(204).end();
+  try {
+    await s3.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key }));
+  } catch (err) {
+    console.warn('[image/delete] failed', key, err.message);
+  }
+  return res.status(204).end();
+}
+
 function register(app) {
   // requireAuth runs first so unauth'd uploads get rejected before multer
   // buffers the (potentially large) file in memory.
   app.post('/api/student-image/upload', requireAuth, uploadOrRespond('file'), handleUpload);
   app.post('/api/student-image/upload-new', requireAuth, uploadOrRespond('file'), handleUploadNew);
+  // Generic — usable by Employees, Vocations, anything that lands in our bucket.
+  app.post('/api/image/delete', requireAuth, handleDeleteByUrl);
 }
 
 module.exports = { register };

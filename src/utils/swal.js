@@ -32,8 +32,16 @@ const MESSAGE_MAP = [
   { re: /^\s*no operation\s*$/i, key: 'swal.texts.noOperation' },
   // "N records added"
   { re: /^\s*(\d+)\s+records?\s+added\s*$/i, key: 'swal.texts.recordsAdded', countGroup: 1 },
-  // already-exists variants
-  { re: /already\s*exists?|duplicate|horey u jira|hore u jira/i, key: 'swal.titles.alreadyExists' },
+  // already-exists variants (English / Somali / Arabic)
+  { re: /already\s*exists?|duplicate|horey u jira|hore u jira|موجود\s*مسبق/i, key: 'swal.titles.alreadyExists' },
+
+  // teacher_state_sp guards — return a state-specific sentence in every UI
+  // language so the body never reads as the mixed "This Employee is Already
+  // Firfircoon" hybrid (English skeleton + a single translated state word).
+  { re: /this\s+employee\s+is\s+already\s+active/i,    key: 'swal.texts.employeeAlreadyActive' },
+  { re: /this\s+employee\s+is\s+already\s+inactive/i,  key: 'swal.texts.employeeAlreadyInactive' },
+  { re: /this\s+employee\s+is\s+already\s+suspended/i, key: 'swal.texts.employeeAlreadySuspended' },
+  { re: /this\s+employee\s+is\s+already\s+on\s*leave/i, key: 'swal.texts.employeeAlreadyOnLeave' },
 
   // English sentences ka yimaada SP-yada DB-ga (delete)
   { re: /this (information|record|data) (has been|is) (correctly )?(deleted|removed)( correctly)?\.?/i, key: 'swal.texts.deleted' },
@@ -94,6 +102,9 @@ const MESSAGE_MAP = [
   // student_marge_sp — "Cannot merge — students are in different Clases"
   { re: /cannot\s+merge.*students?\s+(are\s+)?in\s+different\s+cla[sc]e?s/i, key: 'swal.texts.mergeDifferentClasses' },
   { re: /^\s*merge\s+completed\s+successfully\s*$/i, key: 'swal.texts.mergeSuccess' },
+  // employee_sp — "In Use — cannot delete (employee has assignments)"
+  { re: /in\s+use[\s\S]*cannot\s+delete[\s\S]*has\s+assignments?/i, key: 'swal.texts.cantDelete' },
+  { re: /^\s*in\s+use\b.*$/i, key: 'swal.texts.cantDelete' },
 
   // hardcoded Somali-ga oo callers isticmaalaan — qori dhammaan qaababka
   // sax-loon ee ay ku qoraan tahay (waa/wa) iyo qoraal-yada `guulaystey`,
@@ -334,8 +345,16 @@ export function translateMessage(msg) {
   return stripOpDigits(tDbInline(str));
 }
 
+// Recognises rejected-insert messages across the languages used by SP returns:
+// English ("already exists" / "duplicate" / "is already <state>"), Somali
+// ("horey u jira", "hora ayuu u jiray", "horay ayuu …" — as produced by
+// `teacher_state_sp` when it rejects a duplicate state), and Arabic
+// ("موجود مسبقاً"). The "is already <word>" variant is what teacher_state_sp
+// returns when the employee is already in the requested state (e.g. "This
+// Employee is Already Active") — without it the dialog falls through to the
+// green check, which is misleading because no row was inserted.
 function isAlreadyExists(text) {
-  return /already\s*exists?|horey u jira|hore u jira|duplicate/i.test(text || '');
+  return /already\s*exists?|duplicate|is\s+already\s+\w|hor[ae]y?\s*ayuu|hor[ae]y?\s*ayey|hor[ae]y?\s*u\s*jir(?:ay|a|ta)|hor[ae]yba|موجود\s*مسبق/i.test(text || '');
 }
 
 /** Success – marka insert/update la sameeyay. Haddii fariinta "already exist" leedahay → warning. */
@@ -344,10 +363,16 @@ export function swalSuccess(title, text) {
   const rawText = text ?? t('swal.texts.saved');
   const combined = `${rawTitle || ''} ${rawText || ''}`;
   if (isAlreadyExists(combined)) {
+    // Insert was rejected — switch the green check to a warning icon and use
+    // the "Not succeeded" title (so-Laguma Guulaysan / en-Could not save /
+    // ar-تعذّر الحفظ). The body uses the localized version of the SP message
+    // (translateMessage maps "This Employee is Already Active" → the matching
+    // employeeAlready* key) so the body never mixes English skeleton with a
+    // single translated state word.
     return Swal.fire({
       icon: 'warning',
       title: t('swal.titles.notSucceeded'),
-      text: t('swal.texts.alreadyExists'),
+      text: translateMessage(rawText) || t('swal.texts.alreadyExists'),
       confirmButtonText: t('swal.buttons.ok'),
       customClass: swalClass,
     });
@@ -371,13 +396,16 @@ export function swalError(title, text) {
   const fullMsg = titleMsg + (textMsg ? (titleMsg ? ' ' : '') + textMsg : '');
   const alreadyExists = isAlreadyExists(fullMsg);
   const translatedTitle = translateMessage(titleMsg);
-  // For already-exists we override BOTH title and text with explicit keys so
-  // the message reads naturally: "Laguma guuleysan" / "Xogtaan horay ayey u
-  // jirtay" instead of the same phrase twice.
+  // For already-exists / rejected-insert we override the title with
+  // "notSucceeded" (so-Laguma Guulaysan / en-Could not save / ar-تعذّر
+  // الحفظ). The body runs through translateMessage so SP-specific phrases
+  // like "This Employee is Already Active" become fully localized.
   const finalTitle = alreadyExists
     ? t('swal.titles.notSucceeded')
     : (titleMsg ? translatedTitle : t('swal.titles.error'));
-  const finalText = alreadyExists ? t('swal.texts.alreadyExists') : translateMessage(textMsg);
+  const finalText = alreadyExists
+    ? (translateMessage(textMsg) || t('swal.texts.alreadyExists'))
+    : translateMessage(textMsg);
   return Swal.fire({
     icon: alreadyExists ? 'warning' : 'error',
     title: finalTitle,

@@ -403,13 +403,23 @@ function EntityTab({
       try {
         await deleteRow(row, config, (result) => {
           dispatch(loadData(loadPayload(activeEntityKey, entity.currentPage, limit, entity.searchQuery, activeExtra)));
-          swalSuccess('Wa la guulaystey', result?.message || '');
+          // SP can succeed (HTTP 200) and still report a logical failure in
+          // its body — "Already Exists", "In Use", "Not Registered", "cannot
+          // be deleted". Surface those as a Not-Succeeded warning instead of
+          // a green checkmark so the user notices the row was rejected.
+          const replyText = typeof result === 'string' ? result : (result?.message || '');
+          const isWarning = /already\s+exists?|not\s+registered|in\s+use|cannot\s+(?:delete|change|be\s+deleted)/i.test(replyText);
+          if (isWarning) {
+            swalError(t('swal.titles.notSucceeded', { defaultValue: 'Not succeeded' }), replyText);
+          } else {
+            swalSuccess(t('swal.titles.success', { defaultValue: 'Success' }), replyText);
+          }
         });
       } catch (err) {
-        swalError('Khalad ayaa dhacay', err.message || '');
+        swalError(t('swal.titles.error', { defaultValue: 'Error' }), err.message || '');
       }
     },
-    [config, activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery, buildExtra]
+    [config, activeEntityKey, limit, dispatch, activeExtra, entity.currentPage, entity.searchQuery, buildExtra, t]
   );
 
   // Approve Exam — per-row approve (commit `approve` → `marks`) / cancel (clear `approve`).

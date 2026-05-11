@@ -808,6 +808,137 @@ const ENTITIES = [
       { name: 'p_user_id', type: 'hidden', param: 'p_user_id', default: getSessionUBrId },
     ],
   },
+
+  // ===== HRM ===============================================================
+
+  {
+    key: 'Employees',
+    title: 'hrm.employees.title',
+    fn: 'employee_sp',
+    idKey: 'emp_id',
+    idParam: 'emp_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 2,
+    modalSize: 'xl',
+    pageScroll: true,
+    fields: [
+      // Form layout matches the screenshot (row-major, 2 columns):
+      //   name | phone | email | sex | address | type | job | degree | shift | salary type | salary | image
+      { name: 'name_sp', label: 'hrm.employees.fields.name', placeholder: 'hrm.employees.ph.name', type: 'text', required: true, rowKey: 'p_name', param: 'name_sp' },
+      // Phone: prefill "61" — user just continues typing the rest of the number.
+      { name: 'tell_sp', label: 'hrm.employees.fields.phone', placeholder: 'hrm.employees.ph.phone', type: 'text', required: true, rowKey: 'tel', param: 'tell_sp', default: '61' },
+      { name: 'email_sp', label: 'hrm.employees.fields.email', placeholder: 'hrm.employees.ph.email', type: 'text', required: true, rowKey: 'email', param: 'email_sp' },
+      { name: 'sex_sp',   label: 'hrm.employees.fields.sex',   placeholder: 'hrm.employees.ph.sex',   type: 'select', required: true, rowKey: 'sex', param: 'sex_sp', default: '',
+        options: [
+          { value: 'Male',   label: 'hrm.opts.sex.male' },
+          { value: 'Female', label: 'hrm.opts.sex.female' },
+        ] },
+      { name: 'add_id_sp', label: 'hrm.employees.fields.address', placeholder: 'hrm.employees.ph.address', type: 'select', required: true, rowKey: 'ad_id', param: 'add_id_sp',
+        optionsKey: 'address_options', value: 'add_id', nameKey: 'address_name', default: '' },
+      { name: 'emp_type_sp', label: 'hrm.employees.fields.empType', placeholder: 'hrm.employees.ph.empType', type: 'select', required: true, rowKey: 'emp_type', param: 'emp_type_sp', default: '',
+        options: [
+          { value: 'Teacher',     label: 'hrm.opts.empType.teacher' },
+          { value: 'Staff',       label: 'hrm.opts.empType.staff' },
+          { value: 'Driver',      label: 'hrm.opts.empType.driver' },
+          { value: 'Guard',       label: 'hrm.opts.empType.guard' },
+          { value: 'Cleaner',     label: 'hrm.opts.empType.cleaner' },
+          { value: 'Manager',     label: 'hrm.opts.empType.manager' },
+        ] },
+      { name: 'j_id_sp', label: 'hrm.employees.fields.job', placeholder: 'hrm.employees.ph.job', type: 'select', required: true, rowKey: 'j_id', param: 'j_id_sp',
+        optionsKey: 'job_options', value: 'j_id', nameKey: 'j_name', default: '' },
+      { name: 'degree_sp', label: 'hrm.employees.fields.degree', placeholder: 'hrm.employees.ph.degree', type: 'text', rowKey: 'degree', param: 'degree_sp', default: '' },
+      { name: 'sh_id_sp', label: 'hrm.employees.fields.shift', placeholder: 'hrm.employees.ph.shift', type: 'select', required: true, rowKey: 'sh_id', param: 'sh_id_sp',
+        optionsKey: 'shift_options', value: 'sh_id', nameKey: 'shift_name', default: '' },
+      { name: 'salary_type_sp', label: 'hrm.employees.fields.salaryType', placeholder: 'hrm.employees.ph.salaryType', type: 'select', required: true, rowKey: 'salary_type', param: 'salary_type_sp', default: 'Monthly',
+        options: [
+          { value: 'Monthly',  label: 'hrm.opts.salaryType.monthly' },
+          { value: 'Daily',    label: 'hrm.opts.salaryType.daily' },
+          { value: 'Hourly',   label: 'hrm.opts.salaryType.hourly' },
+          { value: 'Contract', label: 'hrm.opts.salaryType.contract' },
+        ] },
+      { name: 'salary_sp', label: 'hrm.employees.fields.salary', placeholder: 'hrm.employees.ph.salary', type: 'number', required: true, rowKey: 'salary', param: 'salary_sp', default: 0, props: { min: 0, step: 0.01 } },
+      { name: 'image_sp', label: 'hrm.employees.fields.image', type: 'image-upload', rowKey: 'image', param: 'image_sp', default: '' },
+      // Hidden fields — SP looks up tt_id from emp_type when 0; cv left empty
+      // unless a separate CV-upload UI is added later.
+      { name: 'tt_id_sp',     type: 'hidden', param: 'tt_id_sp',     default: 0 },
+      { name: 'cv_sp',        type: 'hidden', param: 'cv_sp',        default: '' },
+      { name: 'hired_date_sp', type: 'hidden', param: 'hired_date_sp', default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'br_id_sp',     type: 'hidden', param: 'br_id_sp',     default: getSessionBrId },
+      { name: 'u_br_id_sp',   type: 'hidden', param: 'u_br_id_sp',   default: getSessionUBrId },
+    ],
+  },
+
+  {
+    key: 'Jobs',
+    title: 'hrm.jobs.title',
+    fn: 'job_sp',
+    idKey: 'j_id',
+    idParam: 'j_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 2,
+    fields: [
+      { name: 'j_name_sp', label: 'hrm.jobs.fields.name', placeholder: 'hrm.jobs.ph.name', type: 'text', required: true, rowKey: 'j_name', param: 'j_name_sp' },
+      // State only renders on Update — Insert defaults to 'Active' via the SP
+      // when state_sp is empty, so a fresh job always starts active.
+      { name: 'state_sp',  label: 'hrm.jobs.fields.state', placeholder: 'hrm.jobs.ph.state', type: 'select', rowKey: 'state', param: 'state_sp', default: 'Active', showOnMode: 'update',
+        options: [
+          { value: 'Active',   label: 'hrm.opts.state.active' },
+          { value: 'Inactive', label: 'hrm.opts.state.inactive' },
+        ] },
+    ],
+  },
+
+  {
+    key: 'TeacherStates',
+    title: 'hrm.teacherStates.title',
+    fn: 'teacher_state_sp',
+    idKey: 'ts_id',
+    idParam: 'ts_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 2,
+    fields: [
+      { name: 'emp_id_sp', label: 'hrm.teacherStates.fields.employee', placeholder: 'hrm.teacherStates.ph.employee', type: 'select', required: true, rowKey: 'emp_id', param: 'emp_id_sp',
+        optionsKey: 'employee_options', value: 'emp_id', nameKey: 'p_name', default: '' },
+      { name: 'state_sp', label: 'hrm.teacherStates.fields.state', placeholder: 'hrm.teacherStates.ph.state', type: 'select', required: true, rowKey: 'state', param: 'state_sp', default: '',
+        options: [
+          { value: 'Active',   label: 'hrm.opts.state.active' },
+          { value: 'Inactive', label: 'hrm.opts.state.inactive' },
+          { value: 'Suspended', label: 'hrm.opts.state.suspended' },
+          { value: 'OnLeave',  label: 'hrm.opts.state.onLeave' },
+        ] },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
+
+  {
+    key: 'EmployeeVocations',
+    title: 'hrm.vocations.title',
+    fn: 'employee_vocation_sp',
+    idKey: 'emp_voc_id',
+    idParam: 'emp_voc_id_sp',
+    omitPId: true,
+    omitPUsrId: true,
+    gridCols: 1,
+    fields: [
+      { name: 'emp_id_sp', label: 'hrm.vocations.fields.employee', placeholder: 'hrm.vocations.ph.employee', type: 'select', required: true, rowKey: 'emp_id', param: 'emp_id_sp',
+        optionsKey: 'employee_options', value: 'emp_id', nameKey: 'p_name', default: '' },
+      { name: 'start_date_sp', label: 'hrm.vocations.fields.startDate', type: 'date', required: true, rowKey: 'start_date', param: 'start_date_sp', default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'end_date_sp',   label: 'hrm.vocations.fields.endDate',   type: 'date', required: true, rowKey: 'end_date',   param: 'end_date_sp',   default: () => new Date().toISOString().slice(0, 10) },
+      { name: 'type_sp', label: 'hrm.vocations.fields.type', placeholder: 'hrm.vocations.ph.type', type: 'select', required: true, rowKey: 'type', param: 'type_sp', default: 'Vocation',
+        options: [
+          { value: 'Vocation',   label: 'hrm.opts.vocType.vocation' },
+          { value: 'Sick Leave', label: 'hrm.opts.vocType.sickLeave' },
+          { value: 'Personal',   label: 'hrm.opts.vocType.personal' },
+          { value: 'Maternity',  label: 'hrm.opts.vocType.maternity' },
+          { value: 'Other',      label: 'hrm.opts.vocType.other' },
+        ] },
+      { name: 'description_sp', label: 'hrm.vocations.fields.description', placeholder: 'hrm.vocations.ph.description', type: 'textarea', rows: 3, rowKey: 'description', param: 'description_sp', default: '' },
+      { name: 'u_br_id_sp', type: 'hidden', param: 'u_br_id_sp', default: getSessionUBrId },
+    ],
+  },
 ];
 
 export const CRUD_CONFIG = Object.fromEntries(

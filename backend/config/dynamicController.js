@@ -124,6 +124,28 @@ const PROCEDURE_PARAM_ORDER = {
   subject_exam_delete_sp: ['p_class', 'p_academic', 'p_exam', 'p_batch', 'p_subject', 'p_user_id', 'oper'],
   result_approve_sp: ['p_id', 'p_user_id', 'oper'],
   result_approve_bulk_sp: ['p_class', 'p_user_id', 'oper'],
+
+  // ---- HRM ------------------------------------------------------------------
+  job_sp: ['j_id_sp', 'j_name_sp', 'state_sp', 'oper'],
+  // employee_sp — handles people + employee CRUD atomically. Order MUST match
+  // the SQL function signature (see backend/sql/employee_sp_v3.sql).
+  employee_sp: [
+    'emp_id_sp', 'name_sp', 'tell_sp', 'sex_sp', 'email_sp', 'add_id_sp',
+    'sh_id_sp', 'j_id_sp', 'tt_id_sp', 'emp_type_sp', 'salary_type_sp',
+    'salary_sp', 'degree_sp', 'br_id_sp', 'cv_sp', 'image_sp',
+    'hired_date_sp', 'u_br_id_sp', 'oper',
+  ],
+  teacher_state_sp: ['ts_id_sp', 'emp_id_sp', 'state_sp', 'u_br_id_sp', 'oper'],
+  // Quick patch — name + image only. Used by the Add-Image bulk panel.
+  employee_quick_update_sp: ['emp_id_sp', 'p_name_sp', 'image_sp', 'u_br_id_sp', 'oper'],
+  employee_schedule_sp: [
+    'emp_sch_id_sp', 'emp_id_sp', 'time_in_sp', 'time_out_sp', 'day_id_sp',
+    'sh_id_sp', 'state_sp', 'reg_date_sp', 'u_br_id_sp', 'language_sp', 'oper',
+  ],
+  employee_vocation_sp: [
+    'emp_voc_id_sp', 'emp_id_sp', 'start_date_sp', 'end_date_sp',
+    'type_sp', 'description_sp', 'u_br_id_sp', 'oper',
+  ],
 };
 
 /**
